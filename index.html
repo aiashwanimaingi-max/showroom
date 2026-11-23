@@ -141,6 +141,23 @@ let DB;
 try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
 if(!DB) DB=structuredClone(DEFAULTS);
 for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]);
+/* ---------- Indian comma formatting for amount fields (1,00,000) ---------- */
+function inFmt(v){
+  v=String(v??'').replace(/[^\d.]/g,''); if(!v) return '';
+  let [i,d]=v.split('.'); i=i.replace(/^0+(?=\d)/,'');
+  const last3=i.slice(-3), rest=i.slice(0,-3);
+  const r=rest?rest.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+last3:last3;
+  return d!==undefined?r+'.'+d.slice(0,2):r;
+}
+function fmtInput(t){
+  const old=t.value, pos=t.selectionStart??old.length, digitsBefore=old.slice(0,pos).replace(/[^\d.]/g,'').length;
+  const nv=inFmt(old); if(nv===old) return; t.value=nv;
+  let c=0,i=0; while(i<nv.length&&c<digitsBefore){ if(/[\d.]/.test(nv[i])) c++; i++ }
+  try{t.setSelectionRange(i,i)}catch(e){}
+}
+document.addEventListener('input',e=>{const t=e.target; if(t&&t.matches&&t.matches('input[inputmode=decimal]')) fmtInput(t)},true);
+const fmtAll=()=>document.querySelectorAll('input[inputmode=decimal]').forEach(i=>{if(i.value&&document.activeElement!==i){const v=inFmt(i.value);if(v!==i.value)i.value=v}});
+new MutationObserver(fmtAll).observe(document.documentElement,{childList:true,subtree:true});
 let storageOK=true;
 /* cloud config: Firebase project config (if null, a config pasted in Settings is used) */
 const FB_CONFIG={apiKey:"AIzaSyBwEfdGtbhXbaiqVv34K1olQDwWSvD301E",authDomain:"honda-showroom-8cda6.firebaseapp.com",projectId:"honda-showroom-8cda6",storageBucket:"honda-showroom-8cda6.firebasestorage.app",messagingSenderId:"966756070246",appId:"1:966756070246:web:e9ec70a7539ad2fb2e8ea7"};
@@ -319,7 +336,7 @@ function stDelete(){
 }
 function addStock(e){
   e.preventDefault(); const f=e.target, d=formData(f);
-  d.chassis=up(d.chassis); d.engine=up(d.engine); d.key=up(d.key);
+  d.chassis=up(d.chassis); d.engine=up(d.engine); d.key=up(d.key); if(d.cost) d.cost=String(num(d.cost));
   const dup=DB.stock.find(s=>s.chassis===d.chassis||s.engine===d.engine);
   if(dup && !confirm(`A vehicle with this ${dup.chassis===d.chassis?'chassis':'engine'} number already exists (${dup.model}). Save anyway?`)) return;
   DB.stock.push({id:uid(),created:Date.now(),status:'in',...d});
@@ -370,9 +387,9 @@ function editStock(id){
     <label>Date<input type="date" name="date" value="${esc(s.date)}"></label><label>Purchase Challan No<input name="challan" value="${esc(s.challan)}"></label>
     <label>Model<input name="model" list="dlModels" value="${esc(s.model)}"></label><label>Colour<input name="colour" list="dlCols" value="${esc(s.colour)}"></label>
     <label>Engine No<input name="engine" class="mono" value="${esc(s.engine)}"></label><label>Chassis No<input name="chassis" class="mono" value="${esc(s.chassis)}"></label>
-    <label>Key No<input name="key" class="mono" value="${esc(s.key)}"></label><label>Purchase price<input name="cost" value="${esc(s.cost)}"></label></form>`,
+    <label>Key No<input name="key" class="mono" value="${esc(s.key)}"></label><label>Purchase price<input name="cost" inputmode="decimal" value="${esc(s.cost)}"></label></form>`,
   `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="if(confirm('Delete this vehicle from stock?')){DB.stock=DB.stock.filter(x=>x.id!=='${id}');save();dlg.close();render()}">Delete</button>
-   <button class="btn" onclick="const d=formData($('#fe'));d.chassis=up(d.chassis);d.engine=up(d.engine);d.key=up(d.key);Object.assign(DB.stock.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Saved')">Save</button>`);
+   <button class="btn" onclick="const d=formData($('#fe'));if(d.cost)d.cost=String(num(d.cost));d.chassis=up(d.chassis);d.engine=up(d.engine);d.key=up(d.key);Object.assign(DB.stock.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Saved')">Save</button>`);
 }
 
 /* ---------- sales ---------- */
