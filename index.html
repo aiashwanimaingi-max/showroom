@@ -196,6 +196,7 @@ function vDash(){
     <div class="stat"><div class="k">Cash in hand</div><div class="v">${rs(bal.cash)}</div></div>
     <div class="stat"><div class="k">Customer dues</div><div class="v">${rs(dues.reduce((a,s)=>a+saleDue(s),0))}</div></div>
     <div class="stat"><div class="k">Finance pending</div><div class="v">${rs(finPend.reduce((a,s)=>a+num(s.finance),0))}</div></div>
+    ${(t=>t?`<div class="stat"><div class="k">Finance कम आया (कुल)</div><div class="v" style="color:var(--amber)">${rs(t)}</div></div>`:'')(DB.sales.reduce((a,s)=>a+Math.max(0,-finDiff(s)),0))}
   </div>
   <div class="row" style="margin-bottom:16px">
     <button class="btn" onclick="go('stock');setTimeout(()=>$('#fStock [name=chassis]')?.focus(),0)">+ Add vehicle to stock</button>
@@ -388,17 +389,56 @@ function receivePay(id){
     <label>Mode<select name="mode"><option>Cash</option><option>Cheque</option><option>UPI</option><option>Bank</option></select></label><label>Cheque / UTR no<input name="ref"></label></form>`,
   `<button class="btn" onclick="const d=formData($('#fp'));if(num(d.amount)<=0)return;addPayment(DB.sales.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Payment recorded in Day Book')">Save payment</button>`);
 }
+const finRecd=s=>s.financeReceived?(s.financeRecdAmt!=null&&s.financeRecdAmt!==''?num(s.financeRecdAmt):num(s.finance)):0;
+const finDiff=s=>s.financeReceived?finRecd(s)-num(s.finance):0;
+const diffPill=d=>Math.abs(d)<0.5?'':d<0?`<span class="pill due">${rs(-d)} कम आया</span>`:`<span class="pill open">${rs(d)} ज़्यादा आया</span>`;
+function finCell(s){
+  if(!num(s.finance)&&!s.financer) return '—';
+  if(!num(s.finance)) return `<a href="#" onclick="setFinance('${s.id}');return false" style="color:var(--amber)">+ राशि भरें</a><div class="muted" style="font-size:12px">${esc(s.financer)}</div>`;
+  return rs(s.finance)+'<br>'+(s.financeReceived?`<span class="pill in">आया ${rs(finRecd(s))}</span> ${diffPill(finDiff(s))}`:'<span class="pill due">pending</span>');
+}
+function setFinance(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  openDlg('Finance – '+s.name,`<form id="ffn" class="grid">
+    <label>Finance राशि (बिल वाली)<input name="finance" inputmode="decimal" value="${num(s.finance)||''}"></label>
+    <label>Financer / bank<input name="financer" value="${esc(s.financer)}" placeholder="HDFC, Bajaj, IDFC…"></label></form>
+    ${s.financeReceived?'<p class="note">इस सेल का finance पहले ही आ चुका है — आई हुई राशि अलग से “Finance आया” में बदलें।</p>':''}`,
+  `<button class="btn plain" onclick="viewSale('${id}')">Back</button><button class="btn" onclick="const d=formData($('#ffn'));const s=DB.sales.find(x=>x.id==='${id}');s.finance=num(d.finance);s.financer=d.financer;save();render();viewSale('${id}');toast('Finance saved')">Save</button>`);
+}
 function financeRecv(id){
-  const s=DB.sales.find(x=>x.id===id);
-  if(!confirm(`Mark finance ${rs(s.finance)} from ${s.financer||'financer'} as received? It will be added to the Day Book as a Bank receipt.`)) return;
-  s.financeReceived=true;
-  DB.daybook.push({id:uid(),created:Date.now(),date:today(),type:'in',mode:'Bank',amount:num(s.finance),particulars:`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}`,saleId:s.id,fin:true});
-  save(); render(); if(dlg.open) viewSale(id);
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  if(!num(s.finance)){setFinance(id);toast('पहले finance की राशि भरें');return}
+  const de=DB.daybook.find(d=>d.fin&&d.saleId===id);
+  openDlg(`Finance आया – ${s.name} (${esc(s.financer)||'financer'})`,`
+  <p class="muted" style="margin-top:0">बिल में finance: <b>${rs(s.finance)}</b></p>
+  <form id="ffr" class="grid">
+    <label>किस तारीख़ को आया<input type="date" name="date" value="${esc(s.financeRecdDate||de?.date||today())}"></label>
+    <label>कितना आया ₹<input name="amount" inputmode="decimal" value="${s.financeReceived?finRecd(s):num(s.finance)}" oninput="const v=num(this.value)-${num(s.finance)};$('#frd').innerHTML=this.value?(Math.abs(v)<0.5?'<span class=&quot;pill in&quot;>पूरा आया</span>':diffPill(v)):''"></label>
+    <label>Mode<select name="mode">${opts(['Bank','Cheque','UPI','Cash'],de?.mode||'Bank')}</select></label>
+    <label>UTR / Cheque no<input name="ref" value="${esc(s.financeRef||'')}"></label>
+    <label class="span2">कम / ज़्यादा का कारण (अगर हो)<input name="note" value="${esc(s.financeNote||'')}" placeholder="जैसे processing fee, subvention, insurance कटा…"></label>
+  </form><p id="frd" style="margin:8px 0 0"><span class="pill in">पूरा आया</span></p>`,
+  `${s.financeReceived?`<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="financeUndo('${id}')">“आया” हटाएँ</button>`:''}<button class="btn plain" onclick="viewSale('${id}')">Back</button><button class="btn" onclick="financeSave('${id}')">Save</button>`);
+  $('#ffr [name=amount]').dispatchEvent(new Event('input'));
+}
+function financeSave(id){
+  const s=DB.sales.find(x=>x.id===id), d=formData($('#ffr')), a=num(d.amount); if(a<=0){alert('आई हुई राशि भरें।');return}
+  Object.assign(s,{financeReceived:true,financeRecdAmt:a,financeRecdDate:d.date||today(),financeRef:d.ref,financeNote:d.note});
+  const part=`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}${d.ref?' · '+d.ref:''}`;
+  let de=DB.daybook.find(x=>x.fin&&x.saleId===id);
+  if(de) Object.assign(de,{date:s.financeRecdDate,amount:a,mode:d.mode,particulars:part});
+  else DB.daybook.push({id:uid(),created:Date.now(),date:s.financeRecdDate,type:'in',mode:d.mode,amount:a,particulars:part,saleId:id,fin:true});
+  save(); render(); viewSale(id); const df=a-num(s.finance); toast(Math.abs(df)<0.5?'Finance पूरा आया ✓':df<0?`Finance ${rs(-df)} कम आया`:`Finance ${rs(df)} ज़्यादा आया`);
+}
+function financeUndo(id){
+  if(!confirm('Finance “आया” हटाएँ? Day Book से इसकी एंट्री भी हट जाएगी।')) return;
+  const s=DB.sales.find(x=>x.id===id); s.financeReceived=false; delete s.financeRecdAmt; delete s.financeRecdDate;
+  DB.daybook=DB.daybook.filter(x=>!(x.fin&&x.saleId===id)); save(); render(); viewSale(id);
 }
 function salesTable(rows){
   return rows.length?`<div class="tablewrap"><table><tr><th>Inv</th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Model</th><th>Chassis</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Received</th><th class="num">Due</th><th></th></tr>
   ${rows.map(s=>{const due=saleDue(s);return `<tr><td>${s.inv}</td><td>${esc(s.schallan)||'<span class="muted">—</span>'}</td><td>${fd(s.date)}</td><td><b>${esc(s.name)}</b><div class="muted" style="font-size:12px">${esc(s.rel)} ${esc(s.relName)}</div></td><td>${esc(s.phone)}</td><td>${esc(s.model)} <span class="muted">${esc(s.colour)}</span></td><td class="mono">${esc(s.chassis)}</td>
-  <td class="num">${rs(s.total)}</td><td class="num">${s.finance?rs(s.finance)+'<br>'+(s.financeReceived?'<span class="pill in">recd</span>':'<span class="pill due">pending</span>'):'—'}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
+  <td class="num">${rs(s.total)}</td><td class="num">${finCell(s)}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
   <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td><td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">No sales yet.</div>';
 }
 function vSales(){
@@ -417,7 +457,8 @@ function viewSale(id){
   <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Sale Challan</td><td>${esc(s.schallan)||'—'} <button class="btn plain sm" onclick="setSChallan('${s.id}')">${s.schallan?'बदलें':'+ भरें'}</button></td></tr><tr><td class="muted">Purchase Challan</td><td>${esc((DB.stock.find(x=>x.id===s.stockId)||{}).challan)||'—'}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
   <tr><td class="muted">Vehicle</td><td>${esc(s.model)} · ${esc(s.colour)}<br><span class="mono">Ch: ${esc(s.chassis)}<br>Eng: ${esc(s.engine)} · Key: ${esc(s.key)}</span></td></tr>
   <tr><td class="muted">Price + extra</td><td>${rs(s.price)} + ${rs(s.extra)} = <b>${rs(s.total)}</b></td></tr>
-  ${s.finance?`<tr><td class="muted">Finance</td><td>${rs(s.finance)} · ${esc(s.financer)} ${s.financeReceived?'<span class="pill in">received</span>':`<span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Mark received</button>`}</td></tr>`:''}
+  <tr><td class="muted">Finance</td><td style="white-space:normal">${num(s.finance)?`बिल में <b>${rs(s.finance)}</b>`:'<span class="muted">राशि नहीं भरी</span>'}${s.financer?' · '+esc(s.financer):''} <button class="btn plain sm" onclick="setFinance('${s.id}')">${num(s.finance)?'बदलें':'+ भरें'}</button>
+    ${num(s.finance)?(s.financeReceived?`<br>आया <b>${rs(finRecd(s))}</b> · ${fd(s.financeRecdDate||'')} ${diffPill(finDiff(s))||'<span class="pill in">पूरा</span>'}${s.financeNote?`<div class="muted" style="font-size:12px">${esc(s.financeNote)}</div>`:''} <button class="btn plain sm" onclick="financeRecv('${s.id}')">बदलें</button>`:`<br><span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Finance आया — भरें</button>`):''}</td></tr>
   ${s.exchangeValue?`<tr><td class="muted">Exchange</td><td>${esc(s.exchange)} · ${rs(s.exchangeValue)}</td></tr>`:''}
   <tr><td class="muted">Payments</td><td>${s.payments.length?s.payments.map(p=>`${fd(p.date)} · ${esc(p.mode)} · <b>${rs(p.amount)}</b> ${esc(p.ref)}`).join('<br>'):'—'}</td></tr>
   <tr><td class="muted">Balance due</td><td>${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Fully paid</span>'}</td></tr>
@@ -596,10 +637,10 @@ function restoreJSON(file){
 }
 function csv(which){
   const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
-    sales:['inv','schallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','exchange','exchangeValue','received','due','notes'],
+    sales:['inv','schallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
-  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r))}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -624,7 +665,7 @@ function pdfData(which){
     const T=k=>rows.reduce((a,s)=>a+k(s),0);
     return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[9,10,11,12],
       head:['Inv','Sale Challan','Date','Customer','Mobile','Model','Colour','Chassis','Financer','Total','Finance','Received','Due'],
-      rows:rows.map(s=>[s.inv,s.schallan,fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,s.model,s.colour,s.chassis,s.financer,rs(s.total),s.finance?rs(s.finance)+(s.financeReceived?' ✓':''):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
+      rows:rows.map(s=>[s.inv,s.schallan,fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,s.model,s.colour,s.chassis,s.financer,rs(s.total),s.finance?rs(s.finance)+(s.financeReceived?` (आया ${rs(finRecd(s))}${Math.abs(finDiff(s))>=0.5?(finDiff(s)<0?', '+rs(-finDiff(s))+' कम':', '+rs(finDiff(s))+' ज़्यादा'):''})`:' pending'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
       foot:[['','','','Total ('+rows.length+' sales)','','','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
   }
   if(which==='daybook'){
@@ -1114,7 +1155,7 @@ function tallyVouchers(from,to){
       V.push({type:'Receipt',date:p.date,id:'p'+p.id,nar:`Sale #${s.inv} – ${p.mode}${p.ref?' '+p.ref:''}`,L:[[modeL(p.mode),num(p.amount)],[P,-num(p.amount)]]});used=true}
     if(s.financeReceived&&num(s.finance)>0){
       const fe=DB.daybook.find(d=>d.fin&&d.saleId===s.id), dt=fe?fe.date:s.date;
-      if(ins(dt)){V.push({type:'Receipt',date:dt,id:'f'+s.id,nar:`Finance ${s.financer} – Sale #${s.inv}`,L:[[T.bank,num(s.finance)],[P,-num(s.finance)]]});used=true}
+      if(ins(dt)){const fa=finRecd(s);V.push({type:'Receipt',date:dt,id:'f'+s.id,nar:`Finance ${s.financer} – Sale #${s.inv}`,L:[[T.bank,fa],[P,-fa]]});used=true}
     }
     if(used) parties.add(P);
   }
