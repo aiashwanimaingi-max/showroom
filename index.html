@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showroom Manager</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Honda Showroom">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#cc0000">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAVH0lEQVR42u2deVxTVxbHb1ayEELCEhEQBET2gNR9nFptVcQ6tVSBaYepdcal2o7asZ9pR221HXR03GstLnzqXtFRqx/tp1UqjChU1GrYNxFE1rCE7GR588eDNEreIwnEYjm/f+CTl7z73n3fd86527mU2wgEsiwqVAEI4AABHCCAAwRwgAAOEMABAjhAAAcI4AABHCAQwAECOEAABwjgAAEcIIADBHCAAA4QwAECOEAggAMEcIAADhDAAQI4QAAHCOAAARwggAMEcIBAAAcI4AABHCCAAwRwgAAOEMABAjhAAAcI4AABHCAQwAECOEAABwjgAAEcIIADBHCAAA4QwAECOEAggAMEcID6IfoQv392ZCQnJoYdHc0Ri+kiEc3FhebiQnV2xjQag1xuVCh0DQ2akhJ1cbHqzh1lbi5mMDjuYmh8Pnf8eHZUFEcsZoWE0FxdaS4uND4fwzBjZ6dBJtNLpSqJRH3vnjI/X3XnjqMrh+LQfWVFq1b5bN9u8ZAyL6904kT7Thtw6pRgwQKLh0rHj1feutXnGVihocI33xQmJzsFBFhfrl4qlV26JD14UJGTM5AvqJub67x5goQE3vTpFAbDyl9pq6vbT56Upqdrq6qeSzhGHj0qfOsti4davvqqdtky+04bXlbGCg7u/TlmMNzj8YxqNclvmf7+Pps3CxIT+3Nf8mvX6teuVdy82c/6Yfr4iNascf/rX6lstn1nwHS6lrS0hg0b9FLpcxZzsGNiiA6pfv7ZzivmcllBQRYPaUpKyMigUr3Wrw8vKeknGQgh3ksvjb5+3euTTxDVzgqkOjv77t4dUVXl+f77dpOBEKIwGJ4rVkRUVLjMnPk8wUFls1khIURH1ffu2XdajlhM9EhUd+8SXgyHM+rSpeEbNlBZrAG6PerwTz8NPHeOQqPZwVaYROL53nsUJnNgghVX16BLlzzff/+5gYMtFhNVHGYwqAsK7DxtdDShNSKAg0KnB1244DJr1oDfo+vcub5799r0k+EbNgRnZjqNHDnA8QGN5rtrl/s77zwfrRUOsU/RlpWRRwb2nZYIDu/UVN706eSnNXR0qCUSTWWlsbMTfxdZoaFssbhPS+OxZIk8M7P99Glrnt+IL790X7zYcXU+Yt8+dUmJMjd30MMxZsyABxwIIQ6R5cAwi66KFRrquXo1eXTZuGmT/No1TK/vHRkIk5K81q9n+vqSnME7NbXj/HlMpyNFgzLyxAmiRtYT96HVKnJzlT/9pK2o0EulRqWSyuXSRSLu+PH8uDiGlxdZIUzmyKNHi0JD+7iYQQ2HvQEHhU5nRURYtkaVlQa53EJz+oMPCMMCo/HRypXNe/YQFWdUKKQHD7adPOmfnk7yXJ2CggTz57edOEEG0Oef90mGWiJp3rWrLSPDqFD0Pirdv5/CYAgSE322bCFBxCkw0H3x4hYbnd0zjTkoDAY7PHzALQcrJITIzlv0KRQaTfD660Rna9y6lYSMXxBRKh8kJbWfOUMefJAcFSYlDfv4Y3Kn9nDhwuKYGGl6ukUyTA3XtmPHisLC5D/+SBbWrF9PcXIavHCww8NJrs/+poqNAYfT6NE0gcByRXd1NW3ZYnV/AvZw4UJdYyMJtSSdGX4HDpAZjIKCYrG49euvkdFozbUYOjoqZs+WZ2cTugNPT/5AtGypz96ndNXV6Vtbn01Txcnfn+j7mrIyfVub9UUbFYrGf//7iRCnoKBl377qP/6xwNe3mPjCfHftojo7Ex1V5ueXTZnSVVtrW9+XVludlERSjf3vy3FgzEHS/aV2RDRK4KqoHA6Jiba19PZTpwQJCYobNxTXrytu3DB0dPT5E5dZs1yJ/Zq2uroyPt4gk9lRFbrGxsbUVJ9t2yzUcGGh9sGDwQuHI6JREsvRVVtr8TUyqlSEjiA4mMpm29Si1jU0lE2ZYtMFe6emEtKp11cnJ+tbWuyujZa0tOGffYa/AF01NZ2ZmfKrV+U//qhrahrETVkqlSMWD3g0yhwxgi4U2tTDoWtoIOnAFn3wQcPnnzuuvcabOpUkSGretUv500/9Ob9Rqaxfu9aoUnVeveqI4TeHwMEKDqZyub96NIqPtmB6PYVu+TaHb9xokMmsabDYJ89Vq4gO6VtbGzZu7H8RTTt2oOdrsg+JTzF0dGirq59Zx7lRo5FnZZF0TPnu3h2cleVso7OwRozhw13nzCH0CPv2GTo7ERp6M8HIXvH79x1yWuIht9ZDh/ow/i++OPp//4soLx++cSMJ1raKHx9POGaLYdK0NISG5DRBkipW9yMaJWqq6JqaSGKLtowMa0Jgp1GjvNatC71zJ6quzu/QIUFCAo3H6xccxGZDkZPTVVc3+OFwyGQfcWsrUeToCMm++65y9mwyfxQREZKXRxIGEfWSybOz20+f7jh3ztapNBQmM7qtjajEx//4xxNdJkPHcjD9/Z8lGeQ+xdTur3r9daNGY+sDdnnlFb/9+6Pq6wPOnOFNm2ZDSB4aSsIiWRj024ZjAN32QMGBEOr84YfyadN09fX2jRMJEhKCMzNDbt608u5IxpWQ0ajuR+AFcAw8HAghZW5uUUSEND3d7hnk3IkTQ/PzfbZvJ2obWwOHtqrKVhv2G4KDuE3hCBna27sePrT+yzWLFhVHRkrT0+2cbUSlilatCrxwgWS4BA9viQ7ZOowClqMfZsP2/lZNSUnNokUSb+/apUvlWVlWjoU+0RKJixt5/DiiUIi+QDQUjI+JDFE4GMOGMYYNG4Q+xaIVaUlLK3/ppfsiUfWf/tR28qRNg7Suc+d6/u1vhHAQN4OtGa5Dv8kVbyRmAzMY2o4dQ3avSyM4s91wILOlSm3HjrUdO4aoVO64cfz4eGFSkhPB6gdzea1b13rokMXpZyRwGLVagKOXMS8ufvj22/ad1u/QIcfBYd6OUOblKfPy6tet406YIFq50vWNN0hWHtCFQrd33mnetctCA4dkIhaGDVG3QtbD3Y+1ndwXXiCagKOpqHBEvSjz8h4kJZWOHasuLCQLPgg634xKJckak6EKB7HlUN62szOWymKxwsIIR2psDydtinbLX3xRS8yf85QpFgdQLPqaIQ0HTSBgEk/Ls9tysMVion6FgfQpRBFJW1vd3/9OsqqPbqlhQtLbRtY/ZrWcRo7kEFjTQQoHiU/B9Hq7uwVJauEZwIEQkn33HUmnCN3NzWKARfR9FvGcZxuCsIMHQ/PzA8+eJbKpgw8O0mjU7iVu3NhY++CgstmcMWPcUlJ8tmwZefSo3feF6XR6kol3ltwK2WJPCoVPOkzYpzyWLcMHelznzQsvKPA/fHjAF1cOfGuFbN5oP6JRDgEcRo3mqReUyuXy58xhR0SwIyLY4eFOgYHmT67+k0/snnZL8q5bnLMjv3YNMxiIWjqeK1a0HT9u56syYYLvzp3maLqlpAiTk6UHDjR89tnA9rA9I7eitBcOKptNZDnVBQVPLWCkMBgBJ096rV3r+tprTqNGPfVOu6Wk2OngR42i8fmWAVWpLE4l0be1KfPySB6w6x/+YE/4FRER9O23vdfmUxgMj3ffDcjIGKRuhcrlWkyo0m057G2qkESjvZc4GDo6NCUlhNZ4+XK6h4cd10CS2kB17x5Rv0UbqSPzO3iQ4e1t02U4T5oUnJVF9/QkiuoeDdoUDCRpM/oTjXJtjEbl168TelB3d//Dh21NiSFMTvZcvpzoaOfly0SHWo8cIZkiRHd3D8nJIXmdnjIMwz76KDg722Lwi6tp27b+rPlwMBwk0WhRkd2D1Bwbo1HyGaP8uLhR339vZR4wxrBhvrt3jzxxgmiADdPrpV9/TfRzo1rduHkzIp0VFXLr1rCPPyZZeUXlcNxSUsJLSrxTU0nmCShu3Khfvx4N2mmC/unpbgsXWjwkTU+vWbTIvtOGSSTsyEiLD+Yej2eRuZCbN7mkqeiwrq6Oc+faz51T3b2rraoy70aje3g4BQZyxoxxmTGDP2sW+XLkPtOaUej00Nu32cRLeEwhrTwzU56VpXv8WC+VIhqNLhA4BQdzx451eeUV8rkBCKGumpqSsWP7szjK4XCE/vwz0QTg2uXLW7780r5oNFoutxjzqyWSYoJK502dGpyZaW22LgwzKBSYRkNlsylstvU5nLoePSqJju5zIJcdFTU6J6efc5UR6aLIipdfVhcVDd5+DgqTSZZwwe5oNDqa6GmRTOOQZ2XZMH2XQqHxeHQPD6qzs/VkGOTyBwkJ1gzxqyWS6sREB2Uv1VZWlk2a5CAyBgwOdmQkUQJNTK9XSyTPuPurfv168nQa/XpZm5oqZsxQ5ucjqztYq+bOJRltsU+dV66UTppk9wqxZwcHSQ9Hv6JRezvOMb3+wYIFTf/5D3JAV3pJbCxJH4blX12+XDZ5st0vSW+7VbNkScWMGY6IMxwAhwMGY8maKkZj3802DKtbs6Z82jTrX3FyKW/dqpw7t3L2bN3jx3b8XF1QUBIbW/fhh4b29v5g0bR1a1FwsHT/foSek0VNIbm53AkTLEej777bsm/fwEajmrKyIuJMOhYXnwmTk/nx8UQdnWR+vaJCdulS6/Hjqtu3B6q30O3Pf3b/y1+sn4mNGQzKGzfaz55tPXKkP2wNrvTWg0oUJtN58mR2VBQ7LIwVGkoXiWjOzlRnZ3z1EdbVZVSp9K2t+paWrpoabWWl6v59VX5+16NHDroehpeXy8yZnJgYVmioU0AAjc+nOjtT6HSjQmHo7DR0dGgqKjSFheqCAnlWlt25kAAOEOy3AgI4QAAHCOAAARwggAMEcIBAAAcI4AABHCCAAwRwgAAOEMABAjhAAAcI4AABHCDQ8wgHhRLd2RmLYSEDtAU3CA2GHamtmfHrvmiRYP58dmQkzdXV0N7eVVcnu3hReuCAaTsSp8BAfC3hgC8hBw1eOOgeHsFXrpgvMqZ7eNA9PDgxMZ6rVlXGxyuuX0dmG/CoAY6h41Z8tm7FyWg7caJYLL7v7l7ywguyixcRQjQezz89HU98YKIHLMcQggNPeYbpdA/fflstkehbW1V37lTNmyfPzm4/dap5zx48ywpuOTCDQVtR4b1pU2RNTYxKFSaR8F99FfXaFdx706awwsIYuTxGqQy7d2/Yhx92p2qhUmONxlgM8+pJYkFls8UtLbEYFothzpMno56kSvgnHkuWjM7OjsWwyJoamqtr4H//G6NQ+PQsriQryJqL6dGoK1diMSy6o4Pu5hbwzTfRMplYKvVLS6MwGBQGw2fLlqiGhmiZLOjCBYaX19ByK0a5HM9Zw4+P7zh/HvUs7SqfOhX12hFSW1UVeP68aQ9HdmRkQEZGYVCQaWUiPz5+5PHj+II2vVRKEwjYYrG3WMybNq0iLg4ZjQa5nObiYlrt7ZaSQnd3R08mg3NfsgTf1LP1yJHhGzcihHSPHwecPu3y8sv47tF9F4RhVn4HIYSn9dE9fjzq++9NCz/dFy/WVlVxxo0TJCR039qrr/pqNA8WLBhClqPtxAn8n8CzZ0dnZ4tWr+69RwldKGT6+HTXI4aVTpxYGBTUefUqntaYO25cdy2HhQWcOUPj89WFhYXBwfc9PCReXniyR5eZM/lxcahnr4JuOCgUz5UrEUL4nr94llkqh+P21lsIIWlaGpXNxlNvsSIinPz8apcte5CYKLt40ZqCrPkOnseYOWIE/n1Fbm7BiBEPe1LfeK1bR+VwCoODSydNwvdUd/7d74aWW2ncvLklLQ1hGKJQnH//e59t2yLKy0Pv3hXMn997I1l1UVHFzJnKvDxtVZXs229Ny6nxv747dlBZLITQw5QUPBW1vqXFlC4G9xr4fvE4HPzZs1khIZriYkVOjslyCBITaa6umE7XvHevKdDB1OqS8eNbvvqqPSOjq7bWmoKs+Y55oK3IyXn03ntdjx7JetKLGRSK6sREbUWFMje3O3Xkr5RL/1eDAzMYapcuLQoLa0xNNaV05cTEBGRkiFavfqoGm3fuNOVxMGXQ1pSXI4QYIhFv+nQ8YjXP6PJLsjY6/SnLIVq1CiHUvHcvfk48GbnHkiUIofaMDF19vancpu3bTQuXrSnIyosx516anm7ajB3/p/3MGUOPz8U3r9GUlg7FTjBNaenjf/6zOCqqwM/PlE5j+L/+hS9uNtWg/No18+STeDo2bXk5nlcJX4mvunULPblMGf8Hj0tMcLCjonjTpxva21sPH8bNCV0gYIvF3PHjEUJNO3ealyu7dMk8gVOfBVl5MU9Yjp70h5wec2X6hBUWhtNsx25UzzccDJHIPD1eV21t3Zo1HRcudG+TEBJiqkFDZ6d55mE8c4G6oADPpUQXiZ5+OxFCCOEPG98cw9ytiFauRAi17N9vVCpxYmh8Pm42FNev43kWusuVy80zKllTkJUXY16EtqrqaR/a02g3ATSE4PBOTRVLpVGNja6vvfbUIVpP5jyjUklhMnFE1Pfvm5wu088Pz8VpqkGjQvHU24kQorm48OfOxS2T8tYthJC+owNPYi9ITMT0+pYvvjCZE5pQKHzzTZPZoDCZrNDQ7iLMnL01BVl5MRQGo3cROApGhUJTWTl04dA+fIg/4BFpaZ4rVnDHjePExPDnzAn45hu880NdVKQpLWWHh/c2qqaEJ6YPFTk5eOjg+sYbeFJKulDof/QojcdDRmPt0qXmO6u5zJpF5XDaT5/Gu+e7P5w5k+bioq2uxkNdi+VaWZCVF8MOD8f7PH4pgkLB3aVKIjEF2uyYmG4HWlY2VPo5WtPThQsW8KZPpwuFvnv2oF47lVQnJ5ub2Sfg6MkvZeow1Uuljz/6yHfHDhqPFyaR6JubaW5uFBrNqNHULl4sz87uhkMmwx0WQqh5xw5zYro/3L0b91NsgvfVmoKsvJjeRZiGkMxzduNRiFoicVAywsEIB6bXV8TFuS9aJFiwgB0ZSRMIkMGgb23VFBfLLl+WHjiAx+qmAM18VKXbchiN5snXmnfu1FZViVav5sTGUnk8bWVl5w8/tHzxBd6ceWpPRsWNG6YsYfqelohBLm/taTVYLNf6gqz5DockvOj5hOnvjzejfsVxA8jsA4LJPiCAAwRwgAAOEMABAjhAAAcI4AABHCCAAwQCOEAABwjgAAEcIIADBHCAAA4QwAECOEAABwgEcIAADhDAAQI4QAAHCOAAARwggAMEcIAADhAI4AABHCCAAwRwgAAOEMABAjhAAAcI4AABHCCAAwQCOEAABwjgADlU/wcyfbp/UcBE/gAAAABJRU5ErkJggg==">
+<style>
+:root{
+  --red:#cc0000; --red-dark:#990000; --red-soft:#fdecec;
+  --bg:#f5f5f4; --card:#ffffff; --ink:#1c1c1c; --muted:#6b6b6b; --line:#e3e3e1;
+  --green:#137333; --green-soft:#e6f4ea; --amber:#a15c00; --amber-soft:#fff4e0;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--red);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.3px}
+header .sub{font-size:12px;opacity:.85}
+header .grow{flex:1}
+nav{display:flex;gap:4px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);padding:0 8px;position:sticky;top:0;z-index:5}
+nav button{border:0;background:none;padding:12px 14px;font:inherit;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--red);border-bottom-color:var(--red)}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grow{flex:1}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.stat .v{font-size:24px;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat.red .v{color:var(--red)}
+form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px 12px}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:4px;font-weight:600}
+input,select,textarea{font:inherit;color:var(--ink);padding:8px 10px;border:1px solid #cfcfcc;border-radius:7px;background:#fff;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--red);outline-offset:-1px;border-color:var(--red)}
+textarea{min-height:60px;resize:vertical}
+.span2{grid-column:span 2}
+@media (max-width:520px){.span2{grid-column:span 1}}
+.btn{border:1px solid var(--red);background:var(--red);color:#fff;padding:8px 14px;border-radius:7px;font:inherit;font-weight:600;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--red-dark)}
+.btn.ghost{background:#fff;color:var(--red)}
+.btn.ghost:hover{background:var(--red-soft)}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn.plain{border-color:#cfcfcc;background:#fff;color:var(--ink)}
+label.btn{display:inline-flex;flex-direction:row;align-items:center;width:auto}
+.imp td,.imp th{font-size:13px;padding:5px 8px}
+details{margin-top:8px;font-size:13px}
+details ul{max-height:160px;overflow:auto;margin:6px 0;padding-left:18px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;background:#fff;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:#fafaf9;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+tr:hover td{background:#fcfcfb}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.in{background:var(--green-soft);color:var(--green)}
+.pill.sold{background:#eee;color:#555}
+.pill.due{background:var(--amber-soft);color:var(--amber)}
+.pill.open{background:#e8f0fe;color:#1a56c4}
+.pill.lost{background:#eee;color:#777}
+.muted{color:var(--muted)}
+.empty{padding:24px;text-align:center;color:var(--muted)}
+.hide{display:none!important}
+.tot td{font-weight:700;background:#fafaf9}
+.note{font-size:13px;color:var(--muted);margin:6px 0 0}
+.warn{background:var(--amber-soft);color:var(--amber);padding:10px 12px;border-radius:8px;font-size:14px;margin-bottom:12px}
+dialog{border:0;border-radius:12px;padding:0;max-width:640px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog .dh{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;display:flex}
+dialog .db{padding:16px}
+dialog .df{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+#toast.show{opacity:1}
+#syncbar{position:fixed;bottom:16px;right:16px;background:#1a56c4;color:#fff;padding:8px 10px 8px 14px;border-radius:10px;z-index:40;display:flex;gap:10px;align-items:center;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#syncbar .btn{background:#fff;color:#1a56c4;border-color:#fff}
+#print{display:none}
+@media print{
+  body>*:not(#print){display:none!important}
+  #print{display:block;padding:10mm;font-size:13px}
+  #print table{font-size:13px}
+  #print th,#print td{border:1px solid #999;white-space:normal}
+}
+@media (pointer:coarse){input,select,textarea{font-size:16px}nav button{padding:14px 16px}}
+html{-webkit-text-size-adjust:100%}
+.rc h3{margin:0;color:var(--red);font-size:22px}
+.rc .hd{border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;gap:12px}
+.rc .sign{display:flex;justify-content:space-between;margin-top:60px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="hName">Honda Showroom Chhachhrauli</h1>
+    <div class="sub" id="hAddr"></div>
+  </div>
+  <div class="grow"></div>
+  <span id="sync" class="sub" style="margin-right:4px"></span>
+  <button class="btn ghost sm" style="background:#fff" onclick="backupJSON()">⬇ Backup now</button>
+</header>
+<nav id="nav"></nav>
+<main id="app"></main>
+<dialog id="dlg"><div class="dh"><span id="dlgT" class="grow"></span><button class="btn plain sm" onclick="dlg.close()">✕</button></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></dialog>
+<div id="toast"></div>
+<div id="syncbar" class="hide">दूसरे डिवाइस से नई एंट्री आई है <button class="btn sm" onclick="render()">दिखाएँ</button></div>
+<div id="print"></div>
+
+<script>
+/* ---------- data ---------- */
+const KEY='honda_chhachhrauli_v1';
+const DEFAULTS={
+  settings:{
+    name:'Honda Showroom Chhachhrauli',
+    address:'Opposite Punjabi Rasoi, Jagadhri – Paonta Sahib Road, Chhachhrauli',
+    phones:'9671697807 | 9812008176', gstin:'', nextInv:1, lastBackup:'',
+    models:['Activa STD','Activa DLX','Activa 125 Drum','Activa 125 Disc','Shine 100 DX','CB Shine 125 Drum','CB Shine 125 Disc','SP 125 Disc','CB Hornet 125','Dio','Unicorn'],
+    colours:['White','Black','Grey','Matt Grey','Blue','PS Blue','Black Red','Red','Yellow']
+  },
+  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[]
+};
+let DB;
+try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
+if(!DB) DB=structuredClone(DEFAULTS);
+for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]);
+let storageOK=true;
+/* cloud config: Firebase project की config (बाद में यहाँ भरी जाएगी; खाली हो तो Settings में paste की गई config चलती है) */
+const FB_CONFIG={apiKey:"AIzaSyBwEfdGtbhXbaiqVv34K1olQDwWSvD301E",authDomain:"honda-showroom-8cda6.firebaseapp.com",projectId:"honda-showroom-8cda6",storageBucket:"honda-showroom-8cda6.firebasestorage.app",messagingSenderId:"966756070246",appId:"1:966756070246:web:e9ec70a7539ad2fb2e8ea7"};
+const FBK=KEY+'_fbcfg';
+function fbCfg(){if(FB_CONFIG)return FB_CONFIG;try{return JSON.parse(localStorage.getItem(FBK))||null}catch(e){return null}}
+const CLOUD=!!fbCfg();
+let FB=null,cloudReady=false,READONLY=false,SYNCED={},UNSUB=[],appDirty=false,cloudEmail='',pendingN=0,SYNC_ST='';
+function save(){
+  if(READONLY){ try{DB=JSON.parse(localStorage.getItem(KEY))||DB}catch(e){} toast('📴 इंटरनेट नहीं — यह एंट्री सेव नहीं हुई'); setTimeout(render,0); return }
+  try{ localStorage.setItem(KEY,JSON.stringify(DB)); storageOK=true }catch(e){ storageOK=CLOUD; if(!CLOUD) toast('⚠ Could not save — take a backup!') }
+  if(CLOUD&&cloudReady) cloudPush();
+}
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=v=>{const n=parseFloat(String(v??'').replace(/,/g,''));return isNaN(n)?0:n};
+const rs=n=>'₹'+Math.round(num(n)).toLocaleString('en-IN');
+const fd=d=>d?d.split('-').reverse().join('-'):'';
+const up=s=>String(s||'').trim().toUpperCase();
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
+function formData(f){const o={};new FormData(f).forEach((v,k)=>o[k]=typeof v==='string'?v.trim():v);return o}
+const opts=(arr,sel)=>arr.map(x=>`<option ${x===sel?'selected':''}>${esc(x)}</option>`).join('');
+const dl=(id,arr)=>`<datalist id="${id}">${arr.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;
+const saleDue=s=>num(s.total)-num(s.finance)-num(s.exchangeValue)-(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
+const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
+
+function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
+
+/* ---------- navigation ---------- */
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['partners','Partners'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
+function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
+function render(){
+  if(CLOUD&&!cloudReady&&!READONLY) return;
+  appDirty=false; $('#syncbar').classList.add('hide'); setSync();
+  $('#hName').textContent=DB.settings.name;
+  $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
+  $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,partners:vPartners,enq:vEnq,tally:vTally,set:vSet})[tab]();
+}
+
+/* ---------- dashboard ---------- */
+function vDash(){
+  const t=today(), m=t.slice(0,7);
+  const inStock=DB.stock.filter(s=>s.status!=='sold');
+  const todaySales=DB.sales.filter(s=>s.date===t);
+  const monthSales=DB.sales.filter(s=>(s.date||'').startsWith(m));
+  const dues=DB.sales.filter(s=>saleDue(s)>0.5);
+  const finPend=DB.sales.filter(s=>num(s.finance)>0&&!s.financeReceived);
+  const fups=DB.enquiries.filter(e=>e.status==='Open'&&e.followUp&&e.followUp<=t);
+  const bal=dayBalance(null,null);
+  const lb=DB.settings.lastBackup;
+  const daysSince=lb?Math.floor((Date.now()-new Date(lb))/864e5):null;
+  $('#app').innerHTML=`
+  ${!storageOK?'<div class="warn">⚠ Saving in this browser failed. Use “Backup now” immediately.</div>':''}
+  ${CLOUD?((daysSince===null||daysSince>=30)&&localHas()?`<div class="warn">डेटा cloud में सुरक्षित है। फिर भी महीने में एक बार <a href="#" onclick="backupJSON();return false">backup ले लें</a>।</div>`:''):(daysSince===null||daysSince>=3)&&(DB.stock.length+DB.sales.length+DB.daybook.length)>0?`<div class="warn">Your data is saved only in this browser. Last backup: <b>${lb?fd(lb.slice(0,10))+' ('+daysSince+' days ago)':'never'}</b>. <a href="#" onclick="backupJSON();return false">Download a backup now</a> and keep it on a pen drive / Google Drive.</div>`:''}
+  <div class="stats">
+    <div class="stat red"><div class="k">Vehicles in stock</div><div class="v">${inStock.length}</div></div>
+    <div class="stat"><div class="k">Sold today</div><div class="v">${todaySales.length}</div></div>
+    <div class="stat"><div class="k">Sold this month</div><div class="v">${monthSales.length}</div></div>
+    <div class="stat"><div class="k">Cash in hand</div><div class="v">${rs(bal.cash)}</div></div>
+    <div class="stat"><div class="k">Customer dues</div><div class="v">${rs(dues.reduce((a,s)=>a+saleDue(s),0))}</div></div>
+    <div class="stat"><div class="k">Finance pending</div><div class="v">${rs(finPend.reduce((a,s)=>a+num(s.finance),0))}</div></div>
+  </div>
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn" onclick="go('stock');setTimeout(()=>$('#fStock [name=chassis]')?.focus(),0)">+ Add vehicle to stock</button>
+    <button class="btn" onclick="newSale()">+ New sale</button>
+    <button class="btn ghost" onclick="go('day')">+ Day Book entry</button>
+    <button class="btn ghost" onclick="go('enq')">+ New enquiry</button>
+  </div>
+  ${DB.partners.length?(S=>`<div class="card"><h2>Partners – किसने कितना लगाया <a href="#" style="font-size:13px;font-weight:400" onclick="go('partners');return false">पूरा हिसाब →</a></h2><div class="stats" style="margin:0">${S.P.map(p=>`<div class="stat"><div class="k">${esc(p.name)} (${p.share}%)</div><div class="v">${rs(p.net)}</div><div style="margin-top:4px">${pendPill(p)}</div></div>`).join('')}</div></div>`)(partnerSummary()):''}
+  <div class="card"><h2>Stock summary (model × colour)</h2>${stockSummary()}</div>
+  <div class="card"><h2>Follow-ups due (${fups.length})</h2>${fups.length?enqTable(fups):'<div class="empty">No follow-ups due today.</div>'}</div>
+  <div class="card"><h2>Pending payments</h2>${(dues.length||finPend.length)?salesTable([...new Set([...dues,...finPend])]):'<div class="empty">Nothing pending.</div>'}</div>`;
+}
+
+/* ---------- stock ---------- */
+let stockQ='', stockF='in';
+function stockSummary(){
+  const inS=DB.stock.filter(s=>s.status!=='sold');
+  if(!inS.length) return '<div class="empty">No vehicles in stock yet.</div>';
+  const models=[...new Set(inS.map(s=>s.model))].sort(), cols=[...new Set(inS.map(s=>s.colour||'—'))].sort();
+  const c=(m,k)=>inS.filter(s=>s.model===m&&(s.colour||'—')===k).length;
+  return `<div class="tablewrap"><table><tr><th>Model</th>${cols.map(k=>`<th class="num">${esc(k)}</th>`).join('')}<th class="num">Total</th></tr>
+  ${models.map(m=>`<tr><td><b>${esc(m)}</b></td>${cols.map(k=>`<td class="num">${c(m,k)||'<span class="muted">·</span>'}</td>`).join('')}<td class="num"><b>${inS.filter(s=>s.model===m).length}</b></td></tr>`).join('')}
+  <tr class="tot"><td>Total</td>${cols.map(k=>`<td class="num">${inS.filter(s=>(s.colour||'—')===k).length}</td>`).join('')}<td class="num">${inS.length}</td></tr></table></div>`;
+}
+function vStock(){
+  const S=DB.settings;
+  $('#app').innerHTML=`
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Add vehicle to stock (inward)</h2>
+    <label class="btn">📷 चालान की फोटो से भरें<input type="file" accept="image/*,.pdf,application/pdf" multiple class="hide" onchange="aiChallan([...this.files]);this.value=''"></label></div>
+  <form id="fStock" class="grid" onsubmit="addStock(event)">
+    <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Challan No<input name="challan" required></label>
+    <label>Model<input name="model" list="dlModels" required></label>
+    <label>Colour<input name="colour" list="dlCols"></label>
+    <label>Engine No<input name="engine" class="mono" required></label>
+    <label>Chassis No<input name="chassis" class="mono" required></label>
+    <label>Key No<input name="key" class="mono"></label>
+    <label>Purchase price (optional)<input name="cost" inputmode="decimal"></label>
+    <div class="row" style="align-self:end"><button class="btn">Save vehicle</button><span class="note">Challan No, Model & Colour stay filled for the next vehicle.</span></div>
+  </form>${dl('dlModels',S.models)}${dl('dlCols',S.colours)}</div>
+  <div class="card"><div class="row" style="margin-bottom:12px">
+    <h2 class="grow" style="margin:0">Stock register</h2>
+    <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="all">All</option></select>
+    <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
+    <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button>
+    ${impBtn('stock')}
+  </div><div id="stockList"></div></div>
+  <div class="card"><h2>Stock summary</h2>${stockSummary()}</div>`;
+  $('#sf').value=stockF; stockList();
+}
+function stockList(){
+  const q=stockQ.toLowerCase();
+  const rows=DB.stock.filter(s=>(stockF==='all'||(stockF==='sold')===(s.status==='sold'))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
+  $('#stockList').innerHTML=rows.length?`<div class="tablewrap"><table><tr><th>#</th><th>Date</th><th>Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
+  ${rows.map((s,i)=>`<tr><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${esc(s.challan)}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
+  <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':'<span class="pill in">In stock</span>'}</td>
+  <td>${s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
+  :'<div class="empty">No vehicles found.</div>';
+}
+function addStock(e){
+  e.preventDefault(); const f=e.target, d=formData(f);
+  d.chassis=up(d.chassis); d.engine=up(d.engine); d.key=up(d.key);
+  const dup=DB.stock.find(s=>s.chassis===d.chassis||s.engine===d.engine);
+  if(dup && !confirm(`A vehicle with this ${dup.chassis===d.chassis?'chassis':'engine'} number already exists (${dup.model}). Save anyway?`)) return;
+  DB.stock.push({id:uid(),created:Date.now(),status:'in',...d});
+  if(d.model && !DB.settings.models.includes(d.model)) DB.settings.models.push(d.model);
+  if(d.colour && !DB.settings.colours.includes(d.colour)) DB.settings.colours.push(d.colour);
+  save(); toast('Vehicle added to stock');
+  const keep={challan:d.challan,model:d.model,colour:d.colour,date:d.date};
+  vStock(); const nf=$('#fStock'); for(const k in keep) nf[k].value=keep[k]; nf.engine.focus();
+}
+function editStock(id){
+  const s=DB.stock.find(x=>x.id===id);
+  openDlg('Edit vehicle',`<form id="fe" class="grid">
+    <label>Date<input type="date" name="date" value="${esc(s.date)}"></label><label>Challan No<input name="challan" value="${esc(s.challan)}"></label>
+    <label>Model<input name="model" list="dlModels" value="${esc(s.model)}"></label><label>Colour<input name="colour" list="dlCols" value="${esc(s.colour)}"></label>
+    <label>Engine No<input name="engine" class="mono" value="${esc(s.engine)}"></label><label>Chassis No<input name="chassis" class="mono" value="${esc(s.chassis)}"></label>
+    <label>Key No<input name="key" class="mono" value="${esc(s.key)}"></label><label>Purchase price<input name="cost" value="${esc(s.cost)}"></label></form>`,
+  `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="if(confirm('Delete this vehicle from stock?')){DB.stock=DB.stock.filter(x=>x.id!=='${id}');save();dlg.close();render()}">Delete</button>
+   <button class="btn" onclick="const d=formData($('#fe'));d.chassis=up(d.chassis);d.engine=up(d.engine);d.key=up(d.key);Object.assign(DB.stock.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Saved')">Save</button>`);
+}
+
+/* ---------- sales ---------- */
+let salesQ='';
+function newSale(stockId,enqId){
+  const avail=DB.stock.filter(s=>s.status!=='sold');
+  if(!avail.length){alert('No vehicle in stock. Add the vehicle in the Stock tab first.');go('stock');return}
+  const e=enqId?DB.enquiries.find(x=>x.id===enqId):null;
+  openDlg('New sale',`<form id="fs" class="grid">
+    <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}</option>`).join('')}</select></label>
+    <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Customer name<input name="name" value="${esc(e?.name)}" required></label>
+    <label>Relation<select name="rel"><option>S/o</option><option>W/o</option><option>D/o</option><option>C/o</option></select></label>
+    <label>Father / husband name<input name="relName"></label>
+    <label>Mobile<input name="phone" inputmode="tel" value="${esc(e?.phone)}"></label>
+    <label class="span2">Address<input name="address"></label>
+    <label>Vehicle price (on-road)<input name="price" inputmode="decimal" required oninput="saleCalc()"></label>
+    <label>Accessories / extra<input name="extra" inputmode="decimal" oninput="saleCalc()"></label>
+    <label>Finance amount<input name="finance" inputmode="decimal" oninput="saleCalc()"></label>
+    <label>Financer / bank<input name="financer" list="dlFin" placeholder="HDFC, Bajaj, IDFC…"></label>
+    <label>Old vehicle (exchange)<input name="exchange" value="${esc(e?.exchange)}" placeholder="e.g. Old Activa HR02.."></label>
+    <label>Exchange value<input name="exchangeValue" inputmode="decimal" oninput="saleCalc()"></label>
+    <label>Paid now – amount<input name="paid" inputmode="decimal" oninput="saleCalc()"></label>
+    <label>Paid by<select name="mode"><option>Cash</option><option>Cheque</option><option>UPI</option><option>Bank</option></select></label>
+    <label>Cheque / UTR no<input name="ref"></label>
+    <label class="span2">Notes<input name="notes"></label>
+  </form>${dl('dlFin',[...new Set(DB.sales.map(s=>s.financer).filter(Boolean))])}
+  <div class="card" style="margin:12px 0 0;background:#fafaf9"><div class="row"><div class="grow">Total: <b id="cT">₹0</b></div><div class="grow">Balance due: <b id="cD">₹0</b></div></div></div>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveSale('${enqId||''}')">Save sale</button>`);
+}
+function saleCalc(){const f=$('#fs');if(!f)return;const t=num(f.price.value)+num(f.extra.value);$('#cT').textContent=rs(t);$('#cD').textContent=rs(t-num(f.finance.value)-num(f.exchangeValue.value)-num(f.paid.value))}
+function saveSale(enqId){
+  const f=$('#fs'); if(!f.reportValidity()) return; const d=formData(f);
+  const st=DB.stock.find(s=>s.id===d.stockId);
+  const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
+  const sale={id,inv,created:Date.now(),date:d.date,stockId:st.id,model:st.model,colour:st.colour,chassis:st.chassis,engine:st.engine,key:st.key,
+    name:d.name,rel:d.rel,relName:d.relName,phone:d.phone,address:d.address,price:num(d.price),extra:num(d.extra),total:num(d.price)+num(d.extra),
+    finance:num(d.finance),financer:d.financer,financeReceived:false,exchange:d.exchange,exchangeValue:num(d.exchangeValue),notes:d.notes,payments:[]};
+  DB.sales.push(sale); st.status='sold'; st.saleId=id;
+  if(num(d.paid)>0) addPayment(sale,{date:d.date,amount:num(d.paid),mode:d.mode,ref:d.ref});
+  if(enqId){const e=DB.enquiries.find(x=>x.id===enqId); if(e) e.status='Sold'}
+  save(); dlg.close(); toast('Sale saved · Invoice #'+inv); render(); viewSale(id);
+}
+function addPayment(sale,p){
+  const pid=uid(); sale.payments.push({id:pid,...p});
+  DB.daybook.push({id:uid(),created:Date.now(),date:p.date,type:'in',mode:p.mode,amount:num(p.amount),
+    particulars:`Sale #${sale.inv} – ${sale.name} (${sale.model})${p.ref?' · '+p.ref:''}`,saleId:sale.id,payId:pid});
+}
+function receivePay(id){
+  const s=DB.sales.find(x=>x.id===id);
+  openDlg('Receive payment – '+s.name,`<p class="muted" style="margin-top:0">Balance due: <b>${rs(saleDue(s))}</b></p><form id="fp" class="grid">
+    <label>Date<input type="date" name="date" value="${today()}"></label><label>Amount<input name="amount" inputmode="decimal" value="${Math.max(0,Math.round(saleDue(s)))}"></label>
+    <label>Mode<select name="mode"><option>Cash</option><option>Cheque</option><option>UPI</option><option>Bank</option></select></label><label>Cheque / UTR no<input name="ref"></label></form>`,
+  `<button class="btn" onclick="const d=formData($('#fp'));if(num(d.amount)<=0)return;addPayment(DB.sales.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Payment recorded in Day Book')">Save payment</button>`);
+}
+function financeRecv(id){
+  const s=DB.sales.find(x=>x.id===id);
+  if(!confirm(`Mark finance ${rs(s.finance)} from ${s.financer||'financer'} as received? It will be added to the Day Book as a Bank receipt.`)) return;
+  s.financeReceived=true;
+  DB.daybook.push({id:uid(),created:Date.now(),date:today(),type:'in',mode:'Bank',amount:num(s.finance),particulars:`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}`,saleId:s.id,fin:true});
+  save(); render(); if(dlg.open) viewSale(id);
+}
+function salesTable(rows){
+  return rows.length?`<div class="tablewrap"><table><tr><th>Inv</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Model</th><th>Chassis</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Received</th><th class="num">Due</th><th></th></tr>
+  ${rows.map(s=>{const due=saleDue(s);return `<tr><td>${s.inv}</td><td>${fd(s.date)}</td><td><b>${esc(s.name)}</b><div class="muted" style="font-size:12px">${esc(s.rel)} ${esc(s.relName)}</div></td><td>${esc(s.phone)}</td><td>${esc(s.model)} <span class="muted">${esc(s.colour)}</span></td><td class="mono">${esc(s.chassis)}</td>
+  <td class="num">${rs(s.total)}</td><td class="num">${s.finance?rs(s.finance)+'<br>'+(s.financeReceived?'<span class="pill in">recd</span>':'<span class="pill due">pending</span>'):'—'}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
+  <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td><td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">No sales yet.</div>';
+}
+function vSales(){
+  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Sale register</h2>
+  <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
+  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button>${impBtn('sales')}${photoBtn('aiSale','बिल की फोटो से सेल')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
+  salesList();
+}
+function salesList(){
+  const q=salesQ.toLowerCase();
+  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv));
+}
+function viewSale(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return; const due=saleDue(s);
+  openDlg(`Sale #${s.inv} – ${s.name}`,`
+  <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
+  <tr><td class="muted">Vehicle</td><td>${esc(s.model)} · ${esc(s.colour)}<br><span class="mono">Ch: ${esc(s.chassis)}<br>Eng: ${esc(s.engine)} · Key: ${esc(s.key)}</span></td></tr>
+  <tr><td class="muted">Price + extra</td><td>${rs(s.price)} + ${rs(s.extra)} = <b>${rs(s.total)}</b></td></tr>
+  ${s.finance?`<tr><td class="muted">Finance</td><td>${rs(s.finance)} · ${esc(s.financer)} ${s.financeReceived?'<span class="pill in">received</span>':`<span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Mark received</button>`}</td></tr>`:''}
+  ${s.exchangeValue?`<tr><td class="muted">Exchange</td><td>${esc(s.exchange)} · ${rs(s.exchangeValue)}</td></tr>`:''}
+  <tr><td class="muted">Payments</td><td>${s.payments.length?s.payments.map(p=>`${fd(p.date)} · ${esc(p.mode)} · <b>${rs(p.amount)}</b> ${esc(p.ref)}`).join('<br>'):'—'}</td></tr>
+  <tr><td class="muted">Balance due</td><td>${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Fully paid</span>'}</td></tr>
+  ${s.notes?`<tr><td class="muted">Notes</td><td style="white-space:normal">${esc(s.notes)}</td></tr>`:''}</table>`,
+  `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="delSale('${s.id}')">Cancel sale</button>
+   ${due>0.5?`<button class="btn ghost" onclick="receivePay('${s.id}')">Receive payment</button>`:''}
+   <button class="btn" onclick="printSale('${s.id}')">🖨 Print receipt</button>`);
+}
+function delSale(id){
+  if(!confirm('Cancel this sale? The vehicle goes back to stock and its Day Book receipts are removed.')) return;
+  const s=DB.sales.find(x=>x.id===id); const st=DB.stock.find(x=>x.id===s.stockId); if(st){st.status='in';delete st.saleId}
+  DB.daybook=DB.daybook.filter(d=>d.saleId!==id); DB.sales=DB.sales.filter(x=>x.id!==id); save(); dlg.close(); render(); toast('Sale cancelled');
+}
+function printSale(id){
+  const s=DB.sales.find(x=>x.id===id), S=DB.settings;
+  $('#print').innerHTML=`<div class="rc"><div class="hd"><div><h3>${esc(S.name)}</h3><div>${esc(S.address)}</div><div>Ph: ${esc(S.phones)}${S.gstin?' · GSTIN: '+esc(S.gstin):''}</div></div>
+  <div style="text-align:right"><b>SALE RECEIPT</b><br>No. ${s.inv}<br>Date: ${fd(s.date)}</div></div>
+  <p><b>Customer:</b> ${esc(s.name)} ${esc(s.rel)} ${esc(s.relName)}<br><b>Address:</b> ${esc(s.address)}<br><b>Mobile:</b> ${esc(s.phone)}</p>
+  <table style="width:100%"><tr><th>Model</th><th>Colour</th><th>Chassis No</th><th>Engine No</th><th>Key</th></tr><tr><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td>${esc(s.chassis)}</td><td>${esc(s.engine)}</td><td>${esc(s.key)}</td></tr></table>
+  <table style="width:60%;margin:14px 0 0 auto"><tr><td>Vehicle price</td><td class="num">${rs(s.price)}</td></tr>${s.extra?`<tr><td>Accessories / extra</td><td class="num">${rs(s.extra)}</td></tr>`:''}
+  <tr><td><b>Total</b></td><td class="num"><b>${rs(s.total)}</b></td></tr>${s.finance?`<tr><td>Finance (${esc(s.financer)})</td><td class="num">${rs(s.finance)}</td></tr>`:''}
+  ${s.exchangeValue?`<tr><td>Exchange: ${esc(s.exchange)}</td><td class="num">${rs(s.exchangeValue)}</td></tr>`:''}
+  ${s.payments.map(p=>`<tr><td>Received ${fd(p.date)} (${esc(p.mode)}${p.ref?' '+esc(p.ref):''})</td><td class="num">${rs(p.amount)}</td></tr>`).join('')}
+  <tr><td><b>Balance due</b></td><td class="num"><b>${rs(Math.max(0,saleDue(s)))}</b></td></tr></table>
+  <div class="sign"><div>Customer signature</div><div>For ${esc(S.name)}</div></div></div>`;
+  window.print();
+}
+
+/* ---------- day book ---------- */
+let dayFrom=today().slice(0,8)+'01', dayTo=today();
+function dayBalance(before){
+  let cash=0,total=0;
+  for(const d of DB.daybook){ if(before&&d.date>=before) continue; const v=(d.type==='in'?1:-1)*num(d.amount); total+=v; if(d.mode==='Cash') cash+=v; }
+  return {cash,total};
+}
+function vDay(){
+  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New entry · रोजनामचा</h2>${photoBtn('aiPay','बिल / रसीद की फोटो से')}</div>
+  <form id="fd" class="grid" onsubmit="addDay(event)">
+    <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Type<select name="type"><option value="in">Receipt (आमद / money in)</option><option value="out">Payment (खर्चा / money out)</option></select></label>
+    <label class="span2">Particulars<input name="particulars" list="dlPart" required placeholder="e.g. Plumber, Electricity bill, Tea, Service repair…"></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
+    <label>Mode<select name="mode"><option>Cash</option><option>Bank</option><option>UPI</option><option>Cheque</option></select></label>
+    <div style="align-self:end"><button class="btn">Save entry</button></div>
+  </form>${dl('dlPart',[...new Set(DB.daybook.filter(d=>!d.saleId).map(d=>d.particulars))].slice(-60))}
+  <p class="note">Sale payments and finance receipts are added here automatically.</p></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Day Book</h2>
+    <label style="flex-direction:row;align-items:center">From <input type="date" value="${dayFrom}" onchange="dayFrom=this.value;dayList()" style="width:auto"></label>
+    <label style="flex-direction:row;align-items:center">To <input type="date" value="${dayTo}" onchange="dayTo=this.value;dayList()" style="width:auto"></label>
+    <button class="btn plain sm" onclick="dayFrom=dayTo=today();vDay()">Today</button>
+    <button class="btn plain sm" onclick="csv('daybook')">Export Excel (CSV)</button></div><div id="dayList"></div></div>`;
+  dayList();
+}
+function dayList(){
+  const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
+  const ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
+  rows.forEach(d=>{const a=num(d.amount); if(d.type==='in'){tin+=a;if(d.mode==='Cash')cin+=a}else{tout+=a;if(d.mode==='Cash')cout+=a}});
+  $('#dayList').innerHTML=`<div class="stats">
+    <div class="stat"><div class="k">Opening cash</div><div class="v">${rs(ob.cash)}</div></div>
+    <div class="stat"><div class="k">Receipts</div><div class="v" style="color:var(--green)">${rs(tin)}</div></div>
+    <div class="stat"><div class="k">Payments</div><div class="v" style="color:var(--red)">${rs(tout)}</div></div>
+    <div class="stat red"><div class="k">Closing cash in hand</div><div class="v">${rs(ob.cash+cin-cout)}</div></div></div>
+  ${rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Particulars</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr>
+  ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td style="white-space:normal">${esc(d.particulars)}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
+  <td>${d.saleId||d.capId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
+  <tr class="tot"><td colspan="3">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
+}
+function addDay(e){
+  e.preventDefault(); const d=formData(e.target); if(num(d.amount)<=0) return;
+  DB.daybook.push({id:uid(),created:Date.now(),...d,amount:num(d.amount)}); save(); toast('Entry saved');
+  const keep={date:d.date,type:d.type,mode:d.mode}; vDay(); const f=$('#fd'); for(const k in keep) f[k].value=keep[k]; f.particulars.focus();
+}
+
+/* ---------- enquiries ---------- */
+let enqF='Open';
+const wa=p=>{const n=String(p||'').replace(/\D/g,'');return n.length>=10?`https://wa.me/91${n.slice(-10)}`:''};
+function enqTable(rows){
+  return `<div class="tablewrap"><table><tr><th>Date</th><th>Name</th><th>Mobile</th><th>Model wanted</th><th>Old vehicle</th><th>Follow-up</th><th>Status</th><th>Notes</th><th></th></tr>
+  ${rows.map(e=>`<tr><td>${fd(e.date)}</td><td><b>${esc(e.name)}</b></td><td>${esc(e.phone)} ${wa(e.phone)?`<a href="${wa(e.phone)}" target="_blank" rel="noopener" title="WhatsApp">💬</a>`:''}</td><td>${esc(e.model)}</td><td>${esc(e.exchange)}</td>
+  <td>${e.followUp?(e.status==='Open'&&e.followUp<=today()?`<span class="pill due">${fd(e.followUp)}</span>`:fd(e.followUp)):''}</td>
+  <td><span class="pill ${e.status==='Open'?'open':e.status==='Sold'?'in':'lost'}">${esc(e.status)}</span></td><td style="white-space:normal;min-width:140px">${esc(e.notes)}</td>
+  <td>${e.status==='Open'?`<button class="btn sm" onclick="newSale(null,'${e.id}')">Convert to sale</button> `:''}<button class="btn plain sm" onclick="editEnq('${e.id}')">Edit</button></td></tr>`).join('')}</table></div>`;
+}
+function enqForm(e={}){
+  return `<form id="fen" class="grid">
+    <label>Date<input type="date" name="date" value="${esc(e.date||today())}"></label>
+    <label>Customer name<input name="name" value="${esc(e.name)}" required></label>
+    <label>Mobile<input name="phone" inputmode="tel" value="${esc(e.phone)}"></label>
+    <label>Model wanted<input name="model" list="dlModels" value="${esc(e.model)}"></label>
+    <label>Old vehicle (exchange)<input name="exchange" value="${esc(e.exchange)}"></label>
+    <label>Next follow-up<input type="date" name="followUp" value="${esc(e.followUp)}"></label>
+    <label>Status<select name="status">${opts(['Open','Sold','Lost'],e.status||'Open')}</select></label>
+    <label class="span2">Notes<input name="notes" value="${esc(e.notes)}"></label>
+  </form>${dl('dlModels',DB.settings.models)}`;
+}
+function vEnq(){
+  $('#app').innerHTML=`<div class="card"><h2>New enquiry</h2>${enqForm()}<div style="margin-top:10px"><button class="btn" onclick="saveEnq()">Save enquiry</button></div></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Enquiry register</h2>
+  <select style="width:auto" onchange="enqF=this.value;vEnq()">${opts(['Open','Sold','Lost','All'],enqF)}</select><button class="btn plain sm" onclick="csv('enquiries')">Export Excel (CSV)</button></div>
+  ${(r=>r.length?enqTable(r):'<div class="empty">No enquiries.</div>')(DB.enquiries.filter(e=>enqF==='All'||e.status===enqF).sort((a,b)=>(b.date||'').localeCompare(a.date||'')))}</div>`;
+}
+function saveEnq(id){
+  const f=$('#fen'); if(!f.reportValidity()) return; const d=formData(f);
+  if(id) Object.assign(DB.enquiries.find(x=>x.id===id),d); else DB.enquiries.push({id:uid(),created:Date.now(),...d});
+  save(); if(dlg.open) dlg.close(); render(); toast('Enquiry saved');
+}
+function editEnq(id){
+  openDlg('Edit enquiry',enqForm(DB.enquiries.find(x=>x.id===id)),
+  `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="if(confirm('Delete enquiry?')){DB.enquiries=DB.enquiries.filter(x=>x.id!=='${id}');save();dlg.close();render()}">Delete</button><button class="btn" onclick="saveEnq('${id}')">Save</button>`);
+}
+
+/* ---------- settings & backup ---------- */
+function vSet(){
+  const S=DB.settings;
+  $('#app').innerHTML=`<div class="card"><h2>Showroom details (printed on receipts)</h2><form id="fset" class="grid">
+    <label>Showroom name<input name="name" value="${esc(S.name)}"></label><label class="span2">Address<input name="address" value="${esc(S.address)}"></label>
+    <label>Phones<input name="phones" value="${esc(S.phones)}"></label><label>GSTIN<input name="gstin" value="${esc(S.gstin)}"></label>
+    <label>Next receipt no<input name="nextInv" type="number" value="${S.nextInv}"></label>
+    <label class="span2">Models (one per line)<textarea name="models">${esc(S.models.join('\n'))}</textarea></label>
+    <label class="span2">Colours (one per line)<textarea name="colours">${esc(S.colours.join('\n'))}</textarea></label>
+  </form><div style="margin-top:10px"><button class="btn" onclick="saveSet()">Save settings</button></div></div>
+  <div class="card"><h2>Backup & restore</h2>
+  ${CLOUD?'<p style="margin-top:0">डेटा <b>cloud (Firebase)</b> में है और सभी डिवाइस पर sync होता है। फिर भी महीने में एक बार backup ले लें।</p>':''}<p style="margin-top:0" class="${CLOUD?'hide':''}">All data is stored <b>only in this browser on this computer</b>. Download a backup every day (takes 1 second) and keep it safe — on a pen drive, Google Drive or WhatsApp to yourself.</p>${IOS&&!CLOUD?'<p class="warn">iPad: Backup दबाने पर Share खुलेगा — “Save to Files” या WhatsApp चुनें। ध्यान दें: Home Screen से ऐप का आइकन हटाने पर उसका सारा डेटा भी मिट जाता है, इसलिए रोज़ backup लें।</p>':''}
+  <p class="muted">Last backup: ${S.lastBackup?new Date(S.lastBackup).toLocaleString('en-IN'):'never'} · Records: ${DB.stock.length} vehicles, ${DB.sales.length} sales, ${DB.daybook.length} day book entries, ${DB.enquiries.length} enquiries</p>
+  <div class="row"><button class="btn" onclick="backupJSON()">⬇ Download full backup</button>
+  <label class="btn ghost" style="flex-direction:row;color:var(--red);font-size:15px">⬆ Restore from backup<input type="file" accept=".json" class="hide" onchange="restoreJSON(this.files[0])"></label></div>
+  <p class="note">Excel exports: <a href="#" onclick="csv('stock');return false">Stock</a> · <a href="#" onclick="csv('sales');return false">Sales</a> · <a href="#" onclick="csv('daybook');return false">Day Book</a> · <a href="#" onclick="csv('enquiries');return false">Enquiries</a></p></div>
+  ${cloudCard()}
+  <div class="card"><h2>फोटो से एंट्री (AI) – चालान, सेल बिल, खर्चे / रसीद</h2>
+  <p style="margin-top:0">Sales टैब में <b>“📷 बिल की फोटो से सेल”</b> और Day Book में <b>“📷 बिल / रसीद की फोटो से”</b> भी यही key इस्तेमाल करते हैं।</p>
+  <p style="margin-top:0">Stock टैब में <b>“📷 चालान की फोटो से भरें”</b> से चालान की फोटो/PDF डालें — गाड़ियाँ अपने-आप भर जाएँगी, आप जाँच कर Save करें।</p>
+  <div class="row" style="margin-bottom:8px"><label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink)">कौन सा AI:
+    <select style="width:auto" onchange="ls(AIP,this.value);render()">${[['openai','ChatGPT (OpenAI)'],['claude','Claude (Anthropic)']].map(([v,l])=>`<option value="${v}" ${aiProv()===v?'selected':''}>${l}</option>`).join('')}</select></label></div>
+  ${aiProv()==='openai'?`<p class="warn" style="margin:0 0 8px">ध्यान दें: ChatGPT का Plus/Pro प्लान यहाँ काम नहीं करता। API का बिल अलग से <b>platform.openai.com</b> पर बनता है।</p>
+  <ol style="padding-left:20px"><li><a href="https://platform.openai.com/" target="_blank" rel="noopener">platform.openai.com</a> पर उसी ChatGPT वाले account से login करें → <b>Billing</b> में थोड़ा balance डालें (जैसे $5)।</li>
+  <li><b>API keys → Create new secret key</b> → key कॉपी करके नीचे डालें।</li></ol>`
+  :`<ol style="padding-left:20px"><li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> पर account बनाएँ, Billing में थोड़ा balance डालें (जैसे $5)।</li>
+  <li>API Keys → Create Key → key कॉपी करके नीचे डालें।</li></ol>`}
+  <div class="row"><input type="password" id="aiKey" placeholder="${getKey()?'✓ Key saved — बदलने के लिए नई key डालें':aiProv()==='openai'?'sk-…':'sk-ant-…'}" style="max-width:360px" autocomplete="off">
+    <button class="btn" onclick="setKey($('#aiKey').value)">Save key</button>${getKey()?'<button class="btn plain" onclick="setKey(\'\')">Remove key</button>':''}</div>
+  ${aiProv()==='openai'?`<div class="row" style="margin-top:8px"><label style="flex-direction:row;align-items:center;gap:8px">Model <input value="${esc(oaiModel())}" style="width:200px" onchange="ls(OAM,txt(this.value));toast('Model saved')"></label><span class="note" style="margin:0">(आम तौर पर बदलने की ज़रूरत नहीं)</span></div>`:''}
+  <p class="note">Key सिर्फ़ इसी ब्राउज़र में रहती है, backup फ़ाइल में नहीं जाती। फोटो पढ़ने के लिए ${aiProv()==='openai'?'OpenAI':'Anthropic'} के सर्वर पर भेजी जाती है। खर्च लगभग ₹2–10 प्रति चालान (अनुमान; असली खर्च उनकी वेबसाइट पर Usage में दिखेगा)।</p></div>
+  <div class="card"><h2>Import from Excel (purchase / stock & sales)</h2>
+  <ol style="margin-top:0;padding-left:20px">
+    <li>Download the blank sheet: <a href="#" onclick="impTemplate('stock');return false">Stock / purchase template</a> · <a href="#" onclick="impTemplate('sales');return false">Sales template</a></li>
+    <li>Open it in Excel and paste your old data under the headings (keep the heading row). You can also use your own Excel sheet — common headings like <i>Chassis No, Engine No, Customer Name, Mobile, Amount</i> are recognised.</li>
+    <li>Save, then import it below. You will see a preview before anything is added. <b>Take a backup first.</b></li>
+  </ol>
+  <div class="row">${impBtn('stock','btn','⬆ Import stock / purchases')}${impBtn('sales','btn','⬆ Import sales')}</div>
+  <p class="note">Accepts .xlsx / .xls (needs internet for the Excel reader) and .csv (works offline). Vehicles already in the app (same chassis / engine no) are skipped, so importing the same file twice is safe. For sales whose vehicle is not in stock, a stock entry is created automatically.</p></div>`;
+}
+function saveSet(){
+  const d=formData($('#fset')); const S=DB.settings;
+  Object.assign(S,{name:d.name,address:d.address,phones:d.phones,gstin:d.gstin,nextInv:Math.max(1,parseInt(d.nextInv)||1),
+    models:d.models.split('\n').map(x=>x.trim()).filter(Boolean),colours:d.colours.split('\n').map(x=>x.trim()).filter(Boolean)});
+  save(); render(); toast('Settings saved');
+}
+const IOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function download(name,text,type){
+  if(IOS&&navigator.canShare){try{const fl=new File([text],name,{type});if(navigator.canShare({files:[fl]})){navigator.share({files:[fl]}).catch(e=>{if(e&&e.name!=='AbortError')dlAnchor(name,text,type)});return}}catch(e){}}
+  dlAnchor(name,text,type)}
+function dlAnchor(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function backupJSON(){DB.settings.lastBackup=new Date().toISOString();save();download(`honda-chhachhrauli-backup-${today()}.json`,JSON.stringify(DB,null,1),'application/json');toast('Backup downloaded');if(tab==='dash'||tab==='set')render()}
+function restoreJSON(file){
+  if(!file) return; const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result); if(!d.settings||!Array.isArray(d.stock)) throw 0;
+    if(!confirm((CLOUD?'⚠ CLOUD: सभी डिवाइस का डेटा इस backup से बदल जाएगा!\n\n':'')+`Replace ALL current data with this backup?\n(${d.stock.length} vehicles, ${d.sales.length} sales, ${d.daybook.length} day book entries)`)) return;
+    DB=d; for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]); save(); render(); toast('Backup restored');
+  }catch(e){alert('This is not a valid backup file.')}};
+  r.readAsText(file);
+}
+function csv(which){
+  const cols={stock:['date','challan','model','colour','engine','chassis','key','cost','status'],
+    sales:['inv','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','exchange','exchangeValue','received','due','notes'],
+    daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
+    capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
+  const rows=DB[which].map(r=>which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r))}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
+  const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
+  download(`${which}-${today()}.csv`,'﻿'+[cols.join(','),...rows.map(r=>cols.map(c=>q(t(r[c]))).join(','))].join('\n'),'text/csv');
+}
+
+/* ---------- partners (साझेदार) ---------- */
+const CAP_T={in:'पैसा लगाया (दुकान में दिया)',exp:'दुकान का खर्च अपनी जेब से दिया',out:'पैसा निकाला'};
+const pName=id=>DB.partners.find(p=>p.id===id)?.name||'?';
+let capF='';
+function partnerSummary(){
+  const P=DB.partners.map(p=>{const c=DB.capital.filter(x=>x.partnerId===p.id);
+    const put=c.filter(x=>x.type!=='out').reduce((a,x)=>a+num(x.amount),0), took=c.filter(x=>x.type==='out').reduce((a,x)=>a+num(x.amount),0);
+    return {...p,share:num(p.share),put,took,net:put-took}});
+  const totShare=P.reduce((a,p)=>a+p.share,0), agreed=num(DB.settings.agreedCapital);
+  // With an agreed total, each partner owes their share of it. Without one, the partner who is furthest
+  // ahead (relative to their share) sets the level the others should match.
+  const base=agreed>0?agreed:Math.max(0,...P.map(p=>p.share>0?p.net/(p.share/(totShare||1)):0));
+  P.forEach(p=>{p.should=totShare?base*p.share/totShare:0; p.pending=p.should-p.net});
+  return {P,totShare,agreed,total:P.reduce((a,p)=>a+p.net,0)};
+}
+const pendPill=p=>p.pending>0.5?`<span class="pill due">${rs(p.pending)} बाकी</span>`:p.pending<-0.5?`<span class="pill in">${rs(-p.pending)} ज़्यादा</span>`:'<span class="pill in">पूरा</span>';
+function vPartners(){
+  const S=partnerSummary();
+  $('#app').innerHTML=`
+  <div class="card"><h2>साझेदार (Partners) – किसने कितना पैसा लगाया</h2>
+  ${DB.partners.length?`<div class="tablewrap"><table><tr><th>Partner</th><th class="num">हिस्सा</th><th class="num">लगाया</th><th class="num">निकाला</th><th class="num">कुल पूँजी</th><th class="num">लगना चाहिए</th><th class="num">बाकी / ज़्यादा</th></tr>
+  ${S.P.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td class="num">${p.share}%</td><td class="num">${rs(p.put)}</td><td class="num">${rs(p.took)}</td><td class="num"><b>${rs(p.net)}</b></td><td class="num">${rs(p.should)}</td><td class="num">${pendPill(p)}</td></tr>`).join('')}
+  <tr class="tot"><td>Total</td><td class="num">${S.totShare}%</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.put,0))}</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.took,0))}</td><td class="num">${rs(S.total)}</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.should,0))}</td><td></td></tr></table></div>
+  <p class="note">${S.agreed>0?`तय कुल पूँजी ${rs(S.agreed)} को हिस्से (%) के हिसाब से बाँटकर “लगना चाहिए” निकाला गया है।`:`कुल पूँजी तय नहीं है, इसलिए जिस partner ने अपने हिस्से के हिसाब से सबसे ज़्यादा लगाया है, बाकी partners का “बाकी” उसके बराबर आने तक दिखाया गया है।`}
+  ${S.totShare!==100?' <b>ध्यान दें: हिस्सों का जोड़ 100% नहीं है।</b>':''}</p>`
+  :'<div class="empty">अभी कोई partner नहीं जोड़ा गया। नीचे “Partners सेट करें” में नाम और हिस्सा (%) भरें।</div>'}</div>
+  ${DB.partners.length?`<div class="card"><h2>नई एंट्री</h2><form id="fcap" class="grid" onsubmit="addCap(event)">
+    <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Partner<select name="partnerId">${DB.partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="span2">क्या हुआ<select name="type" onchange="$('#capNoteT').textContent=this.value==='exp'?'कौन सा खर्च (जैसे बिजली बिल, पेंटिंग)':'Note (cheque no / वजह)'">${Object.entries(CAP_T).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
+    <label>Mode<select name="mode"><option>Cash</option><option>Bank</option><option>UPI</option><option>Cheque</option></select></label>
+    <label class="span2"><span id="capNoteT">Note (cheque no / वजह)</span><input name="note"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Day Book में भी लिखें</label>
+    <div style="align-self:end"><button class="btn">Save</button></div></form>
+    <p class="note">पुरानी एंट्री डालते समय (जो Day Book में पहले से लिखी हैं, या software शुरू होने से पहले की हैं) “Day Book में भी लिखें” का निशान हटा दें, वरना कैश दो बार गिना जाएगा।</p></div>`:''}
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">हिसाब (History)</h2>
+    <select style="width:auto" onchange="capF=this.value;capList()"><option value="">सभी partners</option>${DB.partners.map(p=>`<option value="${p.id}" ${capF===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('capital')">Export Excel (CSV)</button></div><div id="capList"></div></div>
+  <div class="card"><h2>Partners सेट करें</h2><form id="fpt" onsubmit="return false">
+    <div id="ptRows">${(DB.partners.length?DB.partners:[{},{}]).map(ptRow).join('')}</div>
+    <button type="button" class="btn plain sm" onclick="$('#ptRows').insertAdjacentHTML('beforeend',ptRow({}))">+ Partner जोड़ें</button>
+    <label style="margin-top:12px;max-width:340px">तय कुल पूँजी ₹ (अगर तय है, जैसे 20,00,000)<input name="agreed" inputmode="decimal" value="${esc(DB.settings.agreedCapital||'')}"></label>
+  </form><div style="margin-top:10px"><button class="btn" onclick="savePartners()">Save partners</button></div>
+  <p class="note">हिस्सा % = पूँजी और मुनाफ़े में हिस्सेदारी, जैसे 50 और 50। किसी partner को हटाने के लिए उसका नाम खाली करके Save करें (सिर्फ़ तब, जब उसकी कोई एंट्री न हो)।</p></div>`;
+  capList();
+}
+function ptRow(p){return `<div class="row pt" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${esc(p.id||'')}"><input placeholder="Partner का नाम" value="${esc(p.name)}" style="flex:3;min-width:0"><input placeholder="हिस्सा" inputmode="decimal" value="${esc(p.share??'')}" style="width:80px"><span>%</span></div>`}
+function savePartners(){
+  const rows=[...document.querySelectorAll('#ptRows .pt')].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:String(i[1].value).trim(),share:num(i[2].value)}});
+  const keep=rows.filter(p=>p.name), dropped=DB.partners.filter(p=>!keep.some(k=>k.id===p.id));
+  if(dropped.some(p=>DB.capital.some(c=>c.partnerId===p.id))){alert('जिस partner की एंट्री हैं, उसे हटाया नहीं जा सकता। पहले उसकी एंट्री delete करें।');return}
+  if(keep.length&&Math.round(keep.reduce((a,p)=>a+p.share,0))!==100&&!confirm('हिस्सों का जोड़ 100% नहीं है। फिर भी save करें?')) return;
+  DB.partners=keep; DB.settings.agreedCapital=num(formData($('#fpt')).agreed); save(); toast('Partners saved'); vPartners();
+}
+function capList(){
+  const el=$('#capList'); if(!el) return;
+  const rows=DB.capital.filter(c=>!capF||c.partnerId===capF).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
+  el.innerHTML=rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Partner</th><th>क्या</th><th>Mode</th><th>Note</th><th class="num">लगाया</th><th class="num">निकाला</th><th></th></tr>
+  ${rows.map(c=>`<tr><td>${fd(c.date)}</td><td><b>${esc(pName(c.partnerId))}</b></td><td>${esc(CAP_T[c.type])}</td><td>${esc(c.mode)}</td><td style="white-space:normal">${esc(c.note)}</td>
+  <td class="num">${c.type!=='out'?rs(c.amount):''}</td><td class="num">${c.type==='out'?rs(c.amount):''}</td><td><button class="btn plain sm" onclick="delCap('${c.id}')">Delete</button></td></tr>`).join('')}</table></div>`
+  :'<div class="empty">कोई एंट्री नहीं।</div>';
+}
+function addCap(e){
+  e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
+  const id=uid(), t0=Date.now(), nm=pName(d.partnerId), note=d.note?' · '+d.note:'';
+  DB.capital.push({id,created:t0,date:d.date,partnerId:d.partnerId,type:d.type,amount:a,mode:d.mode,note:d.note});
+  if(d.toDay){
+    // Money a partner brings in is cash in; an expense paid from their own pocket is capital in + expense out.
+    if(d.type!=='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`पूँजी – ${nm}${d.type==='exp'?' (खर्च अपनी जेब से)':note}`,capId:id});
+    if(d.type==='exp') DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`${d.note||'खर्च'} (paid by ${nm})`,capId:id});
+    if(d.type==='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`पैसा निकाला – ${nm}${note}`,capId:id});
+  }
+  save(); toast('Saved'); vPartners();
+}
+function delCap(id){
+  if(!confirm('यह एंट्री delete करें? Day Book से भी हट जाएगी।')) return;
+  DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); save(); vPartners();
+}
+
+/* ---------- bill photo → sale / day book (same AI as challan) ---------- */
+const photoBtn=(fn,label)=>`<label class="btn ghost sm">📷 ${label}<input type="file" accept="image/*,.pdf,application/pdf" multiple class="hide" onchange="${fn}([...this.files]);this.value=''"></label>`;
+async function aiPrep(files,title){
+  if(!files.length) return null;
+  const key=getKey();
+  if(!key){openDlg('API key चाहिए',`<p style="margin-top:0">फोटो पढ़ने के लिए पहले <b>Settings & Backup</b> में ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} की API key डालें (एक बार)।</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Settings खोलें</button>`);return null}
+  openDlg(title,'<div class="empty">⏳ फोटो पढ़ी जा रही है — 20 से 60 सेकंड लग सकते हैं। यह खिड़की बंद न करें।</div>','');
+  const parts=[];
+  for(const f of files) parts.push(f.type==='application/pdf'||/\.pdf$/i.test(f.name)?{pdf:true,name:f.name,b64:await fileB64(f)}:{pdf:false,b64:await shrinkImage(f)});
+  return {key,parts};
+}
+const aiRun=(key,parts,prompt,schema,name)=>aiProv()==='openai'?readOpenAI(key,parts,prompt,schema,name):readClaude(key,parts,prompt,schema);
+function aiFail(e){openDlg('फोटो नहीं पढ़ी जा सकी',`<p style="margin-top:0">${esc(e.message==='IMG'?'यह फोटो खुल नहीं रही। JPG / PNG फोटो या PDF डालें (iPhone की HEIC फोटो हो तो JPG में बदलें)।':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">ठीक है</button>')}
+const objSchema=props=>({type:'object',additionalProperties:false,required:Object.keys(props),properties:props});
+const S_STR={type:'string'}, S_NUM={type:'number'};
+const SALE_SCHEMA=objSchema({date:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
+  model:S_STR,colour:S_STR,engine:S_STR,chassis:S_STR,price:S_NUM,accessories:S_NUM,finance_amount:S_NUM,financer:S_STR,exchange_vehicle:S_STR,exchange_value:S_NUM,
+  paid_amount:S_NUM,payment_mode:{type:'string',enum:['Cash','Cheque','UPI','Bank']},payment_ref:S_STR,notes:S_STR});
+const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,direction:{type:'string',enum:['in','out']},particulars:S_STR,amount:S_NUM,
+  mode:{type:'string',enum:['Cash','Bank','UPI','Cheque']},ref:S_STR})}});
+
+async function aiSale(files){
+  try{
+    const a=await aiPrep(files,'बिल पढ़ा जा रहा है…'); if(!a) return;
+    const prompt=`This is a sale document from an Indian two-wheeler dealership (Honda): a sale invoice / bill, booking form, delivery receipt, or a handwritten sale register entry. Extract the sale of ONE vehicle.
+- customer_name; relation (S/o, W/o, D/o or C/o as written); relative_name (father / husband name); phone (10-digit mobile); address.
+- model, colour, engine number and chassis (frame / VIN) number. Copy engine and chassis exactly, in capitals with no spaces; do not confuse 0/O, 1/I, 5/S, 8/B.
+  If the model or colour matches one of these names used by the dealership, use that exact name: Models: ${DB.settings.models.join(', ')}. Colours: ${DB.settings.colours.join(', ')}.
+- price: vehicle price / on-road price. accessories: accessories or extra charges shown separately, else 0.
+- finance_amount and financer (bank / finance company) if financed, else 0 and "". exchange_vehicle and exchange_value if an old vehicle was taken in exchange.
+- paid_amount: money the customer paid now (cash / down payment / advance); payment_mode; payment_ref (cheque no / UTR).
+- date as YYYY-MM-DD (Indian dates are day-month-year).
+- Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
+    fillSale(await aiRun(a.key,a.parts,prompt,SALE_SCHEMA,'sale'));
+  }catch(e){aiFail(e)}
+}
+function fillSale(d){
+  window.__bill=d;
+  const ch=up(d.chassis), en=up(d.engine), avail=DB.stock.filter(s=>s.status!=='sold');
+  const tail=(x,y)=>x&&y&&x.length>=5&&y.length>=5&&x.slice(-5)===y.slice(-5);
+  const st=avail.find(s=>(ch&&s.chassis===ch)||(en&&s.engine===en))||avail.find(s=>tail(s.chassis,ch)||tail(s.engine,en));
+  if(st) return fillSaleForm(st.id);
+  const sold=DB.stock.some(s=>(ch&&s.chassis===ch)||(en&&s.engine===en));
+  openDlg('यह गाड़ी स्टॉक में नहीं मिली',`<p style="margin-top:0">बिल में: <b>${esc(d.customer_name)}</b> – ${esc(d.model)} ${esc(d.colour)}<br><span class="mono">Ch: ${esc(ch)||'—'} · Eng: ${esc(en)||'—'}</span></p>
+  ${sold?'<p class="warn">यह गाड़ी पहले ही बिक चुकी है — Sales में देखें।</p>':'<p>गाड़ी को अभी स्टॉक में जोड़कर सेल भरें, या स्टॉक में से गाड़ी खुद चुनें।</p>'}`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button>${avail.length?'<button class="btn ghost" onclick="fillSaleForm(null)">स्टॉक से खुद चुनें</button>':''}${!sold&&(ch||en)&&txt(d.model)?'<button class="btn" onclick="addStockFromBill()">स्टॉक में जोड़ें और सेल भरें</button>':''}`);
+}
+function addStockFromBill(){
+  const d=window.__bill, id=uid();
+  DB.stock.push({id,created:Date.now(),status:'in',date:toISO(d.date)||today(),challan:'',model:txt(d.model),colour:txt(d.colour),engine:up(d.engine),chassis:up(d.chassis),key:'',cost:''});
+  save(); fillSaleForm(id);
+}
+function fillSaleForm(stockId){
+  const d=window.__bill; newSale(stockId); const f=$('#fs'); if(!f) return;
+  const set=(n,v)=>{if(f[n]&&v) f[n].value=v};
+  set('date',toISO(d.date)); set('name',txt(d.customer_name)); set('rel',d.relation); set('relName',txt(d.relative_name)); set('phone',txt(d.phone)); set('address',txt(d.address));
+  set('price',num(d.price)); set('extra',num(d.accessories)); set('finance',num(d.finance_amount)); set('financer',txt(d.financer));
+  set('exchange',txt(d.exchange_vehicle)); set('exchangeValue',num(d.exchange_value)); set('paid',num(d.paid_amount)); set('mode',d.payment_mode); set('ref',txt(d.payment_ref)); set('notes',txt(d.notes));
+  saleCalc();
+  f.insertAdjacentHTML('beforebegin','<p class="warn" style="margin-top:0">📷 बिल से भरा गया — Save से पहले नाम, नंबर और रकम एक बार बिल से मिला लें।</p>');
+}
+
+async function aiPay(files){
+  try{
+    const a=await aiPrep(files,'बिल / रसीद पढ़ी जा रही है…'); if(!a) return;
+    const prompt=`This photo is from an Indian two-wheeler showroom's accounts. It may be an expense bill or receipt (electricity, rent, fuel, tea, repairs, purchases), a receipt the showroom gave to someone, a UPI / bank payment screenshot, a cheque, or a handwritten cash book / day book page with many lines.
+Extract every money transaction shown.
+- direction: "out" if the showroom paid money (expense bill, purchase, payment made); "in" if the showroom received money. On a day book page, Receipts / आमद are "in" and Payments / खर्चा are "out".
+- particulars: a short description, e.g. "Electricity bill UHBVN", "Tea", "Plumber", "Received from Ramesh – booking". Keep Hindi words if written in Hindi. Resolve ditto marks ("-do-", "〃") from the line above.
+- amount: the final total (including tax), number only.
+- mode: UPI for UPI screenshots, Cheque for cheques, Bank for NEFT / RTGS / IMPS / bank transfer, otherwise Cash.
+- ref: bill no / cheque no / UTR / transaction id if shown, else "".
+- date as YYYY-MM-DD (Indian dates are day-month-year); for ditto use the date above; "" if not shown.
+- Skip total, balance and carried-forward lines. Never invent a value.`;
+    const d=await aiRun(a.key,a.parts,prompt,PAY_SCHEMA,'payments');
+    if(!d.entries?.length) throw new Error('इस फोटो में कोई रकम नहीं मिली। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    reviewPhotoPay(d.entries);
+  }catch(e){aiFail(e)}
+}
+function reviewPhotoPay(E){
+  const dup=e=>DB.daybook.some(x=>x.date===(toISO(e.date)||today())&&x.type===e.direction&&Math.round(num(x.amount))===Math.round(num(e.amount)));
+  const sel=(n,arr,v)=>`<select name="${n}" style="width:auto">${arr.map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${l}</option>`).join('')}</select>`;
+  openDlg(`फोटो से ${E.length} एंट्री मिलीं — जाँच कर Save करें`,`<div class="tablewrap imp"><table id="pyT"><tr><th></th><th>Date</th><th>आमद / खर्चा</th><th>Particulars</th><th>Amount ₹</th><th>Mode</th><th>Bill / Ref</th><th></th></tr>
+  ${E.map(e=>{const dp=dup(e);return `<tr><td><input type="checkbox" ${dp?'':'checked'} style="width:auto"></td><td><input type="date" name="date" value="${esc(toISO(e.date)||today())}"></td>
+  <td>${sel('type',[['in','आमद (in)'],['out','खर्चा (out)']],e.direction)}</td><td><input name="particulars" value="${esc(e.particulars)}" style="min-width:200px"></td>
+  <td><input name="amount" inputmode="decimal" value="${num(e.amount)||''}" style="width:100px"></td><td>${sel('mode',['Cash','Bank','UPI','Cheque'].map(m=>[m,m]),e.mode)}</td>
+  <td><input name="ref" value="${esc(e.ref)}" style="width:110px"></td><td>${dp?'<span class="pill due">शायद पहले से है</span>':''}</td></tr>`}).join('')}</table></div>
+  <p class="note">⚠ AI से पढ़ी रकम एक बार बिल से मिला लें। जो एंट्री नहीं डालनी, उसका ✓ हटा दें। ग्राहक से गाड़ी का पैसा Sales में “Receive payment” से लें, ताकि उसका बकाया भी कटे।</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="savePhotoPay()">Save to Day Book</button>`);
+}
+function savePhotoPay(){
+  const out=[];
+  [...document.querySelectorAll('#pyT tr')].slice(1).forEach(tr=>{
+    if(!tr.querySelector('input[type=checkbox]').checked) return;
+    const g=n=>txt(tr.querySelector(`[name=${n}]`).value), a=num(g('amount'));
+    if(a>0&&g('particulars')) out.push({date:g('date')||today(),type:g('type'),particulars:g('particulars')+(g('ref')?' · '+g('ref'):''),mode:g('mode'),amount:a});
+  });
+  if(!out.length){alert('कोई एंट्री चुनी नहीं गई (या रकम / Particulars खाली है)।');return}
+  const t0=Date.now(); out.forEach((e,i)=>DB.daybook.push({id:uid(),created:t0+i,...e}));
+  save(); dlg.close(); toast(`${out.length} एंट्री Day Book में जुड़ गईं`); render();
+}
+
+/* ---------- import from Excel / CSV ---------- */
+const STOCK_F={date:['date','purchasedate','inwarddate','challandate','receiveddate','recddate'],challan:['challan','challanno','challannumber','invoiceno','purchaseinvoice','purchaseinvoiceno','billno','dcno'],
+  model:['model','modelname','vehicle','vehiclemodel','variant'],colour:['colour','color','colourname','colorname'],engine:['engine','engineno','enginenumber','engno'],
+  chassis:['chassis','chassisno','chassisnumber','frameno','vin','chno'],key:['key','keyno','keynumber'],
+  cost:['cost','purchaseprice','purchaserate','rate','price','amount','dealerprice','landingcost'],status:['status']};
+const SALES_F={inv:['inv','invno','invoice','invoiceno','receiptno','billno'],date:['date','saledate','invoicedate','billdate','deliverydate'],
+  name:['name','customer','customername','buyer','buyername','custname'],rel:['rel','relation'],
+  relName:['relname','father','fathername','husband','husbandname','fatherhusbandname','fatherhusband','so','swo','co','fathersname'],
+  phone:['phone','mobile','mobileno','phoneno','contact','contactno','mob','mobilenumber'],address:['address','addr','village','city'],
+  model:STOCK_F.model,colour:STOCK_F.colour,engine:STOCK_F.engine,chassis:STOCK_F.chassis,key:STOCK_F.key,
+  price:['price','vehicleprice','onroad','onroadprice','saleprice','exshowroom','rate'],extra:['extra','accessories','accessory','extras'],total:['total','totalamount','grandtotal'],
+  finance:['finance','financeamount','loan','loanamount','financeamt'],financer:['financer','financier','bank','financecompany','financerbank'],
+  financeReceived:['financereceived','financerecd','financestatus'],exchange:['exchange','oldvehicle','exchangevehicle'],
+  exchangeValue:['exchangevalue','exchangeamount','oldvehiclevalue','exchangeprice'],
+  received:['received','paid','amountreceived','amountpaid','cashreceived','downpayment','payment','advance'],mode:['mode','paymentmode','paidby'],notes:['notes','remarks','remark','note']};
+let IMP=null;
+const txt=v=>String(v??'').trim();
+const norm=s=>String(s??'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function impBtn(which,cls='btn plain sm',label='⬆ Import from Excel'){
+  return `<label class="${cls}">${label}<input type="file" accept=".csv,.xlsx,.xls,.xlsm" class="hide" onchange="importFile('${which}',this.files[0]);this.value=''"></label>`;
+}
+function impTemplate(which){
+  const t=which==='stock'
+   ?['Date,Challan No,Model,Colour,Engine No,Chassis No,Key No,Purchase Price','21-11-2026,CH1234,Activa 125 Disc,Matt Grey,JF89E1234567,ME4JF891234567890,K123,82000']
+   :['Invoice No,Date,Customer Name,Relation,Father/Husband Name,Mobile,Address,Model,Colour,Chassis No,Engine No,Key No,Vehicle Price,Accessories,Finance Amount,Financer,Finance Received,Exchange Vehicle,Exchange Value,Amount Received,Payment Mode,Notes',
+     ',21-11-2026,Ramesh Kumar,S/o,Suresh Kumar,9876543210,Chhachhrauli,Activa 125 Disc,Matt Grey,ME4JF891234567890,JF89E1234567,K123,95000,1500,60000,HDFC,No,,0,36500,Cash,'];
+  download(`${which}-import-template.csv`,'﻿'+t.join('\n'),'text/csv');
+}
+function parseCSV(text){
+  text=text.replace(/^﻿/,''); const first=text.split(/\r?\n/)[0];
+  const sep=first.includes(',')?',':first.includes(';')?';':'\t';
+  const rows=[]; let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++} else q=false } else f+=c }
+    else if(c==='"') q=true;
+    else if(c===sep){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f);rows.push(row);row=[];f='' }
+    else f+=c }
+  if(f||row.length){row.push(f);rows.push(row)}
+  return rows;
+}
+function loadXLSX(){
+  return window.XLSX?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+}
+const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+function toISO(v){
+  const p=(y,m,d)=>{y=+y;if(y<100)y+=2000;m=+m;d=+d;if(!(m>=1&&m<=12&&d>=1&&d<=31))return '';return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`};
+  if(typeof v==='number'||/^\d{5}(\.\d+)?$/.test(txt(v))){const n=+v;if(n>20000&&n<80000)return new Date(Math.round((n-25569)*864e5)).toISOString().slice(0,10);return ''}
+  const s=txt(v); let m;
+  if(m=s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/)) return p(m[1],m[2],m[3]);
+  if(m=s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})/)) return p(m[3],m[2],m[1]);
+  if(m=s.match(/^(\d{1,2})[-\s\/.]*([a-z]{3})[a-z]*[-\s\/.,]*(\d{2,4})/i)) return MON[m[2].toLowerCase()]?p(m[3],MON[m[2].toLowerCase()],m[1]):'';
+  return '';
+}
+function readRecords(rows,fields){
+  for(let r=0;r<Math.min(rows.length,15);r++){
+    const idx={};
+    (rows[r]||[]).forEach((h,i)=>{const n=norm(h); if(!n) return; for(const f in fields) if(!(f in idx)&&fields[f].includes(n)){idx[f]=i;break}});
+    if(Object.keys(idx).length>=2){
+      const recs=[];
+      for(let i=r+1;i<rows.length;i++){const row=rows[i]||[]; if(!row.some(c=>txt(c))) continue;
+        const o={}; for(const f in idx) o[f]=row[idx[f]]; recs.push({o,line:i+1})}
+      return {idx,recs};
+    }
+  }
+  return null;
+}
+function planStock(rows){
+  const h=readRecords(rows,STOCK_F); if(!h||!('chassis' in h.idx||'engine' in h.idx)) return null;
+  const add=[],skip=[],err=[];
+  const sc=new Set(DB.stock.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.stock.map(s=>s.engine).filter(Boolean));
+  for(const {o,line} of h.recs){
+    const s={date:toISO(o.date)||today(),challan:txt(o.challan),model:txt(o.model),colour:txt(o.colour),engine:up(o.engine),chassis:up(o.chassis),key:up(o.key),cost:txt(o.cost)?String(num(o.cost)):''};
+    if(!s.chassis&&!s.engine){err.push(`Row ${line}: no chassis / engine no`);continue}
+    if(!s.model){err.push(`Row ${line}: model is empty`);continue}
+    if((s.chassis&&sc.has(s.chassis))||(s.engine&&se.has(s.engine))){skip.push(`Row ${line}: ${s.chassis||s.engine} is already in the app`);continue}
+    if(s.chassis)sc.add(s.chassis); if(s.engine)se.add(s.engine);
+    s.status=/sold/i.test(txt(o.status))?'sold':'in'; add.push(s);
+  }
+  return {which:'stock',add,skip,err};
+}
+function planSales(rows){
+  const h=readRecords(rows,SALES_F); if(!h||!('chassis' in h.idx||'engine' in h.idx)||!('name' in h.idx)) return null;
+  const add=[],skip=[],err=[];
+  const sc=new Set(DB.sales.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.sales.map(s=>s.engine).filter(Boolean));
+  for(const {o,line} of h.recs){
+    const relT=txt(o.rel).toLowerCase(), modeT=txt(o.mode).toLowerCase();
+    const r={inv:parseInt(num(o.inv))||null,date:toISO(o.date)||today(),name:txt(o.name),rel:/w/.test(relT)?'W/o':/d/.test(relT)?'D/o':/c/.test(relT)?'C/o':'S/o',
+      relName:txt(o.relName),phone:txt(o.phone),address:txt(o.address),model:txt(o.model),colour:txt(o.colour),chassis:up(o.chassis),engine:up(o.engine),key:up(o.key),
+      price:num(o.price),extra:num(o.extra),finance:num(o.finance),financer:txt(o.financer),financeReceived:/^(y|yes|true|1|recd|received|done|paid)/i.test(txt(o.financeReceived)),
+      exchange:txt(o.exchange),exchangeValue:num(o.exchangeValue),received:num(o.received),
+      mode:['cash','cheque','upi','bank'].find(x=>modeT.includes(x))?.replace(/^./,c=>c.toUpperCase()).replace('Upi','UPI')||'Cash',notes:txt(o.notes)};
+    if(!r.price&&num(o.total)) r.price=num(o.total)-r.extra;
+    if(!r.name){err.push(`Row ${line}: customer name is empty`);continue}
+    if(!r.chassis&&!r.engine){err.push(`Row ${line}: no chassis / engine no`);continue}
+    if((r.chassis&&sc.has(r.chassis))||(r.engine&&se.has(r.engine))){skip.push(`Row ${line}: sale of ${r.chassis||r.engine} already exists`);continue}
+    const st=DB.stock.find(x=>(r.chassis&&x.chassis===r.chassis)||(r.engine&&x.engine===r.engine));
+    if(st&&st.status==='sold'&&st.saleId){skip.push(`Row ${line}: ${r.chassis||r.engine} is already marked sold`);continue}
+    if(!r.model&&!st){err.push(`Row ${line}: model is empty and vehicle not found in stock`);continue}
+    if(r.chassis)sc.add(r.chassis); if(r.engine)se.add(r.engine);
+    r._stock=st?st.id:null; add.push(r);
+  }
+  return {which:'sales',add,skip,err};
+}
+async function importFile(which,file){
+  if(!file) return; let rows;
+  try{
+    if(/\.(xlsx|xls|xlsm)$/i.test(file.name)){
+      try{await loadXLSX()}catch(e){alert('Could not load the Excel reader (it needs internet).\n\nIn Excel use File → Save As → "CSV UTF-8", then import that .csv file.');return}
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:''});
+    } else rows=parseCSV(await file.text());
+  }catch(e){alert('Could not read this file.');return}
+  const P=which==='stock'?planStock(rows):planSales(rows);
+  if(!P){alert(`Could not find the heading row.\n\nThe first sheet needs headings like ${which==='stock'?'"Model", "Engine No", "Chassis No"':'"Customer Name", "Chassis No", "Model"'}. Download the template from Settings & Backup to see the expected headings.`);return}
+  IMP=P; const isS=which==='sales';
+  const cols=isS?[['date','Date'],['name','Customer'],['model','Model'],['chassis','Chassis'],['price','Price'],['finance','Finance'],['received','Received']]:[['date','Date'],['challan','Challan'],['model','Model'],['colour','Colour'],['engine','Engine'],['chassis','Chassis']];
+  const newStock=isS?P.add.filter(r=>!r._stock).length:0;
+  const list=(t,a)=>a.length?`<details><summary>${t} (${a.length})</summary><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'';
+  openDlg(`Import ${isS?'sales':'stock / purchases'} – ${file.name}`,`
+    <p style="margin-top:0"><b>${P.add.length}</b> ${isS?'sales':'vehicles'} will be added${P.skip.length?` · ${P.skip.length} skipped (already in app)`:''}${P.err.length?` · <span style="color:var(--red)">${P.err.length} rows have problems</span>`:''}.</p>
+    ${newStock?`<p class="note">${newStock} of these vehicles are not in stock yet — they will be added to the stock register as sold.</p>`:''}
+    ${P.add.length?`<div class="tablewrap imp"><table><tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${P.add.slice(0,8).map(r=>`<tr>${cols.map(([k])=>`<td>${k==='date'?fd(r[k]):['price','finance','received'].includes(k)?rs(r[k]):esc(r[k])}</td>`).join('')}</tr>`).join('')}</table></div>${P.add.length>8?`<p class="note">…and ${P.add.length-8} more</p>`:''}`:''}
+    ${list('Skipped rows',P.skip)}${list('Rows with problems (not imported)',P.err)}
+    ${isS?`<label style="flex-direction:row;align-items:flex-start;gap:8px;margin-top:12px;font-weight:400;color:var(--ink);font-size:14px"><input type="checkbox" id="impDay" style="width:auto;margin-top:3px"><span>Also add the received amounts to the Day Book.<br><span class="muted">Leave this OFF for old sales — otherwise your cash-in-hand will include money from earlier months.</span></span></label>`:''}`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button>${P.add.length?`<button class="btn" onclick="applyImport()">Import ${P.add.length}</button>`:''}`);
+}
+function applyImport(){
+  const P=IMP; if(!P) return; const S=DB.settings, t0=Date.now();
+  const learn=r=>{if(r.model&&!S.models.includes(r.model))S.models.push(r.model);if(r.colour&&!S.colours.includes(r.colour))S.colours.push(r.colour)};
+  if(P.which==='stock'){
+    P.add.forEach((s,i)=>{DB.stock.push({id:uid(),created:t0+i,...s});learn(s)});
+  } else {
+    const toDay=$('#impDay')?.checked, used=new Set(DB.sales.map(s=>s.inv));
+    P.add.forEach((r,i)=>{
+      let st=r._stock&&DB.stock.find(x=>x.id===r._stock);
+      if(!st){st={id:uid(),created:t0+i,date:r.date,challan:'',model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:r.key,cost:'',status:'in'};DB.stock.push(st)}
+      let inv=r.inv&&!used.has(r.inv)?r.inv:null;
+      if(!inv){while(used.has(S.nextInv))S.nextInv++;inv=S.nextInv++} used.add(inv);
+      const id=uid();
+      const sale={id,inv,created:t0+i,date:r.date,stockId:st.id,model:r.model||st.model,colour:r.colour||st.colour,chassis:r.chassis||st.chassis,engine:r.engine||st.engine,key:r.key||st.key,
+        name:r.name,rel:r.rel,relName:r.relName,phone:r.phone,address:r.address,price:r.price,extra:r.extra,total:r.price+r.extra,
+        finance:r.finance,financer:r.financer,financeReceived:r.financeReceived,exchange:r.exchange,exchangeValue:r.exchangeValue,notes:r.notes,payments:[],imported:true};
+      DB.sales.push(sale); st.status='sold'; st.saleId=id; learn(sale);
+      if(r.received>0){
+        if(toDay) addPayment(sale,{date:r.date,amount:r.received,mode:r.mode,ref:''});
+        else sale.payments.push({id:uid(),date:r.date,amount:r.received,mode:r.mode,ref:'(imported)'});
+      }
+      if(toDay&&r.finance&&r.financeReceived) DB.daybook.push({id:uid(),created:t0+i,date:r.date,type:'in',mode:'Bank',amount:r.finance,particulars:`Finance ${r.financer} – Sale #${inv} ${r.name}`,saleId:id,fin:true});
+    });
+    S.nextInv=Math.max(S.nextInv,...[...used].map(Number).filter(n=>n>0).map(n=>n+1));
+  }
+  save(); dlg.close(); IMP=null; render(); toast(`Imported ${P.add.length} ${P.which==='stock'?'vehicles':'sales'}`);
+}
+
+/* ---------- Tally export (XML) ---------- */
+const TALLY_DEF={company:'',sales:'Sales',purchase:'Purchase',cash:'Cash',bank:'Bank',supplier:'Honda Motorcycle & Scooter India',
+  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',lastExport:''};
+const TL=()=>Object.assign({},TALLY_DEF,DB.settings.tally||{});
+let tFrom='', tTo='';
+function vTally(){
+  const T=TL(); if(!tFrom) tFrom=T.lastExport?new Date(Date.parse(T.lastExport)+864e5).toISOString().slice(0,10):today().slice(0,8)+'01'; if(!tTo) tTo=today();
+  const f=(k,l,extra='')=>`<label>${l}<input name="${k}" value="${esc(T[k])}" ${extra}></label>`;
+  $('#app').innerHTML=`<div class="card"><h2>Send data to Tally</h2>
+  <div class="row" style="margin-bottom:10px">
+    <label style="flex-direction:row;align-items:center">From <input type="date" value="${tFrom}" onchange="tFrom=this.value;tallyCount()" style="width:auto"></label>
+    <label style="flex-direction:row;align-items:center">To <input type="date" value="${tTo}" onchange="tTo=this.value;tallyCount()" style="width:auto"></label>
+    <button class="btn" onclick="tallyExport()">⬇ Download Tally file (XML)</button></div>
+  <div id="tCount" class="muted"></div>
+  ${T.lastExport?`<p class="note">Last exported up to <b>${fd(T.lastExport)}</b>. To avoid double entries in Tally, start the next export from the day after that.</p>`:''}
+  <h3 style="font-size:14px;margin:16px 0 6px">How to import in Tally</h3>
+  <ol style="margin:0;padding-left:20px">
+    <li>Fill the ledger names below <b>exactly</b> as they are in your Tally (one time only). Ledgers that don't exist (e.g. customer names) are created automatically.</li>
+    <li>Choose the dates and click <b>Download Tally file</b>.</li>
+    <li><b>TallyPrime:</b> open your company → <b>Alt+O (Import)</b> → <b>Transactions</b> → give the path of the downloaded file → Enter.<br>
+        <b>Tally ERP 9:</b> Gateway of Tally → <b>Import of Data</b> → <b>Vouchers</b> → give the file path.</li>
+    <li>Check Day Book in Tally. Tally shows how many vouchers were imported and any errors.</li>
+  </ol></div>
+  <div class="card"><h2>Tally ledger names</h2><form id="ftl" class="grid">
+    ${f('company','Tally company name (blank = open company)')}${f('sales','Sales ledger')}${f('purchase','Purchase ledger')}
+    ${f('cash','Cash ledger')}${f('bank','Bank ledger (for UPI / cheque / bank / finance)')}${f('supplier','Supplier (Honda / distributor) ledger')}
+    ${f('debtors','Group for customer ledgers')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
+    ${f('gst','GST rate % in prices (0 = no GST split)','inputmode="decimal"')}${f('cgst','CGST ledger')}${f('sgst','SGST ledger')}
+  </form><p class="note">If GST rate is filled (e.g. 18 or 28), vehicle prices are treated as GST-inclusive and split into Sales + CGST + SGST. Leave 0 if you enter GST separately in Tally.</p>
+  <div style="margin-top:10px"><button class="btn" onclick="saveTally()">Save ledger names</button></div></div>`;
+  tallyCount();
+}
+function saveTally(){const d=formData($('#ftl'));d.gst=num(d.gst);for(const k in d)if(k!=='gst'&&!d[k])d[k]=TALLY_DEF[k];DB.settings.tally={...TL(),...d};save();toast('Ledger names saved');vTally()}
+function tallyVouchers(from,to){
+  const T=TL(), V=[], ins=d=>d>=from&&d<=to, r2=n=>Math.round(n*100)/100;
+  const party=s=>txt(s.name)+(txt(s.phone)?` (${txt(s.phone)})`:'');
+  const modeL=m=>m==='Cash'?T.cash:T.bank;
+  const parties=new Set();
+  for(const s of DB.sales){
+    const P=party(s); let used=false;
+    if(ins(s.date)&&num(s.total)>0){
+      const tot=r2(num(s.total)), g=num(T.gst), L=[[P,tot]];
+      if(g>0){const base=r2(tot/(1+g/100)),tax=r2(tot-base),c=r2(tax/2);L.push([T.sales,-base],[T.cgst,-c],[T.sgst,-r2(tax-c)])} else L.push([T.sales,-tot]);
+      V.push({type:'Sales',date:s.date,no:s.inv,id:'s'+s.id,party:P,nar:`${s.model} ${s.colour} · Ch ${s.chassis} · Eng ${s.engine}${s.financer?' · Finance '+s.financer:''}`,L});used=true;
+      if(num(s.exchangeValue)>0) V.push({type:'Journal',date:s.date,id:'x'+s.id,nar:`Exchange ${s.exchange} – Sale #${s.inv}`,L:[[T.exchange,num(s.exchangeValue)],[P,-num(s.exchangeValue)]]});
+    }
+    for(const p of s.payments||[]) if(ins(p.date)&&num(p.amount)>0){
+      V.push({type:'Receipt',date:p.date,id:'p'+p.id,nar:`Sale #${s.inv} – ${p.mode}${p.ref?' '+p.ref:''}`,L:[[modeL(p.mode),num(p.amount)],[P,-num(p.amount)]]});used=true}
+    if(s.financeReceived&&num(s.finance)>0){
+      const fe=DB.daybook.find(d=>d.fin&&d.saleId===s.id), dt=fe?fe.date:s.date;
+      if(ins(dt)){V.push({type:'Receipt',date:dt,id:'f'+s.id,nar:`Finance ${s.financer} – Sale #${s.inv}`,L:[[T.bank,num(s.finance)],[P,-num(s.finance)]]});used=true}
+    }
+    if(used) parties.add(P);
+  }
+  const ch={};
+  for(const s of DB.stock) if(ins(s.date)&&num(s.cost)>0){const k=s.date+'|'+(s.challan||s.id);(ch[k]=ch[k]||[]).push(s)}
+  for(const k in ch){
+    const a=ch[k], tot=r2(a.reduce((x,s)=>x+num(s.cost),0)), g=num(T.gst), L=[];
+    if(g>0){const base=r2(tot/(1+g/100)),tax=r2(tot-base),c=r2(tax/2);L.push([T.purchase,base],[T.cgst,c],[T.sgst,r2(tax-c)])} else L.push([T.purchase,tot]);
+    L.push([T.supplier,-tot]);
+    V.push({type:'Purchase',date:a[0].date,id:'c'+a[0].id,ref:a[0].challan,party:T.supplier,nar:`Challan ${a[0].challan} · ${a.length} vehicle(s): `+a.map(s=>`${s.model} Ch ${s.chassis}`).join(', '),L});
+  }
+  for(const d of DB.daybook) if(!d.saleId&&ins(d.date)&&num(d.amount)>0){
+    const a=num(d.amount), cap=d.capId&&DB.capital.find(c=>c.id===d.capId), capL=cap&&`${pName(cap.partnerId)} Capital A/c`;
+    if(cap&&d.type==='in'){V.push({type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[capL,-a]]});continue}
+    if(cap&&cap.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[capL,a],[modeL(d.mode),-a]]});continue}
+    V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[T.income,-a]]}
+                        :{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.expense,a],[modeL(d.mode),-a]]});
+  }
+  V.sort((a,b)=>a.date.localeCompare(b.date));
+  return {V,parties:[...parties],T};
+}
+function tallyCount(){
+  const el=$('#tCount'); if(!el) return; const {V}=tallyVouchers(tFrom,tTo), c={};
+  V.forEach(v=>c[v.type]=(c[v.type]||0)+1);
+  el.innerHTML=V.length?'This period: '+Object.entries(c).map(([k,n])=>`<b>${n}</b> ${k}`).join(' · '):'No entries in these dates.';
+}
+function tallyExport(){
+  if(!tFrom||!tTo||tFrom>tTo){alert('Choose valid dates.');return}
+  const {V,parties,T}=tallyVouchers(tFrom,tTo); if(!V.length){alert('No entries in these dates.');return}
+  const x=esc, amt=n=>(Math.round(n*100)/100).toFixed(2);
+  const led=(n,p)=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><LEDGER NAME="${x(n)}"><NAME.LIST><NAME>${x(n)}</NAME></NAME.LIST><PARENT>${x(p)}</PARENT><ISBILLWISEON>No</ISBILLWISEON></LEDGER></TALLYMESSAGE>`;
+  const masters=[...parties.map(p=>led(p,T.debtors)),led(T.exchange,'Current Assets'),led(T.expense,'Indirect Expenses'),led(T.income,'Indirect Incomes'),...DB.partners.map(p=>led(`${p.name} Capital A/c`,'Capital Account'))];
+  const vch=V.map(v=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER REMOTEID="hsc-${x(v.id)}" VCHTYPE="${v.type}" ACTION="Create" OBJVIEW="Accounting Voucher View">
+<DATE>${v.date.replace(/-/g,'')}</DATE><EFFECTIVEDATE>${v.date.replace(/-/g,'')}</EFFECTIVEDATE><VOUCHERTYPENAME>${v.type}</VOUCHERTYPENAME>${v.no?`<VOUCHERNUMBER>${x(v.no)}</VOUCHERNUMBER>`:''}${v.ref?`<REFERENCE>${x(v.ref)}</REFERENCE>`:''}${v.party?`<PARTYLEDGERNAME>${x(v.party)}</PARTYLEDGERNAME>`:''}
+<PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW><ISINVOICE>No</ISINVOICE><NARRATION>${x(v.nar)}</NARRATION>
+${v.L.map(([n,a])=>`<ALLLEDGERENTRIES.LIST><LEDGERNAME>${x(n)}</LEDGERNAME><ISDEEMEDPOSITIVE>${a>0?'Yes':'No'}</ISDEEMEDPOSITIVE><AMOUNT>${amt(-a)}</AMOUNT></ALLLEDGERENTRIES.LIST>`).join('\n')}
+</VOUCHER></TALLYMESSAGE>`);
+  const xml=`<ENVELOPE><HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER><BODY><IMPORTDATA><REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>${T.company?`<STATICVARIABLES><SVCURRENTCOMPANY>${x(T.company)}</SVCURRENTCOMPANY></STATICVARIABLES>`:''}</REQUESTDESC><REQUESTDATA>
+${masters.join('\n')}
+${vch.join('\n')}
+</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>`;
+  download(`tally-${tFrom}-to-${tTo}.xml`,xml,'application/xml');
+  DB.settings.tally={...T,lastExport:tTo}; save(); toast(`Tally file downloaded · ${V.length} vouchers`); vTally();
+}
+
+/* ---------- challan photo → stock (Claude API) ---------- */
+const AIK=KEY+'_apikey', OAK=KEY+'_oaikey', OAM=KEY+'_oaimodel', AIP=KEY+'_aiprov';
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k)||'';v?localStorage.setItem(k,v):localStorage.removeItem(k)}catch(e){return ''}}
+const aiProv=()=>ls(AIP)||'openai';
+const oaiModel=()=>ls(OAM)||'gpt-6.2-sol';
+const getKey=()=>ls(aiProv()==='openai'?OAK:AIK);
+function setKey(v){v=txt(v);const oa=aiProv()==='openai';
+  if(v&&(!/^sk-/.test(v)||(oa&&/^sk-ant-/.test(v))||(!oa&&!/^sk-ant-/.test(v)))){alert(oa?'यह OpenAI की API key नहीं लगती (sk-… से शुरू होती है)।':'यह Claude की API key नहीं लगती (sk-ant-… से शुरू होती है)।');return}
+  ls(oa?OAK:AIK,v);toast(v?'Key saved':'Key removed');render()}
+const CH_SCHEMA={type:'object',additionalProperties:false,required:['challan_no','date','supplier','vehicles'],properties:{
+  challan_no:{type:'string'},date:{type:'string',description:'YYYY-MM-DD, or empty'},supplier:{type:'string'},
+  vehicles:{type:'array',items:{type:'object',additionalProperties:false,required:['model','colour','engine','chassis','key','price'],properties:{
+    model:{type:'string'},colour:{type:'string'},engine:{type:'string'},chassis:{type:'string'},key:{type:'string'},price:{type:'number',description:'0 if not shown'}}}}}};
+function shrinkImage(file){return new Promise((ok,no)=>{const img=new Image(),u=URL.createObjectURL(file);
+  img.onload=()=>{const s=Math.min(1,2000/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(u);ok(c.toDataURL('image/jpeg',0.88).split(',')[1])};
+  img.onerror=()=>{URL.revokeObjectURL(u);no(new Error('IMG'))};img.src=u})}
+const fileB64=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]);r.onerror=no;r.readAsDataURL(f)});
+async function aiChallan(files){
+  if(!files.length) return;
+  const key=getKey();
+  if(!key){openDlg('API key चाहिए',`<p style="margin-top:0">चालान की फोटो पढ़ने के लिए पहले <b>Settings & Backup</b> में ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} की API key डालें (एक बार)।</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Settings खोलें</button>`);return}
+  openDlg('चालान पढ़ा जा रहा है…','<div class="empty">⏳ फोटो पढ़ी जा रही है — 20 से 60 सेकंड लग सकते हैं। यह खिड़की बंद न करें।</div>','');
+  try{
+    const parts=[];
+    for(const f of files){
+      if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)) parts.push({pdf:true,name:f.name,b64:await fileB64(f)});
+      else parts.push({pdf:false,b64:await shrinkImage(f)});
+    }
+    const prompt=`These are page(s) of a vehicle delivery challan / purchase invoice received by an Indian two-wheeler dealership (Honda) from its supplier.
+Extract every vehicle listed. For each vehicle give model, colour, engine number, chassis (frame / VIN) number, key number and price.
+- Copy engine and chassis numbers exactly, character by character, in capitals with no spaces. Read them carefully: they are the most important fields. Do not confuse 0/O, 1/I, 5/S, 8/B.
+- If the printed model or colour matches one of these names used by the dealership, use that exact name; otherwise copy what is printed.
+  Models: ${DB.settings.models.join(', ')}
+  Colours: ${DB.settings.colours.join(', ')}
+- price: the per-vehicle amount including taxes if shown, else the per-vehicle amount shown, else 0.
+- date: the challan / invoice date as YYYY-MM-DD (Indian dates are day-month-year). challan_no: the challan or invoice number. supplier: the issuer's name.
+- Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
+    const data=aiProv()==='openai'?await readOpenAI(key,parts,prompt):await readClaude(key,parts,prompt);
+    if(!data.vehicles?.length) throw new Error('इस फोटो में कोई गाड़ी नहीं मिली। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    reviewChallan(data);
+  }catch(e){
+    openDlg('चालान नहीं पढ़ा जा सका',`<p style="margin-top:0">${esc(e.message==='IMG'?'यह फोटो खुल नहीं रही। JPG / PNG फोटो या PDF डालें (iPhone की HEIC फोटो हो तो Safari में खोलें या JPG में बदलें)।':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">ठीक है</button>');
+  }
+}
+async function readOpenAI(key,parts,prompt,schema=CH_SCHEMA,sname='challan'){
+  const content=[{type:'text',text:prompt},...parts.map(p=>p.pdf?{type:'file',file:{filename:p.name,file_data:'data:application/pdf;base64,'+p.b64}}
+    :{type:'image_url',image_url:{url:'data:image/jpeg;base64,'+p.b64,detail:'high'}})];
+  let res;
+  try{
+    res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+key},
+      body:JSON.stringify({model:oaiModel(),max_completion_tokens:16000,messages:[{role:'user',content}],
+        response_format:{type:'json_schema',json_schema:{name:sname,strict:true,schema}}})});
+  }catch(e){throw new Error('इंटरनेट से जुड़ नहीं पाया। इंटरनेट चेक करके फिर कोशिश करें।')}
+  const j=await res.json().catch(()=>({})), er=j?.error||{}, em=er.message||'';
+  if(!res.ok) throw new Error(res.status===401?'API key गलत है। Settings में सही key डालें।'
+    :er.code==='insufficient_quota'||/quota|billing|credit/i.test(em)?'OpenAI API account में balance नहीं है। platform.openai.com → Billing में balance डालें (ChatGPT Plus का पैसा यहाँ नहीं गिना जाता)।'
+    :er.code==='model_not_found'||/model/i.test(em)&&res.status===404?`Model "${oaiModel()}" आपके account में नहीं मिला। Settings में model का नाम जाँचें।`
+    :[429,500,502,503].includes(res.status)?'सर्वर अभी व्यस्त है, 1–2 मिनट बाद फिर कोशिश करें।':'Error '+res.status+': '+em);
+  const ch=j.choices?.[0]||{}, m=ch.message||{};
+  if(m.refusal) throw new Error('यह फोटो पढ़ी नहीं जा सकी। दूसरी फोटो डालकर देखें।');
+  if(ch.finish_reason==='length') throw new Error('चालान बहुत लंबा है। पेज अलग-अलग करके डालें।');
+  try{return JSON.parse(m.content||'')}catch(e){throw new Error('जवाब समझ नहीं आया, फिर से कोशिश करें।')}
+}
+async function readClaude(key,parts,prompt,schema=CH_SCHEMA){
+    const content=[...parts.map(p=>p.pdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:p.b64}}
+      :{type:'image',source:{type:'base64',media_type:'image/jpeg',data:p.b64}}),{type:'text',text:prompt}];
+    let res;
+    try{
+      res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2026-10-21',
+        'anthropic-beta':'server-side-fallback-2026-07-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-opus-5-5',max_tokens:16000,fallbacks:'default',output_config:{format:{type:'json_schema',schema}},messages:[{role:'user',content}]})});
+    }catch(e){throw new Error('इंटरनेट से जुड़ नहीं पाया। इंटरनेट चेक करके फिर कोशिश करें।')}
+    const j=await res.json().catch(()=>({})), em=j?.error?.message||'';
+    if(!res.ok) throw new Error(res.status===401?'API key गलत है। Settings में सही key डालें।'
+      :/credit|balance|billing/i.test(em)?'Anthropic account में balance नहीं है। console.anthropic.com → Billing में balance डालें।'
+      :[429,500,502,503,529].includes(res.status)?'सर्वर अभी व्यस्त है, 1–2 मिनट बाद फिर कोशिश करें।'
+      :/too large|size|exceed/i.test(em)?'फ़ाइल बहुत बड़ी है। कम पेज या छोटी फोटो डालें।':'Error '+res.status+': '+em);
+    if(j.stop_reason==='refusal') throw new Error('यह फोटो पढ़ी नहीं जा सकी। दूसरी फोटो डालकर देखें।');
+    if(j.stop_reason==='max_tokens') throw new Error('चालान बहुत लंबा है। पेज अलग-अलग करके डालें।');
+    try{return JSON.parse((j.content||[]).find(b=>b.type==='text')?.text||'')}catch(e){throw new Error('जवाब समझ नहीं आया, फिर से कोशिश करें।')}
+}
+function reviewChallan(d){
+  const sc=new Set(DB.stock.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.stock.map(s=>s.engine).filter(Boolean));
+  const inp=(n,v,w,extra='')=>`<input name="${n}" value="${esc(v)}" style="min-width:${w}px" ${extra}>`;
+  openDlg(`चालान से ${d.vehicles.length} गाड़ियाँ मिलीं — जाँच कर Save करें`,`
+  <div class="row"><label class="grow">Date<input type="date" id="chD" value="${esc(toISO(d.date)||today())}"></label>
+    <label class="grow">Challan No<input id="chN" value="${esc(d.challan_no)}"></label></div>
+  ${d.supplier?`<p class="note">Supplier: ${esc(d.supplier)}</p>`:''}
+  <div class="tablewrap imp" style="margin-top:10px"><table id="chT"><tr><th></th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Price</th><th></th></tr>
+  ${d.vehicles.map(v=>{const ch=up(v.chassis),en=up(v.engine),dup=(ch&&sc.has(ch))||(en&&se.has(en));
+    return `<tr><td><input type="checkbox" ${dup?'':'checked'} style="width:auto"></td><td>${inp('model',v.model,150,'list="dlModels"')}</td><td>${inp('colour',v.colour,100,'list="dlCols"')}</td>
+    <td>${inp('engine',en,140,'class="mono"')}</td><td>${inp('chassis',ch,180,'class="mono"')}</td><td>${inp('key',up(v.key),70,'class="mono"')}</td><td>${inp('cost',num(v.price)||'',90,'inputmode="decimal"')}</td>
+    <td>${dup?'<span class="pill due">पहले से स्टॉक में</span>':''}</td></tr>`}).join('')}</table></div>
+  ${dl('dlModels',DB.settings.models)}${dl('dlCols',DB.settings.colours)}
+  <p class="note">⚠ AI से पढ़े नंबर एक बार चालान से ज़रूर मिला लें — खासकर Engine और Chassis No। जो गाड़ी नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveChallan()">Save to stock</button>`);
+}
+function saveChallan(){
+  const date=$('#chD').value||today(), challan=txt($('#chN').value), out=[], bad=[];
+  [...document.querySelectorAll('#chT tr')].slice(1).forEach((tr,i)=>{
+    if(!tr.querySelector('input[type=checkbox]').checked) return;
+    const g=n=>txt(tr.querySelector(`[name=${n}]`).value);
+    const s={date,challan,model:g('model'),colour:g('colour'),engine:up(g('engine')),chassis:up(g('chassis')),key:up(g('key')),cost:g('cost')?String(num(g('cost'))):''};
+    if(!s.model||!(s.chassis||s.engine)) bad.push(i+1); else out.push(s);
+  });
+  if(bad.length){alert(`लाइन ${bad.join(', ')} में Model या Chassis/Engine No खाली है। भरें या ✓ हटा दें।`);return}
+  if(!out.length){alert('कोई गाड़ी चुनी नहीं गई।');return}
+  const t0=Date.now();
+  out.forEach((s,i)=>{DB.stock.push({id:uid(),created:t0+i,status:'in',...s});
+    if(s.model&&!DB.settings.models.includes(s.model))DB.settings.models.push(s.model);
+    if(s.colour&&!DB.settings.colours.includes(s.colour))DB.settings.colours.push(s.colour)});
+  save(); dlg.close(); toast(`${out.length} गाड़ियाँ स्टॉक में जुड़ गईं`); go('stock');
+}
+
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+/* ---------- cloud sync (Firebase) ---------- */
+const SHOP='chhachhrauli', FBV='12.19.0', CPK=KEY+'_cloudproj', PRE=KEY+'_precloud';
+const COLS=['stock','sales','daybook','enquiries','partners','capital'];
+const jparse=j=>{try{return JSON.parse(j)}catch(e){return null}};
+const localHas=()=>COLS.some(c=>(DB[c]||[]).length);
+function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
+function cloudScreen(html){$('#nav').innerHTML='';$('#app').innerHTML=`<div class="card" style="max-width:460px;margin:40px auto">${html}</div>`}
+function syncLabel(){
+  if(READONLY) return '📴 Offline – सिर्फ़ देखने के लिए';
+  if(!cloudReady) return '';
+  if(SYNC_ST==='err') return '⚠ Sync में दिक्कत';
+  if(pendingN>0) return navigator.onLine?'⏳ Saving…':'📴 Offline – नेट आने पर sync होगा';
+  return '☁ Synced';
+}
+function setSync(s){if(s!==undefined)SYNC_ST=s;const t=syncLabel();const a=$('#sync');if(a)a.textContent=t+(cloudReady&&cloudEmail?' · '+cloudEmail:'');const b=$('#sync2');if(b)b.textContent=t}
+addEventListener('online',()=>setSync());addEventListener('offline',()=>setSync());
+
+async function cloudInit(){
+  cloudScreen('<div class="empty">⏳ Cloud से जुड़ रहा है…</div>');
+  const b=window.__FBBASE||`https://www.gstatic.com/firebasejs/${FBV}/`;
+  try{
+    const [A,U,F]=await Promise.all(['app','auth','firestore'].map(m=>import(b+'firebase-'+m+'.js')));
+    const app=A.initializeApp(fbCfg()), auth=U.getAuth(app);
+    let db; try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
+    FB={A,U,F,app,auth,db};
+  }catch(e){
+    cloudScreen(`<h2>इंटरनेट नहीं मिला</h2><p style="margin-top:0">Cloud से जुड़ने के लिए इंटरनेट चाहिए।</p><div class="row"><button class="btn" onclick="location.reload()">फिर कोशिश करें</button>${localHas()?'<button class="btn plain" onclick="READONLY=true;setSync();render()">पुराना डेटा देखें (सिर्फ़ देखने के लिए)</button>':''}</div>`);
+    return;
+  }
+  FB.U.onAuthStateChanged(FB.auth,u=>{if(u){cloudEmail=u.email||'';cloudStart()}else showLogin()});
+}
+function showLogin(msg=''){
+  cloudReady=false; setSync('');
+  cloudScreen(`<h2>Login – ${esc(DB.settings.name)}</h2>${msg?`<p class="warn">${esc(msg)}</p>`:''}
+  <form id="flog" class="grid" style="grid-template-columns:1fr" onsubmit="doLogin(event)">
+    <label>Email<input name="email" type="email" autocomplete="username" autocapitalize="none" required></label>
+    <label>Password<input name="pw" type="password" autocomplete="current-password" required></label>
+    <button class="btn">Login</button></form>
+  <p class="note"><a href="#" onclick="forgotPw();return false">Password भूल गए?</a></p>`);
+}
+function authMsg(er){const c=(er&&er.code)||'';return /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c)?'Email या password गलत है।':/too-many/.test(c)?'बहुत बार गलत कोशिश हुई। थोड़ी देर बाद फिर करें।':/network/.test(c)?'इंटरनेट नहीं मिला।':'Login नहीं हुआ ('+(c||er)+')'}
+async function doLogin(e){
+  e.preventDefault(); const d=formData(e.target), b=e.target.querySelector('button'); b.disabled=true; b.textContent='⏳ …';
+  try{await FB.U.signInWithEmailAndPassword(FB.auth,d.email,d.pw)}catch(er){showLogin(authMsg(er))}
+}
+async function forgotPw(){
+  const em=txt($('#flog [name=email]').value); if(!em){alert('पहले ऊपर अपना email लिखें।');return}
+  try{await FB.U.sendPasswordResetEmail(FB.auth,em);alert('Password बदलने का link '+em+' पर भेज दिया है (Spam folder भी देखें)।')}catch(er){alert(authMsg(er))}
+}
+function cloudStart(){
+  cloudScreen('<div class="empty">⏳ डेटा आ रहा है…</div>');
+  const slow=setTimeout(()=>{if(!cloudReady&&!READONLY)cloudScreen('<div class="empty">⏳ डेटा आ रहा है… इंटरनेट धीमा लग रहा है।<br><br><button class="btn plain" onclick="location.reload()">फिर कोशिश करें</button></div>')},20000);
+  const {F,db}=FB, init={}, need=COLS.length+1; let started=false;
+  const begin=()=>{if(started||Object.keys(init).length<need)return; started=true; clearTimeout(slow); cloudFirst(init)};
+  COLS.forEach(c=>UNSUB.push(F.onSnapshot(F.collection(db,'shops',SHOP,c),{includeMetadataChanges:true},snap=>{
+    if(!cloudReady){ if(started) return; if(snap.metadata.fromCache&&snap.empty) return; init[c]=snap.docs.map(d=>d.data().j); begin(); return }
+    remoteCol(c,snap);
+  },cloudErr)));
+  UNSUB.push(F.onSnapshot(F.doc(db,'shops',SHOP,'meta','settings'),{includeMetadataChanges:true},snap=>{
+    if(!cloudReady){ if(started) return; if(snap.metadata.fromCache&&!snap.exists()) return; init._s=snap.exists()?snap.data().j:null; begin(); return }
+    if(snap.exists()) remoteSettings(snap.data().j);
+  },cloudErr));
+}
+function cloudFirst(init){
+  const pid=fbCfg().projectId, wasCache=localStorage.getItem(CPK)===pid;
+  const cloudEmpty=COLS.every(c=>!init[c].length)&&!init._s;
+  const cdb={settings:(init._s&&jparse(init._s))||structuredClone(DB.settings)};
+  COLS.forEach(c=>cdb[c]=init[c].map(jparse).filter(Boolean));
+  const syncedFromInit=()=>{SYNCED={};COLS.forEach(c=>{SYNCED[c]=new Map(init[c].map(j=>{const r=jparse(j);return r&&[r.id,j]}).filter(Boolean))});SYNCED._s=init._s||undefined};
+  window.__cloudFinish=(choice)=>{
+    if(choice==='upload'){ syncedFromInit(); }                                   // keep local DB, push all
+    else if(choice==='fresh'){ try{localStorage.setItem(PRE,JSON.stringify(DB))}catch(e){} DB={...structuredClone(DEFAULTS),settings:DB.settings}; syncedFromInit(); }
+    else { if(localHas()&&!wasCache){try{localStorage.setItem(PRE,JSON.stringify(DB))}catch(e){}} DB=cdb; syncedFromInit(); }
+    for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]);
+    try{localStorage.setItem(CPK,pid)}catch(e){}
+    cloudReady=true; cacheLocal(); cloudPush(); setSync('ok'); render();
+    if(choice==='cloud'&&localStorage.getItem(PRE)&&!wasCache&&localHas0) toast('इस डिवाइस का पुराना डेटा अलग रख दिया है (Settings में)');
+  };
+  const localHas0=localHas();
+  if(cloudEmpty&&localHas0&&!wasCache){
+    const n=c=>(DB[c]||[]).length;
+    cloudScreen(`<h2>Cloud अभी खाली है</h2><p style="margin-top:0">इस डिवाइस पर <b>${n('stock')}</b> गाड़ियाँ, <b>${n('sales')}</b> सेल, <b>${n('daybook')}</b> रोजनामचा एंट्री हैं।</p>
+    <p>क्या यह डेटा cloud में चढ़ा दें? फिर बाकी सभी डिवाइस पर यही दिखेगा।</p>
+    <div class="row"><button class="btn" onclick="__cloudFinish('upload')">हाँ, cloud में चढ़ाएँ</button><button class="btn plain" onclick="if(confirm('Cloud खाली शुरू होगा। इस डिवाइस का डेटा Settings में अलग रखा रहेगा। ठीक?'))__cloudFinish('fresh')">नहीं, खाली शुरू करें</button></div>`);
+  } else if(cloudEmpty) __cloudFinish('upload');
+  else __cloudFinish('cloud');
+}
+function remoteCol(c,snap){
+  const m=SYNCED[c]||(SYNCED[c]=new Map()); let ch=false;
+  for(const x of snap.docChanges()){
+    const id=x.doc.id;
+    if(x.type==='removed'){ if(m.has(id)){m.delete(id);DB[c]=DB[c].filter(r=>r.id!==id);ch=true} continue }
+    const j=x.doc.data().j; if(m.get(id)===j) continue;
+    const r=jparse(j); if(!r) continue; m.set(id,j);
+    const i=DB[c].findIndex(o=>o.id===id); if(i<0) DB[c].push(r); else DB[c][i]=r; ch=true;
+  }
+  if(ch) remoteChanged();
+}
+function remoteSettings(j){ if(SYNCED._s===j) return; const s=jparse(j); if(!s) return; SYNCED._s=j; DB.settings=s; remoteChanged() }
+function remoteChanged(){
+  cacheLocal();
+  const ae=document.activeElement, typing=ae&&$('#app').contains(ae)&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName);
+  if(dlg.open||appDirty||typing){$('#syncbar').classList.remove('hide');return}
+  render();
+}
+function cloudPush(){
+  if(!FB||!cloudReady) return;
+  const {F,db}=FB, ops=[];
+  for(const c of COLS){ const m=SYNCED[c]||(SYNCED[c]=new Map()), seen=new Set();
+    for(const r of DB[c]){ if(!r.id) r.id=uid(); seen.add(r.id); const j=JSON.stringify(r); if(m.get(r.id)!==j){m.set(r.id,j);ops.push([c,r.id,j])} }
+    for(const id of [...m.keys()]) if(!seen.has(id)){m.delete(id);ops.push([c,id,null])}
+  }
+  const sj=JSON.stringify(DB.settings); if(SYNCED._s!==sj){SYNCED._s=sj;ops.push(['meta','settings',sj])}
+  if(!ops.length) return;
+  const ps=[];
+  for(let i=0;i<ops.length;i+=400){ const b=F.writeBatch(db);
+    ops.slice(i,i+400).forEach(([c,id,j])=>{const ref=F.doc(db,'shops',SHOP,c,id); if(j===null) b.delete(ref); else b.set(ref,{j,by:cloudEmail,at:F.serverTimestamp()})});
+    ps.push(b.commit()) }
+  pendingN++; setSync();
+  Promise.all(ps).then(()=>{pendingN--;setSync('ok')},e=>{pendingN--;setSync('err');cloudErr(e)});
+}
+function cloudErr(e){
+  const c=(e&&e.code)||'';
+  if(/permission-denied/.test(c)){ cloudReady=false; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[];
+    cloudScreen(`<h2>इजाज़त नहीं है</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> को इस showroom का डेटा देखने की इजाज़त नहीं है। Firebase के Firestore Rules में यह email जोड़ें।</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`); return }
+  toast('⚠ Sync error: '+(c||(e&&e.message)||e));
+}
+async function cloudLogout(force){
+  if(!force&&pendingN>0&&!confirm('कुछ एंट्री अभी cloud में नहीं पहुँचीं (इंटरनेट नहीं)। Logout करने पर वे खो जाएँगी। फिर भी Logout करें?')) return;
+  UNSUB.forEach(u=>{try{u()}catch(e){}}); UNSUB=[];
+  try{localStorage.removeItem(KEY);localStorage.removeItem(CPK)}catch(e){}
+  try{await FB.U.signOut(FB.auth)}catch(e){}
+  try{await FB.F.terminate(FB.db);await FB.F.clearIndexedDbPersistence(FB.db)}catch(e){}
+  location.reload();
+}
+function rulesText(s){
+  const em=[...new Set(String(s||'').split(/[,\s;]+/).map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)))];
+  return `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /shops/${SHOP}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.token.email.lower() in [${em.map(e=>`'${e}'`).join(', ')}];
+    }
+  }
+}`}
+function parseFbCfg(t){const o={};String(t||'').replace(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g,(m,k,v)=>{o[k]=v});
+  return o.apiKey&&o.projectId&&o.appId?{apiKey:o.apiKey,authDomain:o.authDomain||'',projectId:o.projectId,storageBucket:o.storageBucket||'',messagingSenderId:o.messagingSenderId||'',appId:o.appId}:null}
+function saveFbCfg(){const c=parseFbCfg($('#fbIn').value);
+  if(!c){alert('Config पूरी नहीं है। Firebase में “firebaseConfig = { … }” वाला पूरा हिस्सा कॉपी करके डालें।');return}
+  if(!confirm('Cloud चालू करें? इसके बाद login करना होगा।'))return;
+  try{localStorage.setItem(FBK,JSON.stringify(c))}catch(e){} location.reload()}
+function rulesBox(v){return `<details style="margin-top:10px"><summary>Firebase Rules – किन emails को इजाज़त है</summary>
+  <p class="note">सभी login वाले emails comma लगाकर लिखें, फिर नीचे का पूरा text Firebase → Firestore → Rules में paste करके Publish करें।</p>
+  <input id="rulesEm" value="${esc(v)}" placeholder="aap@gmail.com, partner@gmail.com" oninput="$('#rulesOut').value=rulesText(this.value)">
+  <textarea id="rulesOut" readonly style="min-height:170px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:6px">${esc(rulesText(v))}</textarea></details>`}
+function cloudCard(){
+  if(!CLOUD) return `<div class="card"><h2>☁ Cloud sync – लैपटॉप, iPad, फ़ोन पर एक ही डेटा</h2>
+  <p style="margin-top:0">Firebase project बनने के बाद उसकी config (firebaseConfig) यहाँ paste करें।</p>
+  <textarea id="fbIn" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;, …&#10;};"></textarea>
+  <div style="margin-top:8px"><button class="btn" onclick="saveFbCfg()">Cloud चालू करें</button></div>${rulesBox('')}</div>`;
+  const pre=(()=>{try{return localStorage.getItem(PRE)}catch(e){return ''}})();
+  return `<div class="card"><h2>☁ Cloud sync</h2>
+  <p style="margin-top:0">Login: <b>${esc(cloudEmail)}</b> · Project: <span class="mono">${esc(fbCfg().projectId)}</span> · <span id="sync2">${syncLabel()}</span></p>
+  <p class="note" style="margin-top:0">हर एंट्री अपने-आप cloud में जाती है और बाकी डिवाइस पर कुछ सेकंड में दिख जाती है। इंटरनेट न हो तो भी एंट्री होती रहेगी, नेट आते ही sync हो जाएगी।</p>
+  <div class="row" style="margin-top:8px"><button class="btn plain" onclick="cloudLogout()">Logout</button>
+  ${!FB_CONFIG?`<button class="btn plain" onclick="if(confirm('इस डिवाइस पर cloud बंद करें? (cloud का डेटा नहीं मिटेगा)')){try{localStorage.removeItem(FBK)}catch(e){};cloudLogout()}">इस डिवाइस पर Cloud बंद करें</button>`:''}
+  ${pre?`<button class="btn plain" onclick="download('old-device-data-${today()}.json',localStorage.getItem(PRE),'application/json')">⬇ इस डिवाइस का पुराना (cloud से पहले का) डेटा</button>`:''}</div>
+  ${rulesBox(cloudEmail)}</div>`;
+}
+$('#app').addEventListener('input',()=>{appDirty=true});
+dlg.addEventListener('close',()=>{if(cloudReady&&!$('#syncbar').classList.contains('hide')&&!appDirty)render()});
+
+if(CLOUD) cloudInit(); else render();
+</script>
+</body>
+</html>
