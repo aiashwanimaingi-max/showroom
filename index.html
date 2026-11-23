@@ -353,7 +353,7 @@ function newSale(stockId,enqId){
   if(!avail.length){alert('No vehicle in stock. Add the vehicle in the Stock tab first.');go('stock');return}
   const e=enqId?DB.enquiries.find(x=>x.id===enqId):null;
   openDlg('New sale',`<form id="fs" class="grid">
-    <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}${s.challan?' · Purch. challan '+esc(s.challan):''}</option>`).join('')}</select></label>
+    <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}</option>`).join('')}</select></label>
     <label>Date<input type="date" name="date" value="${today()}" required></label>
     <label>Sale Challan / Bill No<input name="schallan"></label>
     <label>Customer name<input name="name" value="${esc(e?.name)}" required></label>
@@ -461,10 +461,9 @@ function salesTable(rows,summary){
     <div class="stat"><div class="k">Finance pending</div><div class="v" style="color:var(--amber)">${rs(sum(s=>num(s.finance)&&!s.financeReceived?num(s.finance):0))}</div></div>
     <div class="stat"><div class="k">Finance short / excess</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
     <div class="stat"><div class="k">Customer dues</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
-  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Sale Challan</th><th>Purch. Challan</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th class="num">Due</th></tr></thead><tbody>
+  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Bill</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th class="num">Due</th></tr></thead><tbody>
   ${rows.map(s=>{const due=saleDue(s);return `<tr class="click" title="Click to open" onclick="if(!event.target.closest('button,a'))viewSale('${s.id}')">
     <td><b>${esc(s.schallan)||'<span class="muted">—</span>'}</b><div class="sub2">Rcpt #${s.inv}</div></td>
-    <td>${(st=>st&&st.challan?esc(st.challan):`<span class="muted">—</span>`)(DB.stock.find(x=>x.id===s.stockId))}</td>
     <td>${fd(s.date)}</td>
     <td class="wrap"><b>${esc(s.name)}</b><div class="sub2">${esc(s.rel||'')} ${esc(s.relName||'')}${s.phone?' · '+esc(s.phone):''}</div></td>
     <td class="wrap">${esc(s.model)} <span class="muted">${esc(s.colour||'')}</span><div class="sub2 mono">${esc(s.chassis)}</div></td>
@@ -474,7 +473,7 @@ function salesTable(rows,summary){
     <td class="num">${diffCell(s)}</td>
     <td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
     <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td></tr>`}).join('')}</tbody>
-  <tfoot><tr class="tot"><td colspan="5">Total (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
+  <tfoot><tr class="tot"><td colspan="4">Total (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
     <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td></tr></tfoot></table></div>`;
 }
 function vSales(){
@@ -673,10 +672,10 @@ function restoreJSON(file){
 }
 function csv(which){
   const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
-    sales:['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
+    sales:['inv','schallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
-  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -699,12 +698,12 @@ function pdfData(which){
   if(which==='sales'){
     const q=salesQ.toLowerCase(), rows=DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.inv-b.inv);
     const T=k=>rows.reduce((a,s)=>a+k(s),0), dd=v=>Math.abs(v)<0.5?'':(v<0?'− ':'+ ')+rs(Math.abs(v));
-    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[7,8,9,10,11,12],
-      head:['Sale Challan','Purch. Challan','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance received','Short / Excess','From customer','Due'],
-      rows:rows.map(s=>[s.schallan||('#'+s.inv),(DB.stock.find(x=>x.id===s.stockId)||{}).challan||'',fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
+    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[6,7,8,9,10,11],
+      head:['Bill','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance received','Short / Excess','From customer','Due'],
+      rows:rows.map(s=>[s.schallan||('#'+s.inv),fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
         num(s.finance)?rs(s.finance)+(s.financer?' '+s.financer:''):(s.financer||''),num(s.finance)?(s.financeReceived?rs(finRecd(s)):'pending'):'',
         s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ Full'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
-      foot:[['','','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
+      foot:[['','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
   }
   if(which==='daybook'){
     const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
@@ -854,7 +853,7 @@ const aiRun=(key,parts,prompt,schema,name)=>aiProv()==='openai'?readOpenAI(key,p
 function aiFail(e){openDlg('Could not read the photo',`<p style="margin-top:0">${esc(e.message==='IMG'?'This photo could not be opened. Use a JPG / PNG photo or a PDF (convert iPhone HEIC photos to JPG).':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">OK</button>')}
 const objSchema=props=>({type:'object',additionalProperties:false,required:Object.keys(props),properties:props});
 const S_STR={type:'string'}, S_NUM={type:'number'};
-const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,purchase_challan_no:S_STR,key_no:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
+const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
   model:S_STR,colour:S_STR,engine:S_STR,chassis:S_STR,price:S_NUM,accessories:S_NUM,finance_amount:S_NUM,financer:S_STR,exchange_vehicle:S_STR,exchange_value:S_NUM,
   paid_amount:S_NUM,payment_mode:{type:'string',enum:['Cash','Cheque','UPI','Bank']},payment_ref:S_STR,notes:S_STR});
 const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,direction:{type:'string',enum:['in','out']},particulars:S_STR,amount:S_NUM,
@@ -867,12 +866,7 @@ async function aiSale(files){
     const prompt=`These are sale documents from an Indian two-wheeler dealership (Honda): sale invoices / bills, booking forms, delivery challans / receipts, or handwritten sale register pages. There may be MANY bills — one or more per photo or page.
 Return EVERY vehicle sale you find in "sales", one entry per vehicle sold. Do not merge two bills, and do not skip any.
 For each sale:
-- sale_challan_no: the SHOWROOM'S OWN sale number for that bill. On handwritten register pages this is the number written inside a CIRCLE at the top of the page (e.g. a circled "48"). On printed bills it is the bill / invoice / delivery challan number. ONE number only, never several joined.
-- purchase_challan_no: the supplier's challan number with which this vehicle was PURCHASED by the showroom. On handwritten pages it is written as "Challan No: ...." (e.g. "Challan No: 7316"). Empty if not shown. Never put the circled number here.
-- key_no: key number if written (e.g. "Key No: PN90").
-- A date written in the margin or top corner of a handwritten page (e.g. 22-11-26) is the sale date.
-- phone: the first mobile number. notes: put any second mobile number and the battery number here, e.g. "Mob 2: 7015712076 · Battery: 50611320467598".
-- Example of a handwritten page: circled "47" at top → sale_challan_no "47"; "Challan No: 6411" → purchase_challan_no "6411"; "Name: Sani W/o Moseen" → customer_name "Sani", relation "W/o", relative_name "Moseen".
+- sale_challan_no: the showroom's own sale challan / delivery challan / bill / invoice number printed on THAT bill (ONE number only, never several joined).
 - customer_name; relation (S/o, W/o, D/o or C/o as written); relative_name (father / husband name); phone (10-digit mobile); address.
 - model, colour, engine number and chassis (frame / VIN) number. Copy engine and chassis exactly, in capitals with no spaces; do not confuse 0/O, 1/I, 5/S, 8/B.
   If the model or colour matches one of these names used by the dealership, use that exact name: Models: ${DB.settings.models.join(', ')}. Colours: ${DB.settings.colours.join(', ')}.
@@ -905,7 +899,7 @@ function reviewSales(L){
     if(sold)nSold++; if(twice)nTwice++; if(!st&&!sold)nNew++;
     const tag=sold?'<span class="pill sold">Already sold</span>':twice?'<span class="pill due">Appears twice</span>':st?`<span class="pill in">Found in stock</span>${st.chassis!==ch?`<div class="muted mono" style="font-size:11px">${esc(st.chassis)}</div>`:''}`:'<span class="pill due">Not in stock — will be added</span>';
     return `<tr data-i="${i}" data-st="${st?st.id:''}"><td><input type="checkbox" ${sold||twice?'':'checked'} style="width:auto"></td>
-    <td>${inp('schallan',one(d.sale_challan_no),70,'placeholder="Sale no."')}</td><td>${inp('pchallan',one(d.purchase_challan_no)||(st&&st.challan)||'',75,'placeholder="Purch. no."')}</td><td><input type="date" name="date" value="${esc(toISO(d.date)||today())}"></td>
+    <td>${inp('schallan',one(d.sale_challan_no),80,'placeholder="Bill no."')}</td><td><input type="date" name="date" value="${esc(toISO(d.date)||today())}"></td>
     <td>${inp('name',txt(d.customer_name),130)}</td><td>${inp('relName',txt(d.relative_name),110,'placeholder="Father/Husband"')}</td><td>${inp('phone',txt(d.phone),100)}</td>
     <td>${inp('model',txt(d.model),120,'list="dlModels"')}</td><td>${inp('chassis',ch,160,'class="mono"')}</td><td>${inp('engine',en,120,'class="mono"')}</td>
     <td>${inp('price',num(d.price)||'',80,'inputmode="decimal"')}</td><td>${inp('finance',num(d.finance_amount)||'',75,'inputmode="decimal"')}</td><td>${inp('financer',txt(d.financer),80)}</td>
@@ -913,7 +907,7 @@ function reviewSales(L){
   openDlg(`${L.length} sales found in bills — check and Save`,`
   ${nSold||nTwice?`<p class="warn" style="margin-top:0">${nSold?`<b>${nSold}</b> already sold. `:''}${nTwice?`<b>${nTwice}</b> bill(s) appear twice. `:''}These are unticked and will not be added again.</p>`:''}
   ${nNew?`<p class="note" style="margin-top:0">${nNew} vehicle(s) not found in stock — on Save they will be added to stock as sold. Please double-check the chassis numbers.</p>`:''}
-  <div class="tablewrap imp"><table id="slT"><tr><th></th><th>Sale Challan</th><th>Purchase Challan</th><th>Date</th><th>Customer</th><th>S/o</th><th>Mobile</th><th>Model</th><th>Chassis</th><th>Engine</th><th>Price</th><th>Finance</th><th>Financer</th><th>Paid</th><th>Mode</th><th></th></tr>${rows}</table></div>
+  <div class="tablewrap imp"><table id="slT"><tr><th></th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>S/o</th><th>Mobile</th><th>Model</th><th>Chassis</th><th>Engine</th><th>Price</th><th>Finance</th><th>Financer</th><th>Paid</th><th>Mode</th><th></th></tr>${rows}</table></div>
   ${dl('dlModels',DB.settings.models)}
   <p class="note">⚠ Check the names, numbers and amounts read by AI against the bills. Untick any sale you do not want to add.</p>`,
   `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveSales()">Save all sales</button>`);
@@ -925,7 +919,7 @@ function saveSales(){
   [...document.querySelectorAll('#slT tr')].slice(1).forEach((tr,n)=>{
     if(!tr.querySelector('input[type=checkbox]').checked) return;
     const g=k=>{const e=tr.querySelector(`[name=${k}]`);return e?txt(e.value):''}, d=L[+tr.dataset.i]||{};
-    const r={schallan:g('schallan'),pchallan:g('pchallan'),key:up(d.key_no),date:g('date')||today(),name:g('name'),relName:g('relName'),phone:g('phone'),model:g('model'),chassis:up(g('chassis')),engine:up(g('engine')),
+    const r={schallan:g('schallan'),date:g('date')||today(),name:g('name'),relName:g('relName'),phone:g('phone'),model:g('model'),chassis:up(g('chassis')),engine:up(g('engine')),
       price:num(g('price')),finance:num(g('finance')),financer:g('financer'),paid:num(g('paid')),mode:g('mode')||'Cash',
       rel:d.relation||'S/o',address:txt(d.address),extra:num(d.accessories),exchange:txt(d.exchange_vehicle),exchangeValue:num(d.exchange_value),ref:txt(d.payment_ref),notes:txt(d.notes),colour:txt(d.colour)};
     if(!r.name||!(r.chassis||r.engine)){bad.push(n+1);return}
@@ -938,8 +932,7 @@ function saveSales(){
     const avail=DB.stock.filter(s=>s.status!=='sold'&&!used.has(s.id));
     let st=saleMatch(r.chassis,r.engine,avail);
     if(!st&&DB.stock.some(s=>s.status==='sold'&&((r.chassis&&s.chassis===r.chassis)||(r.engine&&s.engine===r.engine)))){skipped.push(r.chassis||r.engine);continue}
-    if(st){if(!st.challan&&r.pchallan)st.challan=r.pchallan; if(!st.key&&r.key)st.key=r.key}
-    if(!st){st={id:uid(),created:Date.now(),status:'in',date:r.date,challan:r.pchallan,model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:r.key,cost:''};DB.stock.push(st);
+    if(!st){st={id:uid(),created:Date.now(),status:'in',date:r.date,challan:'',model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:'',cost:''};DB.stock.push(st);
       if(r.model&&!DB.settings.models.includes(r.model))DB.settings.models.push(r.model)}
     used.add(st.id);
     const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
