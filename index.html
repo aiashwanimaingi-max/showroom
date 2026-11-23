@@ -400,6 +400,28 @@ let salesQ='', salesW='';
 // Who received this sale's money (customer payments + finance): {'':business amount, partnerId: amount}
 function moneyWith(s){const m={}; (s.payments||[]).forEach(p=>{const k=p.by||''; m[k]=(m[k]||0)+num(p.amount)}); if(s.financeReceived&&num(s.finance)) {const k=s.financeBy||''; m[k]=(m[k]||0)+finRecd(s)} return m}
 const mwName=k=>k?pName(k):'Business';
+// Dropdown in the sale register: choose who has the customer's money (and the finance money) for this sale.
+function mwSel(cur,on,mixed){
+  return `<select style="width:auto;padding:3px 6px;font-size:13px;${cur?'background:#e8f0fe;color:#1a56c4;font-weight:600':'background:#e7f6ec;color:#1a7f37;font-weight:600'}" onclick="event.stopPropagation()" onchange="${on}">${mixed?'<option value="*" selected>Mixed</option>':''}<option value="" ${!mixed&&!cur?'selected':''}>Business</option>${DB.partners.map(p=>`<option value="${p.id}" ${!mixed&&cur===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
+}
+function mwCell(s){
+  if(!DB.partners.length) return (t=>t||'<span class="muted">—</span>')(mwText(s));
+  const P=(s.payments||[]).filter(p=>num(p.amount)>0), out=[];
+  if(P.length){const ks=[...new Set(P.map(p=>p.by||''))], amt=P.reduce((a,p)=>a+num(p.amount),0);
+    out.push(`<div style="margin-bottom:3px">${mwSel(ks[0],`setSaleBy('${s.id}',this.value)`,ks.length>1)} <span style="font-size:13px">${rs(amt)}</span></div>`)}
+  if(s.financeReceived&&num(s.finance)) out.push(`<div><span class="sub2" style="display:inline">Finance</span> ${mwSel(s.financeBy||'',`setFinBy('${s.id}',this.value)`,false)} <span style="font-size:13px">${rs(finRecd(s))}</span></div>`);
+  return out.join('')||'<span class="muted">—</span>';
+}
+function setSaleBy(id,by){
+  if(by==='*') return; const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  (s.payments||[]).forEach(p=>{ if(by) p.by=by; else delete p.by; const de=DB.daybook.find(x=>x.payId===p.id); if(de){ if(by) de.by=by; else delete de.by } });
+  save(); toast(`Money of ${s.name} → ${mwName(by)}`); tab==='sales'?salesList():render();
+}
+function setFinBy(id,by){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return; s.financeBy=by||'';
+  const de=DB.daybook.find(x=>x.fin&&x.saleId===id); if(de){ if(by) de.by=by; else delete de.by }
+  save(); toast(`Finance money of ${s.name} → ${mwName(by)}`); tab==='sales'?salesList():render();
+}
 const mwText=s=>Object.entries(moneyWith(s)).filter(([,v])=>v>0.5).map(([k,v])=>`${mwName(k)} ${rs(v)}`).join(' · ');
 function newSale(stockId,enqId){
   const avail=DB.stock.filter(isIn);
@@ -519,7 +541,7 @@ function salesTable(rows,summary){
     <div class="stat"><div class="k">Finance short / excess</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
     <div class="stat"><div class="k">Customer dues</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
   return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Sale Challan</th><th>Purch. Challan</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th>Money with</th><th class="num">Due</th></tr></thead><tbody>
-  ${rows.map(s=>{const due=saleDue(s);return `<tr class="click" title="Click to open" onclick="if(!event.target.closest('button,a'))viewSale('${s.id}')">
+  ${rows.map(s=>{const due=saleDue(s);return `<tr class="click" title="Click to open" onclick="if(!event.target.closest('button,a,select'))viewSale('${s.id}')">
     <td><b>${esc(s.schallan)||'<span class="muted">—</span>'}</b><div class="sub2">Rcpt #${s.inv}</div></td>
     <td>${(st=>st&&st.challan?esc(st.challan):`<span class="muted">—</span>`)(DB.stock.find(x=>x.id===s.stockId))}</td>
     <td>${fd(s.date)}</td>
@@ -530,7 +552,7 @@ function salesTable(rows,summary){
     <td class="num">${recCell(s)}</td>
     <td class="num">${diffCell(s)}</td>
     <td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
-    <td style="white-space:nowrap">${(m=>m.length?m.map(([k,v])=>`<div><span class="pill ${k?'open':'in'}">${esc(mwName(k))}</span> <span style="font-size:13px">${rs(v)}</span></div>`).join(''):'<span class="muted">—</span>')(Object.entries(moneyWith(s)).filter(([,v])=>v>0.5))}</td>
+    <td style="white-space:nowrap">${mwCell(s)}</td>
     <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td></tr>`}).join('')}</tbody>
   <tfoot><tr class="tot"><td colspan="5">Total (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
     <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td style="white-space:nowrap;font-size:12px">${(t=>Object.entries(t).filter(([,v])=>v>0.5).map(([k,v])=>`${esc(mwName(k))} ${rs(v)}`).join('<br>'))(rows.reduce((t,s)=>{for(const [k,v] of Object.entries(moneyWith(s))) t[k]=(t[k]||0)+v; return t},{}))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td></tr></tfoot></table></div>`;
