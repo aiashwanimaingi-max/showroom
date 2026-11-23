@@ -636,42 +636,92 @@ function dayBalance(before){
   for(const d of DB.daybook){ if(before&&d.date>=before) continue; const v=(d.type==='in'?1:-1)*num(d.amount); total+=v; if(d.mode==='Cash') cash+=v; }
   return {cash,total};
 }
+const HEADS_OUT=['Rent','Salary & Wages','Spare Parts Expenses','Workshop Expenses','Miscellaneous Expenses','Showroom Expenses'];
+const HEADS_IN=['Miscellaneous Receipts','Service / workshop income','Other income'];
+const headOpts=(type,sel)=>opts(type==='in'?HEADS_IN:HEADS_OUT,sel);
+const HEAD2CAT={'Spare Parts Expenses':'Spare parts','Workshop Expenses':'Workshop','Miscellaneous Expenses':'Miscellaneous'};
+function headOf(d){
+  if(d.head) return d.head;
+  if(d.saleId) return d.fin?'Finance received':'Sale receipt';
+  if(d.dpId) return 'Dealer payment';
+  if(d.epId) return d.epKind==='rent'?'Rent':'Salary & Wages';
+  if(d.exId) return ({'Spare parts':'Spare Parts Expenses','Workshop':'Workshop Expenses','Miscellaneous':'Miscellaneous Expenses'})[d.exCat]||d.exCat||'Expense';
+  if(d.capId){const c=DB.capital.find(x=>x.id===d.capId); return d.type==='in'?'Partner capital':c&&c.type==='exp'?'Paid by partner':'Partner withdrawal'}
+  return '';
+}
 function vDay(){
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New entry</h2>${photoBtn('aiPay','From bill / receipt photo')}</div>
   <form id="fd" class="grid" onsubmit="addDay(event)">
     <label>Date<input type="date" name="date" value="${today()}" required></label>
-    <label>Type<select name="type"><option value="in">Receipt (money in)</option><option value="out">Payment (money out)</option></select></label>
-    <label class="span2">Particulars<input name="particulars" list="dlPart" required placeholder="e.g. Plumber, Electricity bill, Tea, Service repair…"></label>
+    <label>Type<select name="type" onchange="this.form.head.innerHTML=headOpts(this.value)"><option value="out">Payment (money out)</option><option value="in">Receipt (money in)</option></select></label>
+    <label>Head (account)<select name="head">${headOpts('out')}</select></label>
     <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
     <label>Mode<select name="mode"><option>Cash</option><option>Bank</option><option>UPI</option><option>Cheque</option></select></label>
+    <label>Paid / received by<select name="by"><option value="">Business (cash / bank)</option>${DB.partners.map(p=>`<option value="${p.id}" ${''===p.id?'selected':''}>Partner – ${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="span2">Remarks<input name="particulars" list="dlPart" placeholder="e.g. Raman Nov salary, brake shoe for HR02AB1234, tea, electricity bill…"></label>
     <div style="align-self:end"><button class="btn">Save entry</button></div>
   </form>${dl('dlPart',[...new Set(DB.daybook.filter(d=>!d.saleId).map(d=>d.particulars))].slice(-60))}
-  <p class="note">Sale payments and finance receipts are added here automatically.</p></div>
+  <p class="note">Sale payments, finance receipts, dealer payments, rent/salary and expenses entered in their own tabs are added here automatically. For a person-wise rent / salary account (Shubham, Ruchi, Raman, Sahil) use the Rent & Salary tab.<br><b>Paid / received by a partner:</b> if a partner paid from his own pocket, it is added to his capital (business owes him). If a partner kept the money he received, it is counted as his withdrawal. Business cash does not change. See the Partners tab for each partner's balance.</p></div>
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Day Book</h2>
     <label style="flex-direction:row;align-items:center">From <input type="date" value="${dayFrom}" onchange="dayFrom=this.value;dayList()" style="width:auto"></label>
     <label style="flex-direction:row;align-items:center">To <input type="date" value="${dayTo}" onchange="dayTo=this.value;dayList()" style="width:auto"></label>
+    <select style="width:auto" onchange="dayH=this.value;dayList()"><option value="">All heads</option>${[...HEADS_OUT,...HEADS_IN,'Sale receipt','Finance received','Dealer payment','Partner capital'].map(h=>`<option ${dayH===h?'selected':''}>${h}</option>`).join('')}</select>
     <button class="btn plain sm" onclick="dayFrom=dayTo=today();vDay()">Today</button>
     <button class="btn plain sm" onclick="csv('daybook')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('daybook')">📄 PDF</button></div><div id="dayList"></div></div>`;
   dayList();
 }
+let dayH='';
 function dayList(){
-  const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
+  const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo&&(!dayH||headOf(d)===dayH)).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
   const ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
   rows.forEach(d=>{const a=num(d.amount); if(d.type==='in'){tin+=a;if(d.mode==='Cash')cin+=a}else{tout+=a;if(d.mode==='Cash')cout+=a}});
+  const auto=d=>d.saleId||(d.capId&&!d.man)||d.dpId||d.epId||d.exId;
   $('#dayList').innerHTML=`<div class="stats">
     <div class="stat"><div class="k">Opening cash</div><div class="v">${rs(ob.cash)}</div></div>
     <div class="stat"><div class="k">Receipts</div><div class="v" style="color:var(--green)">${rs(tin)}</div></div>
     <div class="stat"><div class="k">Payments</div><div class="v" style="color:var(--red)">${rs(tout)}</div></div>
     <div class="stat red"><div class="k">Closing cash in hand</div><div class="v">${rs(ob.cash+cin-cout)}</div></div></div>
-  ${rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Particulars</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr>
-  ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td style="white-space:normal">${esc(d.particulars)}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
-  <td>${d.saleId||d.capId||d.dpId||d.epId||d.exId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
-  <tr class="tot"><td colspan="3">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
+  ${dayH?`<p class="note" style="margin:0 0 8px">Showing only “${esc(dayH)}”. Opening / closing cash are for all heads.</p>`:''}
+  ${rows.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Head</th><th>Remarks</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr></thead><tbody>
+  ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td>${headOf(d)?`<span class="pill ${d.type==='in'?'in':'lost'}">${esc(headOf(d))}</span>`:'<span class="muted">—</span>'}</td><td class="wrap" style="max-width:360px">${esc(d.particulars)}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
+  <td style="white-space:nowrap">${auto(d)?'<span class="muted" style="font-size:12px">auto</span>':d.man&&!d.head?'<span class="muted" style="font-size:12px">partner</span>':`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button> <button class="btn plain sm" onclick="if(confirm('Delete this entry?')){dayDrop(DB.daybook.find(x=>x.id==='${d.id}'));save();dayList()}">Delete</button>`}</td></tr>`).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="4">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
+}
+function dayDrop(x){ if(!x) return; if(x.man&&x.capId){DB.daybook=DB.daybook.filter(d=>d.capId!==x.capId);DB.capital=DB.capital.filter(c=>c.id!==x.capId)} else DB.daybook=DB.daybook.filter(d=>d.id!==x.id) }
+function dayPut(d,id,created){
+  const a=num(d.amount), rem=d.particulars||d.head, t0=created||Date.now();
+  if(!d.by){ DB.daybook.push({id:id||uid(),created:t0,date:d.date,type:d.type,head:d.head,mode:d.mode,amount:a,particulars:rem}); return }
+  const cid=uid(), nm=pName(d.by), lbl=`${d.head}${rem&&rem!==d.head?' – '+rem:''}`;
+  if(d.type==='out'){
+    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'exp',amount:a,mode:d.mode,note:lbl});
+    DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`Capital – ${nm} (paid personally)`,capId:cid,man:1});
+    DB.daybook.push({id:id||uid(),created:t0+1,date:d.date,type:'out',head:d.head,mode:d.mode,amount:a,particulars:`${rem} (paid by ${nm})`,rem,by:d.by,capId:cid,man:1});
+  } else {
+    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'out',amount:a,mode:d.mode,note:`Received – ${lbl}`});
+    DB.daybook.push({id:id||uid(),created:t0,date:d.date,type:'in',head:d.head,mode:d.mode,amount:a,particulars:`${rem} (received by ${nm})`,rem,by:d.by,capId:cid,man:1});
+    DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`Withdrawal – ${nm} (kept the money received)`,capId:cid,man:1});
+  }
 }
 function addDay(e){
   e.preventDefault(); const d=formData(e.target); if(num(d.amount)<=0) return;
-  DB.daybook.push({id:uid(),created:Date.now(),...d,amount:num(d.amount)}); save(); toast('Entry saved');
-  const keep={date:d.date,type:d.type,mode:d.mode}; vDay(); const f=$('#fd'); for(const k in keep) f[k].value=keep[k]; f.particulars.focus();
+  dayPut(d); save(); toast(d.by?`Saved – ${d.type==='out'?'added to':'deducted from'} ${pName(d.by)}'s capital`:'Entry saved');
+  const keep={date:d.date,type:d.type,mode:d.mode,by:d.by}; vDay(); const f=$('#fd'); for(const k in keep) f[k].value=keep[k]; f.head.innerHTML=headOpts(d.type,d.head); f.amount.focus();
+}
+function editDay(id){
+  const x=DB.daybook.find(d=>d.id===id); if(!x) return;
+  openDlg('Edit Day Book entry',`<form id="fde" class="grid">
+    <label>Date<input type="date" name="date" value="${esc(x.date)}" required></label>
+    <label>Type<select name="type" onchange="this.form.head.innerHTML=headOpts(this.value)"><option value="out" ${x.type==='out'?'selected':''}>Payment (money out)</option><option value="in" ${x.type==='in'?'selected':''}>Receipt (money in)</option></select></label>
+    <label>Head (account)<select name="head">${headOpts(x.type,x.head)}</select></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" value="${num(x.amount)}" required></label>
+    <label>Mode<select name="mode">${opts(['Cash','Bank','UPI','Cheque'],x.mode)}</select></label>
+    <label>Paid / received by<select name="by"><option value="">Business (cash / bank)</option>${DB.partners.map(p=>`<option value="${p.id}" ${(x.by||'')===p.id?'selected':''}>Partner – ${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="span2">Remarks<input name="particulars" value="${esc(x.man?x.rem:x.particulars)}"></label></form>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveDayEdit('${id}')">Save changes</button>`);
+}
+function saveDayEdit(id){
+  const d=formData($('#fde')); if(num(d.amount)<=0) return; const x=DB.daybook.find(z=>z.id===id); if(!x) return;
+  const created=x.created; dayDrop(x); dayPut(d,id,created); save(); dlg.close(); dayList(); toast('Entry updated');
 }
 
 /* ---------- enquiries ---------- */
@@ -775,12 +825,12 @@ function restoreJSON(file){
 function csv(which){
   const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
     sales:['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
-    daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
+    daybook:['date','type','head','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn'],
     dealerPay:['date','amount','mode','paidBy','ref','challans','note'],
     expPay:['date','payee','type','month','amount','mode','paidBy','ref','note'],
     expenses:['date','cat','usedFor','amount','vendor','bill','mode','paidBy','note']}[which];
-  const rows=(DB[which]||[]).map(r=>which==='expenses'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=(which==='expenses'?exAll():DB[which]||[]).map(r=>which==='expenses'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,head:headOf(r),type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -1000,7 +1050,8 @@ function delExpPay(id){
 /* ---------- expenses (spare parts / workshop / misc) ---------- */
 let exF='', exM='';
 const exCats=()=>DB.settings.expCats||(DB.settings.expCats=['Spare parts','Workshop','Miscellaneous']);
-const exRows=()=>(DB.expenses||[]).filter(x=>(!exF||x.cat===exF)&&(!exM||(x.date||'').startsWith(exM)));
+const exAll=()=>[...(DB.expenses||[]),...DB.daybook.filter(d=>d.type==='out'&&!d.exId&&HEAD2CAT[d.head]).map(d=>({id:'db'+d.id,created:d.created,date:d.date,cat:HEAD2CAT[d.head],usedFor:d.particulars,amount:d.amount,mode:d.mode,by:'',vendor:'',bill:'',note:'',fromDay:true}))];
+const exRows=()=>exAll().filter(x=>(!exF||x.cat===exF)&&(!exM||(x.date||'').startsWith(exM)));
 function exForm(x={}){
   return `<label>Date<input type="date" name="date" value="${esc(x.date||today())}" required></label>
     <label>Category<select name="cat">${opts(exCats(),x.cat||exCats()[0])}</select></label>
@@ -1014,7 +1065,7 @@ function exForm(x={}){
     ${dl('dlUsed',[...new Set((DB.expenses||[]).map(e=>e.usedFor).filter(Boolean))].slice(-80))}${dl('dlVend',[...new Set((DB.expenses||[]).map(e=>e.vendor).filter(Boolean))])}`;
 }
 function vExp(){
-  const C=exCats(), cm=curMonth(), all=DB.expenses||[];
+  const C=exCats(), cm=curMonth(), all=exAll();
   const sumBy=(cat,m)=>all.filter(x=>x.cat===cat&&(!m||(x.date||'').startsWith(m))).reduce((a,x)=>a+num(x.amount),0);
   const first=all.reduce((m,x)=>x.date&&x.date.slice(0,7)<m?x.date.slice(0,7):m,cm);
   const months=monthsBack(Math.min(12,Math.max(1,(+cm.slice(0,4)-+first.slice(0,4))*12+(+cm.slice(5,7)-+first.slice(5,7))+1)));
@@ -1034,7 +1085,7 @@ function vExp(){
     <button class="btn plain sm" onclick="csv('expenses')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('exp')">📄 PDF</button></div>
   ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Category</th><th>Used for</th><th class="num">Amount</th><th>Shop / vendor</th><th>Bill no</th><th>Mode</th><th>Paid by</th><th></th></tr></thead><tbody>
     ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><span class="pill ${/spare/i.test(x.cat)?'open':/workshop/i.test(x.cat)?'due':'lost'}">${esc(x.cat)}</span></td><td class="wrap"><b>${esc(x.usedFor)}</b>${x.note?`<div class="sub2">${esc(x.note)}</div>`:''}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.vendor)}</td><td>${esc(x.bill)}</td><td>${esc(x.mode)}</td>
-    <td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td style="white-space:nowrap"><button class="btn plain sm" onclick="editExpense('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delExpense('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+    <td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td style="white-space:nowrap">${x.fromDay?'<span class="muted" style="font-size:12px">from Day Book</span>':`<button class="btn plain sm" onclick="editExpense('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delExpense('${x.id}')">Delete</button>`}</td></tr>`).join('')}</tbody>
     <tfoot><tr class="tot"><td colspan="3">Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="5"></td></tr></tfoot></table></div>`:'<div class="empty">No expenses.</div>')(exRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>`;
 }
 function addExCat(){const n=txt(prompt('New category name (e.g. Electricity, Fuel, Advertising):')||''); if(!n) return; if(!exCats().includes(n)){exCats().push(n);save()} vExp()}
@@ -1094,13 +1145,13 @@ function pdfData(which){
       foot:[['','','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
   }
   if(which==='daybook'){
-    const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
+    const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo&&(!dayH||headOf(d)===dayH)).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
     const ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
     rows.forEach(d=>{const a=num(d.amount); if(d.type==='in'){tin+=a;if(d.mode==='Cash')cin+=a}else{tout+=a;if(d.mode==='Cash')cout+=a}});
-    return {title:'Day Book',sub:`${fd(dayFrom)} to ${fd(dayTo)} · Opening cash ${rs(ob.cash)} · Closing cash ${rs(ob.cash+cin-cout)}`,num:[3,4],
-      head:['Date','Particulars','Mode','Receipt','Payment'],
-      rows:rows.map(d=>[fd(d.date),d.particulars,d.mode,d.type==='in'?rs(d.amount):'',d.type==='out'?rs(d.amount):'']),
-      foot:[['','Total','',rs(tin),rs(tout)]]};
+    return {title:'Day Book',sub:`${fd(dayFrom)} to ${fd(dayTo)} · Opening cash ${rs(ob.cash)} · Closing cash ${rs(ob.cash+cin-cout)}`,num:[4,5],
+      head:['Date','Head','Remarks','Mode','Receipt','Payment'],
+      rows:rows.map(d=>[fd(d.date),headOf(d),d.particulars,d.mode,d.type==='in'?rs(d.amount):'',d.type==='out'?rs(d.amount):'']),
+      foot:[['','','Total','',rs(tin),rs(tout)]]};
   }
   if(which==='enquiries'){
     const rows=DB.enquiries.filter(e=>enqF==='All'||e.status===enqF).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -1621,10 +1672,12 @@ function tallyVouchers(from,to){
     if(d.exId&&d.type==='out'){const c=d.exCat||'';V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[/spare/i.test(c)?T.spareL:/workshop/i.test(c)?T.workshopL:/misc/i.test(c)?T.miscL:T.expense,a],[modeL(d.mode),-a]]});continue}
     if(d.epId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[d.epKind==='rent'?T.rentL:T.salaryL,a],[modeL(d.mode),-a]]});continue}
     if(d.dpId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.supplier,a],[modeL(d.mode),-a]]});continue}
+    if(d.man&&d.head){const HL={'Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income},hl=HL[d.head]||d.head;V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[hl,-a]]}:{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[hl,a],[modeL(d.mode),-a]]});continue}
     if(cap&&d.type==='in'){V.push({type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[capL,-a]]});continue}
     if(cap&&cap.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[capL,a],[modeL(d.mode),-a]]});continue}
-    V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[T.income,-a]]}
-                        :{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.expense,a],[modeL(d.mode),-a]]});
+    const HL={'Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income}, hl=d.head&&(HL[d.head]||d.head);
+    V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[hl||T.income,-a]]}
+                        :{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[hl||T.expense,a],[modeL(d.mode),-a]]});
   }
   V.sort((a,b)=>a.date.localeCompare(b.date));
   return {V,parties:[...parties],T};
