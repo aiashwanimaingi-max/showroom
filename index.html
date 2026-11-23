@@ -404,7 +404,7 @@ function salesTable(rows){
 function vSales(){
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Sale register</h2>
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
-  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','बिल की फोटो से सेल')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
+  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','बिलों की फोटो से सेल (कई एक साथ)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
   salesList();
 }
 function salesList(){
@@ -552,7 +552,7 @@ function vSet(){
   <p class="note">Excel exports: <a href="#" onclick="csv('stock');return false">Stock</a> · <a href="#" onclick="csv('sales');return false">Sales</a> · <a href="#" onclick="csv('daybook');return false">Day Book</a> · <a href="#" onclick="csv('enquiries');return false">Enquiries</a></p></div>
   ${cloudCard()}
   <div class="card"><h2>फोटो से एंट्री (AI) – चालान, सेल बिल, खर्चे / रसीद</h2>
-  <p style="margin-top:0">Sales टैब में <b>“📷 बिल की फोटो से सेल”</b> और Day Book में <b>“📷 बिल / रसीद की फोटो से”</b> भी यही key इस्तेमाल करते हैं।</p>
+  <p style="margin-top:0">Sales टैब में <b>“📷 बिलों की फोटो से सेल”</b> और Day Book में <b>“📷 बिल / रसीद की फोटो से”</b> भी यही key इस्तेमाल करते हैं।</p>
   <p style="margin-top:0">Stock टैब में <b>“📷 चालान की फोटो से भरें”</b> से चालान की फोटो/PDF डालें — गाड़ियाँ अपने-आप भर जाएँगी, आप जाँच कर Save करें।</p>
   <div class="row" style="margin-bottom:8px"><label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink)">कौन सा AI:
     <select style="width:auto" onchange="ls(AIP,this.value);render()">${[['openai','ChatGPT (OpenAI)'],['claude','Claude (Anthropic)']].map(([v,l])=>`<option value="${v}" ${aiProv()===v?'selected':''}>${l}</option>`).join('')}</select></label></div>
@@ -781,46 +781,91 @@ const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,customer_name:S_ST
 const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,direction:{type:'string',enum:['in','out']},particulars:S_STR,amount:S_NUM,
   mode:{type:'string',enum:['Cash','Bank','UPI','Cheque']},ref:S_STR})}});
 
+const SALES_SCHEMA=objSchema({sales:{type:'array',items:SALE_SCHEMA}});
 async function aiSale(files){
   try{
-    const a=await aiPrep(files,'बिल पढ़ा जा रहा है…'); if(!a) return;
-    const prompt=`This is a sale document from an Indian two-wheeler dealership (Honda): a sale invoice / bill, booking form, delivery receipt, or a handwritten sale register entry. Extract the sale of ONE vehicle.
+    const a=await aiPrep(files,'बिल पढ़े जा रहे हैं…'); if(!a) return;
+    const prompt=`These are sale documents from an Indian two-wheeler dealership (Honda): sale invoices / bills, booking forms, delivery challans / receipts, or handwritten sale register pages. There may be MANY bills — one or more per photo or page.
+Return EVERY vehicle sale you find in "sales", one entry per vehicle sold. Do not merge two bills, and do not skip any.
+For each sale:
+- sale_challan_no: the showroom's own sale challan / delivery challan / bill / invoice number printed on THAT bill (ONE number only, never several joined).
 - customer_name; relation (S/o, W/o, D/o or C/o as written); relative_name (father / husband name); phone (10-digit mobile); address.
 - model, colour, engine number and chassis (frame / VIN) number. Copy engine and chassis exactly, in capitals with no spaces; do not confuse 0/O, 1/I, 5/S, 8/B.
   If the model or colour matches one of these names used by the dealership, use that exact name: Models: ${DB.settings.models.join(', ')}. Colours: ${DB.settings.colours.join(', ')}.
 - price: vehicle price / on-road price. accessories: accessories or extra charges shown separately, else 0.
 - finance_amount and financer (bank / finance company) if financed, else 0 and "". exchange_vehicle and exchange_value if an old vehicle was taken in exchange.
-- paid_amount: money the customer paid now (cash / down payment / advance); payment_mode; payment_ref (cheque no / UTR).
-- sale_challan_no: the showroom's own sale challan / delivery challan / bill / invoice number printed on this document (ONE number only).
+- paid_amount: money the customer paid (cash / down payment / advance); payment_mode; payment_ref (cheque no / UTR).
 - date as YYYY-MM-DD (Indian dates are day-month-year).
+- If the same bill appears twice (same bill number and chassis), list it once.
 - Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
-    fillSale(await aiRun(a.key,a.parts,prompt,SALE_SCHEMA,'sale'));
+    const d=await aiRun(a.key,a.parts,prompt,SALES_SCHEMA,'sales');
+    if(!d.sales?.length) throw new Error('इन फोटो में कोई सेल बिल नहीं मिला। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    reviewSales(d.sales);
   }catch(e){aiFail(e)}
 }
-function fillSale(d){
-  window.__bill=d;
-  const ch=up(d.chassis), en=up(d.engine), avail=DB.stock.filter(s=>s.status!=='sold');
-  const tail=(x,y)=>x&&y&&x.length>=5&&y.length>=5&&x.slice(-5)===y.slice(-5);
-  const st=avail.find(s=>(ch&&s.chassis===ch)||(en&&s.engine===en))||avail.find(s=>tail(s.chassis,ch)||tail(s.engine,en));
-  if(st) return fillSaleForm(st.id);
-  const sold=DB.stock.some(s=>(ch&&s.chassis===ch)||(en&&s.engine===en));
-  openDlg('यह गाड़ी स्टॉक में नहीं मिली',`<p style="margin-top:0">बिल में: <b>${esc(d.customer_name)}</b> – ${esc(d.model)} ${esc(d.colour)}<br><span class="mono">Ch: ${esc(ch)||'—'} · Eng: ${esc(en)||'—'}</span></p>
-  ${sold?'<p class="warn">यह गाड़ी पहले ही बिक चुकी है — Sales में देखें।</p>':'<p>गाड़ी को अभी स्टॉक में जोड़कर सेल भरें, या स्टॉक में से गाड़ी खुद चुनें।</p>'}`,
-  `<button class="btn plain" onclick="dlg.close()">Cancel</button>${avail.length?'<button class="btn ghost" onclick="fillSaleForm(null)">स्टॉक से खुद चुनें</button>':''}${!sold&&(ch||en)&&txt(d.model)?'<button class="btn" onclick="addStockFromBill()">स्टॉक में जोड़ें और सेल भरें</button>':''}`);
+function saleMatch(ch,en,pool){
+  const t=x=>x&&x.length>=5?x.slice(-5):'';
+  let st=pool.find(s=>(ch&&s.chassis===ch)||(en&&s.engine===en));
+  if(!st){const c=pool.filter(s=>(t(ch)&&t(s.chassis)===t(ch))||(t(en)&&t(s.engine)===t(en))); if(c.length===1) st=c[0]}
+  return st||null;
 }
-function addStockFromBill(){
-  const d=window.__bill, id=uid();
-  DB.stock.push({id,created:Date.now(),status:'in',date:toISO(d.date)||today(),challan:'',model:txt(d.model),colour:txt(d.colour),engine:up(d.engine),chassis:up(d.chassis),key:'',cost:''});
-  save(); fillSaleForm(id);
+function reviewSales(L){
+  window.__sales=L;
+  const avail=DB.stock.filter(s=>s.status!=='sold'), seen=new Set(); let nSold=0,nTwice=0,nNew=0;
+  const one=x=>{x=txt(x);return /[,;&]|\band\b|\d\s+\d/i.test(x)?'':x};
+  const inp=(n,v,w,extra='')=>`<input name="${n}" value="${esc(v)}" style="min-width:${w}px" ${extra}>`;
+  const rows=L.map((d,i)=>{
+    const ch=up(d.chassis), en=up(d.engine), st=saleMatch(ch,en,avail);
+    const sold=!st&&DB.stock.some(s=>s.status==='sold'&&((ch&&s.chassis===ch)||(en&&s.engine===en)));
+    const k=(ch||en)+'|'+one(d.sale_challan_no), twice=!!(ch||en)&&seen.has(k); seen.add(k);
+    if(sold)nSold++; if(twice)nTwice++; if(!st&&!sold)nNew++;
+    const tag=sold?'<span class="pill sold">पहले ही बिक चुकी</span>':twice?'<span class="pill due">दो बार आया</span>':st?`<span class="pill in">स्टॉक में मिली</span>${st.chassis!==ch?`<div class="muted mono" style="font-size:11px">${esc(st.chassis)}</div>`:''}`:'<span class="pill due">स्टॉक में नहीं — जुड़ जाएगी</span>';
+    return `<tr data-i="${i}" data-st="${st?st.id:''}"><td><input type="checkbox" ${sold||twice?'':'checked'} style="width:auto"></td>
+    <td>${inp('schallan',one(d.sale_challan_no),80,'placeholder="बिल नं."')}</td><td><input type="date" name="date" value="${esc(toISO(d.date)||today())}"></td>
+    <td>${inp('name',txt(d.customer_name),130)}</td><td>${inp('relName',txt(d.relative_name),110,'placeholder="पिता/पति"')}</td><td>${inp('phone',txt(d.phone),100)}</td>
+    <td>${inp('model',txt(d.model),120,'list="dlModels"')}</td><td>${inp('chassis',ch,160,'class="mono"')}</td><td>${inp('engine',en,120,'class="mono"')}</td>
+    <td>${inp('price',num(d.price)||'',80,'inputmode="decimal"')}</td><td>${inp('finance',num(d.finance_amount)||'',75,'inputmode="decimal"')}</td><td>${inp('financer',txt(d.financer),80)}</td>
+    <td>${inp('paid',num(d.paid_amount)||'',75,'inputmode="decimal"')}</td><td><select name="mode" style="width:auto">${opts(['Cash','Cheque','UPI','Bank'],d.payment_mode||'Cash')}</select></td><td>${tag}</td></tr>`}).join('');
+  openDlg(`बिलों से ${L.length} सेल मिलीं — जाँच कर Save करें`,`
+  ${nSold||nTwice?`<p class="warn" style="margin-top:0">${nSold?`<b>${nSold}</b> गाड़ी पहले ही बिक चुकी है। `:''}${nTwice?`<b>${nTwice}</b> बिल दो बार आया है। `:''}इनका ✓ हटा दिया है, ये दोबारा नहीं चढ़ेंगी।</p>`:''}
+  ${nNew?`<p class="note" style="margin-top:0">${nNew} गाड़ियाँ स्टॉक में नहीं मिलीं — Save करने पर ये स्टॉक में जुड़कर बिकी हुई दिखेंगी। Chassis नंबर एक बार ज़रूर मिला लें।</p>`:''}
+  <div class="tablewrap imp"><table id="slT"><tr><th></th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>S/o</th><th>Mobile</th><th>Model</th><th>Chassis</th><th>Engine</th><th>Price</th><th>Finance</th><th>Financer</th><th>Paid</th><th>Mode</th><th></th></tr>${rows}</table></div>
+  ${dl('dlModels',DB.settings.models)}
+  <p class="note">⚠ AI से पढ़े नाम, नंबर और रकम एक बार बिलों से मिला लें। जो सेल नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveSales()">सारी सेल Save करें</button>`);
+  dlg.style.maxWidth='1400px'; dlg.addEventListener('close',()=>dlg.style.maxWidth='',{once:true});
 }
-function fillSaleForm(stockId){
-  const d=window.__bill; newSale(stockId); const f=$('#fs'); if(!f) return;
-  const set=(n,v)=>{if(f[n]&&v) f[n].value=v};
-  set('date',toISO(d.date)); set('schallan',txt(d.sale_challan_no)); set('name',txt(d.customer_name)); set('rel',d.relation); set('relName',txt(d.relative_name)); set('phone',txt(d.phone)); set('address',txt(d.address));
-  set('price',num(d.price)); set('extra',num(d.accessories)); set('finance',num(d.finance_amount)); set('financer',txt(d.financer));
-  set('exchange',txt(d.exchange_vehicle)); set('exchangeValue',num(d.exchange_value)); set('paid',num(d.paid_amount)); set('mode',d.payment_mode); set('ref',txt(d.payment_ref)); set('notes',txt(d.notes));
-  saleCalc();
-  f.insertAdjacentHTML('beforebegin','<p class="warn" style="margin-top:0">📷 बिल से भरा गया — Save से पहले नाम, नंबर और रकम एक बार बिल से मिला लें।</p>');
+function saveSales(){
+  const L=window.__sales||[], out=[], bad=[], skipped=[];
+  const used=new Set();
+  [...document.querySelectorAll('#slT tr')].slice(1).forEach((tr,n)=>{
+    if(!tr.querySelector('input[type=checkbox]').checked) return;
+    const g=k=>{const e=tr.querySelector(`[name=${k}]`);return e?txt(e.value):''}, d=L[+tr.dataset.i]||{};
+    const r={schallan:g('schallan'),date:g('date')||today(),name:g('name'),relName:g('relName'),phone:g('phone'),model:g('model'),chassis:up(g('chassis')),engine:up(g('engine')),
+      price:num(g('price')),finance:num(g('finance')),financer:g('financer'),paid:num(g('paid')),mode:g('mode')||'Cash',
+      rel:d.relation||'S/o',address:txt(d.address),extra:num(d.accessories),exchange:txt(d.exchange_vehicle),exchangeValue:num(d.exchange_value),ref:txt(d.payment_ref),notes:txt(d.notes),colour:txt(d.colour)};
+    if(!r.name||!(r.chassis||r.engine)){bad.push(n+1);return}
+    out.push(r);
+  });
+  if(bad.length){alert(`लाइन ${bad.join(', ')} में ग्राहक का नाम या Chassis/Engine नंबर खाली है। भरें या ✓ हटा दें।`);return}
+  if(!out.length){alert('कोई सेल चुनी नहीं गई।');return}
+  let made=0;
+  for(const r of out){
+    const avail=DB.stock.filter(s=>s.status!=='sold'&&!used.has(s.id));
+    let st=saleMatch(r.chassis,r.engine,avail);
+    if(!st&&DB.stock.some(s=>s.status==='sold'&&((r.chassis&&s.chassis===r.chassis)||(r.engine&&s.engine===r.engine)))){skipped.push(r.chassis||r.engine);continue}
+    if(!st){st={id:uid(),created:Date.now(),status:'in',date:r.date,challan:'',model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:'',cost:''};DB.stock.push(st);
+      if(r.model&&!DB.settings.models.includes(r.model))DB.settings.models.push(r.model)}
+    used.add(st.id);
+    const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
+    const sale={id,inv,schallan:r.schallan,created:Date.now()+made,date:r.date,stockId:st.id,model:st.model||r.model,colour:st.colour||r.colour,chassis:st.chassis||r.chassis,engine:st.engine||r.engine,key:st.key,
+      name:r.name,rel:r.rel,relName:r.relName,phone:r.phone,address:r.address,price:r.price,extra:r.extra,total:r.price+r.extra,
+      finance:r.finance,financer:r.financer,financeReceived:false,exchange:r.exchange,exchangeValue:r.exchangeValue,notes:r.notes,payments:[]};
+    DB.sales.push(sale); st.status='sold'; st.saleId=id;
+    if(r.paid>0) addPayment(sale,{date:r.date,amount:r.paid,mode:r.mode,ref:r.ref});
+    made++;
+  }
+  save(); dlg.close(); toast(`${made} सेल जुड़ गईं`+(skipped.length?` · ${skipped.length} पहले से बिकी थीं, छोड़ दीं`:'')); go('sales');
 }
 
 async function aiPay(files){
