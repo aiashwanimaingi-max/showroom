@@ -240,7 +240,7 @@ function vStock(){
     <h2 class="grow" style="margin:0">Stock register</h2>
     <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="all">All</option></select>
     <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
-    <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button>
+    <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('stock')">📄 PDF</button>
     ${impBtn('stock')}<button class="btn plain sm" style="color:var(--red);border-color:var(--red)" onclick="stDeleteAll()">🗑 सारी गाड़ियाँ हटाएँ</button>${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 डबल गाड़ियाँ हटाएँ (${n})</button>`:'')(dupPlan().remove.length)}
   </div><div id="stockList"></div></div>
   <div class="card"><h2>Stock summary</h2>${stockSummary()}</div>`;
@@ -404,7 +404,7 @@ function salesTable(rows){
 function vSales(){
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Sale register</h2>
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
-  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button>${impBtn('sales')}${photoBtn('aiSale','बिल की फोटो से सेल')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
+  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','बिल की फोटो से सेल')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
   salesList();
 }
 function salesList(){
@@ -473,7 +473,7 @@ function vDay(){
     <label style="flex-direction:row;align-items:center">From <input type="date" value="${dayFrom}" onchange="dayFrom=this.value;dayList()" style="width:auto"></label>
     <label style="flex-direction:row;align-items:center">To <input type="date" value="${dayTo}" onchange="dayTo=this.value;dayList()" style="width:auto"></label>
     <button class="btn plain sm" onclick="dayFrom=dayTo=today();vDay()">Today</button>
-    <button class="btn plain sm" onclick="csv('daybook')">Export Excel (CSV)</button></div><div id="dayList"></div></div>`;
+    <button class="btn plain sm" onclick="csv('daybook')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('daybook')">📄 PDF</button></div><div id="dayList"></div></div>`;
   dayList();
 }
 function dayList(){
@@ -521,7 +521,7 @@ function enqForm(e={}){
 function vEnq(){
   $('#app').innerHTML=`<div class="card"><h2>New enquiry</h2>${enqForm()}<div style="margin-top:10px"><button class="btn" onclick="saveEnq()">Save enquiry</button></div></div>
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Enquiry register</h2>
-  <select style="width:auto" onchange="enqF=this.value;vEnq()">${opts(['Open','Sold','Lost','All'],enqF)}</select><button class="btn plain sm" onclick="csv('enquiries')">Export Excel (CSV)</button></div>
+  <select style="width:auto" onchange="enqF=this.value;vEnq()">${opts(['Open','Sold','Lost','All'],enqF)}</select><button class="btn plain sm" onclick="csv('enquiries')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('enquiries')">📄 PDF</button></div>
   ${(r=>r.length?enqTable(r):'<div class="empty">No enquiries.</div>')(DB.enquiries.filter(e=>enqF==='All'||e.status===enqF).sort((a,b)=>(b.date||'').localeCompare(a.date||'')))}</div>`;
 }
 function saveEnq(id){
@@ -606,6 +606,80 @@ function csv(which){
   download(`${which}-${today()}.csv`,'﻿'+[cols.join(','),...rows.map(r=>cols.map(c=>q(t(r[c]))).join(','))].join('\n'),'text/csv');
 }
 
+/* ---------- PDF export ---------- */
+function loadPDF(){return window.html2pdf?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');
+  s.src=window.__H2P||'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+function pdfData(which){
+  const R=(t,c)=>({t,c});
+  if(which==='stock'){
+    const rows=stockRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
+    const sc=s=>(DB.sales.find(z=>z.id===s.saleId)||{}).schallan||'';
+    return {title:'Stock Register',sub:(stockF==='in'?'In stock':stockF==='sold'?'Sold':'All vehicles')+(stockQ?` · search “${stockQ}”`:''),
+      head:['#','Date','Purchase Challan','Sale Challan','Model','Colour','Engine No','Chassis No','Key','Status'],
+      rows:rows.map((s,i)=>[rows.length-i,fd(s.date),s.challan,sc(s),s.model,s.colour,s.engine,s.chassis,s.key,s.status==='sold'?'Sold':'In stock']),
+      foot:[['Total vehicles: '+rows.length]]};
+  }
+  if(which==='sales'){
+    const q=salesQ.toLowerCase(), rows=DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.inv-b.inv);
+    const T=k=>rows.reduce((a,s)=>a+k(s),0);
+    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[9,10,11,12],
+      head:['Inv','Sale Challan','Date','Customer','Mobile','Model','Colour','Chassis','Financer','Total','Finance','Received','Due'],
+      rows:rows.map(s=>[s.inv,s.schallan,fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,s.model,s.colour,s.chassis,s.financer,rs(s.total),s.finance?rs(s.finance)+(s.financeReceived?' ✓':''):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
+      foot:[['','','','Total ('+rows.length+' sales)','','','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
+  }
+  if(which==='daybook'){
+    const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
+    const ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
+    rows.forEach(d=>{const a=num(d.amount); if(d.type==='in'){tin+=a;if(d.mode==='Cash')cin+=a}else{tout+=a;if(d.mode==='Cash')cout+=a}});
+    return {title:'Day Book (रोजनामचा)',sub:`${fd(dayFrom)} to ${fd(dayTo)} · Opening cash ${rs(ob.cash)} · Closing cash ${rs(ob.cash+cin-cout)}`,num:[3,4],
+      head:['Date','Particulars','Mode','Receipt','Payment'],
+      rows:rows.map(d=>[fd(d.date),d.particulars,d.mode,d.type==='in'?rs(d.amount):'',d.type==='out'?rs(d.amount):'']),
+      foot:[['','Total','',rs(tin),rs(tout)]]};
+  }
+  if(which==='enquiries'){
+    const rows=DB.enquiries.filter(e=>enqF==='All'||e.status===enqF).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    return {title:'Enquiry Register',sub:enqF==='All'?'All enquiries':enqF,
+      head:['Date','Name','Mobile','Model wanted','Old vehicle','Follow-up','Status','Notes'],
+      rows:rows.map(e=>[fd(e.date),e.name,e.phone,e.model,e.exchange,fd(e.followUp),e.status,e.notes]),foot:[['Total: '+rows.length]]};
+  }
+  if(which==='capital'){
+    const S=partnerSummary(), rows=DB.capital.filter(c=>!capF||c.partnerId===capF).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
+    return {title:'Partners – पूँजी का हिसाब',sub:capF?pName(capF):'All partners',num:[5,6],
+      pre:{head:['Partner','हिस्सा','लगाया','निकाला','कुल पूँजी','लगना चाहिए','बाकी / ज़्यादा'],num:[1,2,3,4,5,6],
+        rows:S.P.map(p=>[p.name,p.share+'%',rs(p.put),rs(p.took),rs(p.net),rs(p.should),p.pending>0.5?rs(p.pending)+' बाकी':p.pending<-0.5?rs(-p.pending)+' ज़्यादा':'पूरा'])},
+      head:['Date','Partner','क्या','Mode','Note','लगाया','निकाला'],
+      rows:rows.map(c=>[fd(c.date),pName(c.partnerId),CAP_T[c.type],c.mode,c.note,c.type!=='out'?rs(c.amount):'',c.type==='out'?rs(c.amount):'']),
+      foot:[['','','','','Total',rs(rows.filter(c=>c.type!=='out').reduce((a,c)=>a+num(c.amount),0)),rs(rows.filter(c=>c.type==='out').reduce((a,c)=>a+num(c.amount),0))]]};
+  }
+}
+function pdfTable(head,rows,foot,numCols=[]){
+  const td=(v,i,tag='td')=>`<${tag} style="border:1px solid #bbb;padding:4px 5px;${numCols.includes(i)?'text-align:right;':''}">${esc(v)}</${tag}>`;
+  return `<table style="border-collapse:collapse;width:100%;font-size:10px;margin-top:8px"><thead><tr style="background:#f1f1f1">${head.map((h,i)=>td(h,i,'th')).join('')}</tr></thead>
+  <tbody>${rows.map(r=>`<tr style="page-break-inside:avoid">${r.map((v,i)=>td(v,i)).join('')}</tr>`).join('')}
+  ${(foot||[]).map(r=>`<tr style="font-weight:700;background:#fafafa">${r.length===1?`<td colspan="${head.length}" style="border:1px solid #bbb;padding:4px 5px">${esc(r[0])}</td>`:r.map((v,i)=>td(v,i)).join('')}</tr>`).join('')}</tbody></table>`;
+}
+async function pdfExport(which){
+  const D=pdfData(which); if(!D.rows.length&&!D.pre){alert('इस list में कुछ नहीं है।');return}
+  const S=DB.settings, now=new Date().toLocaleString('en-IN');
+  const el=document.createElement('div');
+  el.style.cssText='font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;color:#111;width:1040px;background:#fff;padding:0;margin:0;box-sizing:border-box';
+  el.innerHTML=`<div style="border-bottom:2px solid #c00;padding-bottom:6px;display:flex;justify-content:space-between;gap:10px">
+    <div><div style="font-size:18px;font-weight:700;color:#c00">${esc(S.name)}</div><div style="font-size:10px">${esc(S.address)} · ${esc(S.phones)}${S.gstin?' · GSTIN '+esc(S.gstin):''}</div></div>
+    <div style="text-align:right"><div style="font-size:15px;font-weight:700">${esc(D.title)}</div><div style="font-size:10px">${esc(D.sub)}</div><div style="font-size:9px;color:#666">Printed ${esc(now)}</div></div></div>
+    ${D.pre?pdfTable(D.pre.head,D.pre.rows,null,D.pre.num)+'<div style="height:8px"></div>':''}
+    ${D.rows.length?pdfTable(D.head,D.rows,D.foot,D.num||[]):'<p style="font-size:11px">कोई एंट्री नहीं।</p>'}`;
+  toast('⏳ PDF बन रही है…');
+  try{await loadPDF()}catch(e){alert('PDF बनाने के लिए इंटरनेट चाहिए। इंटरनेट चेक करके फिर कोशिश करें।');return}
+  try{
+    const blob=await html2pdf().set({margin:[8,8,10,8],image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:'tr'}}).from(el).outputPdf('blob');
+    const name=`${which}-${today()}.pdf`;
+    if(IOS&&navigator.canShare){try{const f=new File([blob],name,{type:'application/pdf'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e&&e.name==='AbortError')return}}
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+    toast('PDF downloaded');
+  }catch(e){alert('PDF नहीं बन पाई: '+(e&&e.message||e))}
+}
+
 /* ---------- partners (साझेदार) ---------- */
 const CAP_T={in:'पैसा लगाया (दुकान में दिया)',exp:'दुकान का खर्च अपनी जेब से दिया',out:'पैसा निकाला'};
 const pName=id=>DB.partners.find(p=>p.id===id)?.name||'?';
@@ -644,7 +718,7 @@ function vPartners(){
     <p class="note">पुरानी एंट्री डालते समय (जो Day Book में पहले से लिखी हैं, या software शुरू होने से पहले की हैं) “Day Book में भी लिखें” का निशान हटा दें, वरना कैश दो बार गिना जाएगा।</p></div>`:''}
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">हिसाब (History)</h2>
     <select style="width:auto" onchange="capF=this.value;capList()"><option value="">सभी partners</option>${DB.partners.map(p=>`<option value="${p.id}" ${capF===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
-    <button class="btn plain sm" onclick="csv('capital')">Export Excel (CSV)</button></div><div id="capList"></div></div>
+    <button class="btn plain sm" onclick="csv('capital')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('capital')">📄 PDF</button></div><div id="capList"></div></div>
   <div class="card"><h2>Partners सेट करें</h2><form id="fpt" onsubmit="return false">
     <div id="ptRows">${(DB.partners.length?DB.partners:[{},{}]).map(ptRow).join('')}</div>
     <button type="button" class="btn plain sm" onclick="$('#ptRows').insertAdjacentHTML('beforeend',ptRow({}))">+ Partner जोड़ें</button>
