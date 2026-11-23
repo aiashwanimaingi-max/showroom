@@ -105,6 +105,7 @@ html{-webkit-text-size-adjust:100%}
 .rc h3{margin:0;color:var(--red);font-size:22px}
 .rc .hd{border-bottom:2px solid var(--red);padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between;gap:12px}
 .rc .sign{display:flex;justify-content:space-between;margin-top:60px}
+a.btn{text-decoration:none}
 </style>
 </head>
 <body>
@@ -184,13 +185,13 @@ function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');cl
 function formData(f){const o={};new FormData(f).forEach((v,k)=>o[k]=typeof v==='string'?v.trim():v);return o}
 const opts=(arr,sel)=>arr.map(x=>`<option ${x===sel?'selected':''}>${esc(x)}</option>`).join('');
 const dl=(id,arr)=>`<datalist id="${id}">${arr.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;
-const saleDue=s=>num(s.total)-num(s.finance)-num(s.exchangeValue)-(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
+const saleDue=s=>num(s.total)-num(s.finance)-num(s.exchangeValue)-num(s.discount)-(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 
 function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
 
 /* ---------- navigation ---------- */
-const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['cash','Cash Book'],['ledger','Ledgers'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['dues','Customer Dues'],['day','Day Book'],['cash','Cash Book'],['ledger','Ledgers'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
 let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
 if(['dealer','rent','exp','partners'].includes(tab)){accT=tab;tab='acc'}
 function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
@@ -201,7 +202,7 @@ function render(){
   $('#hName').textContent=DB.settings.name;
   $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,cash:vCash,ledger:vLedger,enq:vEnq,tally:vTally,set:vSet})[tab]();
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,dues:vDues,cash:vCash,ledger:vLedger,enq:vEnq,tally:vTally,set:vSet})[tab]();
 }
 
 /* ---------- dashboard ---------- */
@@ -224,7 +225,7 @@ function vDash(){
     <div class="stat"><div class="k">Sold today</div><div class="v">${todaySales.length}</div></div>
     <div class="stat"><div class="k">Sold this month</div><div class="v">${monthSales.length}</div></div>
     <div class="stat"><div class="k">Cash in hand</div><div class="v">${rs(bal.cash)}</div></div>
-    <div class="stat"><div class="k">Customer dues</div><div class="v">${rs(dues.reduce((a,s)=>a+saleDue(s),0))}</div></div>
+    <div class="stat click" style="cursor:pointer" onclick="go('dues')"><div class="k">Customer dues →</div><div class="v">${rs(dues.reduce((a,s)=>a+saleDue(s),0))}</div><div class="sub2">${dues.length} customers</div></div>
     <div class="stat"><div class="k">Finance pending</div><div class="v">${rs(finPend.reduce((a,s)=>a+num(s.finance),0))}</div></div>
     ${(t=>t?`<div class="stat"><div class="k">Finance short (total)</div><div class="v" style="color:var(--amber)">${rs(t)}</div></div>`:'')(DB.sales.reduce((a,s)=>a+Math.max(0,-finDiff(s)),0))}
   </div>
@@ -546,9 +547,11 @@ function viewSale(id){
   ${s.exchangeValue?`<tr><td class="muted">Exchange</td><td>${esc(s.exchange)} · ${rs(s.exchangeValue)}</td></tr>`:''}
   <tr><td class="muted">Payments</td><td>${s.payments.length?s.payments.map(p=>`${fd(p.date)} · ${esc(p.mode)} · <b>${rs(p.amount)}</b> ${esc(p.ref)}`).join('<br>'):'—'}</td></tr>
   <tr><td class="muted">Balance due</td><td>${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Fully paid</span>'}</td></tr>
+  ${num(s.discount)?`<tr><td class="muted">Discount</td><td>${rs(s.discount)} ${esc(s.discountNote)}</td></tr>`:''}
+  ${s.dueFollow&&(s.dueFollow.date||s.dueFollow.note)?`<tr><td class="muted">Promise</td><td style="white-space:normal">${s.dueFollow.date?fd(s.dueFollow.date)+' · ':''}${esc(s.dueFollow.note||'')}</td></tr>`:''}
   ${s.notes?`<tr><td class="muted">Notes</td><td style="white-space:normal">${esc(s.notes)}</td></tr>`:''}</table>`,
   `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="delSale('${s.id}')">Cancel sale</button>
-   ${due>0.5?`<button class="btn ghost" onclick="receivePay('${s.id}')">Receive payment</button>`:''}
+   ${due>0.5?`<button class="btn ghost" onclick="receivePay('${s.id}')">Receive payment</button><button class="btn ghost" onclick="dueFollowDlg('${s.id}')">Follow-up</button>${waLink(s)?`<a class="btn ghost" href="${waLink(s)}" target="_blank" rel="noopener">WhatsApp reminder</a>`:''}`:''}
    <button class="btn ghost" onclick="editSale('${s.id}')">✎ Edit</button><button class="btn" onclick="printSale('${s.id}')">🖨 Print receipt</button>`);
 }
 function editSale(id){
@@ -769,6 +772,83 @@ function migrateDB(){
   return true;
 }
 
+/* ---------- customer dues (balance left with customers) ---------- */
+let duesF='all', duesQ='', duesSort='due';
+const daysAgo=d=>d?Math.floor((new Date(today())-new Date(d))/864e5):0;
+const lastPay=s=>(s.payments||[]).reduce((m,p)=>p.date>m?p.date:m,'');
+const duesAll=()=>DB.sales.filter(s=>saleDue(s)>0.5);
+const promDue=s=>s.dueFollow&&s.dueFollow.date&&s.dueFollow.date<=today();
+const ageL=n=>n<=30?['0–30 days','in']:n<=60?['31–60 days','open']:n<=90?['61–90 days','due']:['90+ days','lost'];
+function duesRows(){
+  const q=duesQ.toLowerCase();
+  return duesAll().filter(s=>(duesF==='all'||(duesF==='prom'&&promDue(s))||(duesF==='30'&&daysAgo(s.date)>30)||(duesF==='90'&&daysAgo(s.date)>90))
+    &&(!q||[s.name,s.phone,s.address,s.model,s.chassis,s.schallan,s.relName].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>duesSort==='due'?saleDue(b)-saleDue(a):duesSort==='old'?(a.date||'').localeCompare(b.date||''):(a.dueFollow?.date||'9').localeCompare(b.dueFollow?.date||'9'));
+}
+function remindText(s){
+  const sh=DB.settings;
+  return `नमस्ते ${s.name} जी,\n${sh.name||'Deep Honda'} की ओर से। आपकी ${s.model||''} गाड़ी (${fd(s.date)}) का ₹${inFmt(String(Math.round(saleDue(s))))} बकाया है। कृपया जल्दी जमा करवा दें।\nधन्यवाद\n${sh.name||'Deep Honda'}${sh.phones?' · '+sh.phones:''}`;
+}
+const waLink=(s)=>{const u=wa(s.phone);return u?u+'?text='+encodeURIComponent(remindText(s)):''};
+function vDues(){
+  const A=duesAll(), tot=A.reduce((a,s)=>a+saleDue(s),0), sum=f=>A.filter(f).reduce((a,s)=>a+saleDue(s),0);
+  const buckets=[[0,30],[31,60],[61,90],[91,1e9]].map(([a,b])=>sum(s=>{const n=daysAgo(s.date);return n>=a&&n<=b}));
+  $('#app').innerHTML=`<div class="stats">
+    <div class="stat red"><div class="k">Total due from customers</div><div class="v">${rs(tot)}</div><div class="sub2">${A.length} customers</div></div>
+    <div class="stat"><div class="k">0–30 days</div><div class="v">${rs(buckets[0])}</div></div>
+    <div class="stat"><div class="k">31–60 days</div><div class="v" style="color:var(--amber)">${rs(buckets[1])}</div></div>
+    <div class="stat"><div class="k">61–90 days</div><div class="v" style="color:var(--amber)">${rs(buckets[2])}</div></div>
+    <div class="stat"><div class="k">More than 90 days</div><div class="v" style="color:var(--red)">${rs(buckets[3])}</div></div>
+    <div class="stat"><div class="k">Promise date today / passed</div><div class="v">${A.filter(promDue).length}</div><div class="sub2">${rs(sum(promDue))}</div></div></div>
+  <div class="card"><div class="row" style="margin-bottom:12px;row-gap:10px"><h2 class="grow" style="margin:0">Customer dues</h2>
+    <input placeholder="Search name / mobile / village / chassis…" style="max-width:240px" value="${esc(duesQ)}" oninput="duesQ=this.value;duesList()">
+    <select style="width:auto" onchange="duesF=this.value;duesList()">${[['all','All dues'],['prom','Promise date today / passed'],['30','Older than 30 days'],['90','Older than 90 days']].map(([k,v])=>`<option value="${k}" ${duesF===k?'selected':''}>${v}</option>`).join('')}</select>
+    <select style="width:auto" onchange="duesSort=this.value;duesList()">${[['due','Biggest due first'],['old','Oldest sale first'],['prom','Promise date']].map(([k,v])=>`<option value="${k}" ${duesSort===k?'selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('dues')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('dues')">📄 PDF</button></div>
+    <div id="duesList"></div>
+    <p class="note">Due = vehicle total − finance − exchange − payments received − discount. Finance company money is tracked separately (Sales → finance received). Click a customer's name for the full sale.</p></div>`;
+  duesList();
+}
+function duesList(){
+  const r=duesRows();
+  $('#duesList').innerHTML=r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Customer</th><th>Vehicle</th><th>Sale date</th><th class="num">Total</th><th class="num">Received</th><th class="num">Due</th><th>Last payment</th><th>Promise / follow-up</th><th></th></tr></thead><tbody>
+  ${r.map(s=>{const n=daysAgo(s.date), ag=ageL(n), lp=lastPay(s), f=s.dueFollow||{}, w=waLink(s);
+    return `<tr><td class="wrap"><a href="#" onclick="viewSale('${s.id}');return false"><b>${esc(s.name)}</b></a>${s.relName?`<div class="sub2">${esc(s.rel||'')} ${esc(s.relName)}</div>`:''}<div class="sub2">${esc(s.phone)}${s.address?' · '+esc(s.address):''}</div></td>
+    <td class="wrap">${esc(s.model)} ${esc(s.colour)}<div class="sub2">${s.schallan?'Challan '+esc(s.schallan)+' · ':''}#${s.inv}</div></td>
+    <td>${fd(s.date)}<div style="margin-top:3px"><span class="pill ${ag[1]}">${n} days</span></div></td>
+    <td class="num">${rs(s.total)}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue)+num(s.finance)+num(s.discount))}<div class="sub2">incl. finance ${rs(s.finance)}</div></td>
+    <td class="num"><b style="color:var(--red)">${rs(saleDue(s))}</b></td>
+    <td>${lp?fd(lp)+`<div class="sub2">${daysAgo(lp)} days ago</div>`:'<span class="muted">none</span>'}</td>
+    <td class="wrap" style="max-width:200px">${f.date?`<span class="pill ${f.date<today()?'lost':f.date===today()?'due':'open'}">${fd(f.date)}</span>`:''}${f.note?`<div class="sub2">${esc(f.note)}</div>`:''}${!f.date&&!f.note?'<span class="muted">—</span>':''}</td>
+    <td><div style="display:flex;flex-wrap:wrap;gap:4px;width:190px"><button class="btn sm" onclick="receivePay('${s.id}')">Receive</button>
+      ${w?`<a class="btn plain sm" href="${w}" target="_blank" rel="noopener">WhatsApp</a>`:''}${s.phone?`<a class="btn plain sm" href="tel:${esc(String(s.phone).replace(/[^\d+]/g,''))}">Call</a>`:''}
+      <button class="btn plain sm" onclick="dueFollowDlg('${s.id}')">Follow-up</button><button class="btn plain sm" onclick="discountDlg('${s.id}')">Discount</button></div></td></tr>`}).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="5">Total (${r.length} customers)</td><td class="num">${rs(r.reduce((a,s)=>a+saleDue(s),0))}</td><td colspan="3"></td></tr></tfoot></table></div>`
+  :'<div class="empty">🎉 No pending amount with customers.</div>';
+}
+function dueFollowDlg(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return; const f=s.dueFollow||{}, log=f.log||[];
+  openDlg('Follow-up – '+s.name,`<p class="muted" style="margin-top:0">Due: <b>${rs(saleDue(s))}</b> · ${esc(s.phone)}</p>
+  <form id="fdf" class="grid"><label>Customer promised to pay on<input type="date" name="date" value="${esc(f.date||'')}"></label>
+  <label class="span2">What did the customer say?<input name="note" placeholder="e.g. will pay after harvest, will send ₹5,000 on Sunday…"></label></form>
+  ${log.length?`<h3 style="font-size:14px;margin:14px 0 6px">History</h3><div class="tablewrap"><table><tr><th>Date</th><th>Note</th><th>Promise</th></tr>${log.slice().reverse().map(l=>`<tr><td>${fd(l.on)}</td><td style="white-space:normal">${esc(l.note)}</td><td>${l.date?fd(l.date):''}</td></tr>`).join('')}</table></div>`:''}`,
+  `${f.date||f.note?`<button class="btn plain" style="margin-right:auto" onclick="const s=DB.sales.find(x=>x.id==='${id}');s.dueFollow={log:(s.dueFollow||{}).log||[]};save();dlg.close();render()">Clear promise</button>`:''}<button class="btn plain" onclick="dlg.close()">Cancel</button>
+   <button class="btn" onclick="saveDueFollow('${id}')">Save</button>`);
+}
+function saveDueFollow(id){
+  const s=DB.sales.find(x=>x.id===id), d=formData($('#fdf')); const f=s.dueFollow||{log:[]}; f.log=f.log||[];
+  if(d.note||d.date!==(f.date||'')) f.log.push({on:today(),note:d.note||'',date:d.date||''});
+  f.date=d.date||''; if(d.note) f.note=d.note; s.dueFollow=f; save(); dlg.close(); render(); toast('Follow-up saved');
+}
+function discountDlg(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  openDlg('Discount / write-off – '+s.name,`<p class="muted" style="margin-top:0">Use this when the customer will not pay the rest and you agree to let it go (e.g. ₹500 rounded off). It is not cash; it only reduces what the customer owes.</p>
+  <form id="fdc" class="grid"><label>Discount amount ₹<input name="discount" inputmode="decimal" value="${num(s.discount)||''}" placeholder="e.g. 500"></label>
+  <label class="span2">Reason<input name="discountNote" value="${esc(s.discountNote)}" placeholder="e.g. rounded off, settled at ₹70,000"></label></form>
+  <p class="note">Due before discount: ${rs(saleDue(s)+num(s.discount))}</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="const d=formData($('#fdc')),s=DB.sales.find(x=>x.id==='${id}');s.discount=num(d.discount);s.discountNote=d.discountNote;save();dlg.close();render();toast('Saved')">Save</button>`);
+}
+
 /* ---------- enquiries ---------- */
 let enqF='Open';
 const wa=p=>{const n=String(p||'').replace(/\D/g,'');return n.length>=10?`https://wa.me/91${n.slice(-10)}`:''};
@@ -879,6 +959,7 @@ function csv(which){
     dealer:[['date','amount','mode','paidBy','ref','challans','particulars'],()=>oldest(dpRows()).map(r=>({...r,paidBy:PB(r)}))],
     rent:[['date','paidTo','type','forMonth','amount','mode','paidBy','ref','particulars'],()=>oldest(epRows()).map(r=>({...r,paidTo:epName(r.payee),type:r.head===H.rent?'Rent':r.ptype||'Salary',forMonth:mLabel(r.forMonth),paidBy:PB(r)}))],
     exp:[['date','head','particulars','amount','vendor','bill','mode','paidBy'],()=>oldest(exRows()).map(r=>({...r,paidBy:PB(r)}))],
+    dues:[['name','relName','phone','address','model','colour','schallan','date','days','total','finance','exchangeValue','received','discount','due','lastPayment','promiseDate','promiseNote'],()=>duesRows().map(s=>({...s,days:daysAgo(s.date),received:saleReceived(s),due:Math.round(saleDue(s)),lastPayment:lastPay(s),promiseDate:s.dueFollow?.date||'',promiseNote:s.dueFollow?.note||''}))],
     ledger:[['date','head','remarks','mode','debit','credit','balance'],()=>{const D=ledData(ledOf(ledK),ledFrom,ledTo);return [{date:ledFrom,head:'Opening balance',balance:drcr(D.ob)},...D.rows.map(r=>({date:r.d.date,head:headOf(r.d),remarks:ledText(r.d),mode:r.d.mode,debit:r.dr||'',credit:r.cr||'',balance:drcr(r.bal)}))]}],
     cashbook:[['date','head','remarks','mode','receipt','payment','balance'],()=>{const D=ledData(ledOf(cbK),ledFrom,ledTo);return [{date:ledFrom,head:'Opening balance',balance:D.ob},...D.rows.map(r=>({date:r.d.date,head:headOf(r.d),remarks:ledText(r.d),mode:r.d.mode,receipt:r.dr||'',payment:r.cr||'',balance:r.bal}))]}],
     capital:[['date','partner','entry','particulars','mode','investedOrPaid','withdrawnOrKept'],()=>oldest(capAll().filter(d=>!capF||capP(d)===capF)).map(d=>({...d,partner:pName(capP(d)),entry:capLabel(d),investedOrPaid:capSign(d)>0?d.amount:'',withdrawnOrKept:capSign(d)<0?d.amount:''}))]
@@ -1169,6 +1250,12 @@ function pdfData(which){
     return {title:'Dealer Payments – '+(DB.settings.dealerName||'Dealer'),sub:(dpF?'Paid by '+(dpF==='biz'?'Business':pName(dpF)):'All payments')+` · Purchases ${rs(A.purchase)} · Paid ${rs(A.paid)} · Balance ${rs(A.purchase-A.paid)}`,num:[1],
       head:['Date','Amount','Mode','Paid by','UTR / Cheque','Against challan','Remarks'],
       rows:rows.map(x=>[fd(x.date),rs(x.amount),x.mode,PB(x),x.ref,x.challans,x.particulars]),foot:[['Total',rs(T),'','','','','']]};
+  }
+  if(which==='dues'){
+    const r=duesRows();
+    return {title:'Customer Dues',sub:`As on ${fd(today())} · ${r.length} customers`,num:[6,7],head:['Customer','Mobile','Address','Vehicle','Sale date','Days','Total','Due','Last payment','Promise / note'],
+      rows:r.map(s=>[`${s.name}${s.relName?' '+(s.rel||'')+' '+s.relName:''}`,s.phone,s.address,`${s.model||''} ${s.colour||''}`,fd(s.date),daysAgo(s.date),rs(s.total),rs(saleDue(s)),fd(lastPay(s)),[s.dueFollow?.date?fd(s.dueFollow.date):'',s.dueFollow?.note||''].filter(Boolean).join(' · ')]),
+      foot:[['Total','','','','','','',rs(r.reduce((a,s)=>a+saleDue(s),0)),'','']]};
   }
   if(which==='ledger'||which==='cashbook'){
     const cash=which==='cashbook', l=ledOf(cash?cbK:ledK), D=ledData(l,ledFrom,ledTo), b=v=>cash?rs(v):drcr(v);
@@ -1590,6 +1677,7 @@ function tallyVouchers(from,to){
     }
     for(const p of s.payments||[]) if(ins(p.date)&&num(p.amount)>0){
       V.push({type:'Receipt',date:p.date,id:'p'+p.id,nar:`Sale #${s.inv} – ${p.mode}${p.ref?' '+p.ref:''}`,L:[[modeL(p.mode),num(p.amount)],[P,-num(p.amount)]]});used=true}
+    if(num(s.discount)>0&&ins(s.date)){V.push({type:'Journal',date:s.date,id:'dc'+s.id,nar:`Discount – Sale #${s.inv}${s.discountNote?' · '+s.discountNote:''}`,L:[['Discount Allowed',num(s.discount)],[P,-num(s.discount)]]});used=true}
     if(s.financeReceived&&num(s.finance)>0){
       const fe=DB.daybook.find(d=>d.fin&&d.saleId===s.id), dt=fe?fe.date:s.date;
       if(ins(dt)){const fa=finRecd(s);V.push({type:'Receipt',date:dt,id:'f'+s.id,nar:`Finance ${s.financer} – Sale #${s.inv}`,L:[[T.bank,fa],[P,-fa]]});used=true}
@@ -1627,7 +1715,7 @@ function tallyExport(){
   const {V,parties,T}=tallyVouchers(tFrom,tTo); if(!V.length){alert('No entries in these dates.');return}
   const x=esc, amt=n=>(Math.round(n*100)/100).toFixed(2);
   const led=(n,p)=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><LEDGER NAME="${x(n)}"><NAME.LIST><NAME>${x(n)}</NAME></NAME.LIST><PARENT>${x(p)}</PARENT><ISBILLWISEON>No</ISBILLWISEON></LEDGER></TALLYMESSAGE>`;
-  const masters=[...parties.map(p=>led(p,T.debtors)),led(T.exchange,'Current Assets'),led(T.expense,'Indirect Expenses'),led(T.income,'Indirect Incomes'),...[T.rentL,T.salaryL,T.spareL,T.workshopL,T.miscL].map(n=>led(n,'Indirect Expenses')),led(T.spareSup,'Sundry Creditors'),...['Service / workshop income','Other income'].map(n=>led(n,'Indirect Incomes')),...DB.partners.map(p=>led(`${p.name} Capital A/c`,'Capital Account'))];
+  const masters=[...parties.map(p=>led(p,T.debtors)),led(T.exchange,'Current Assets'),led(T.expense,'Indirect Expenses'),led(T.income,'Indirect Incomes'),led('Discount Allowed','Indirect Expenses'),...[T.rentL,T.salaryL,T.spareL,T.workshopL,T.miscL].map(n=>led(n,'Indirect Expenses')),led(T.spareSup,'Sundry Creditors'),...['Service / workshop income','Other income'].map(n=>led(n,'Indirect Incomes')),...DB.partners.map(p=>led(`${p.name} Capital A/c`,'Capital Account'))];
   const vch=V.map(v=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER REMOTEID="hsc-${x(v.id)}" VCHTYPE="${v.type}" ACTION="Create" OBJVIEW="Accounting Voucher View">
 <DATE>${v.date.replace(/-/g,'')}</DATE><EFFECTIVEDATE>${v.date.replace(/-/g,'')}</EFFECTIVEDATE><VOUCHERTYPENAME>${v.type}</VOUCHERTYPENAME>${v.no?`<VOUCHERNUMBER>${x(v.no)}</VOUCHERNUMBER>`:''}${v.ref?`<REFERENCE>${x(v.ref)}</REFERENCE>`:''}${v.party?`<PARTYLEDGERNAME>${x(v.party)}</PARTYLEDGERNAME>`:''}
 <PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW><ISINVOICE>No</ISINVOICE><NARRATION>${x(v.nar)}</NARRATION>
