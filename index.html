@@ -396,7 +396,11 @@ function editStock(id){
 }
 
 /* ---------- sales ---------- */
-let salesQ='';
+let salesQ='', salesW='';
+// Who received this sale's money (customer payments + finance): {'':business amount, partnerId: amount}
+function moneyWith(s){const m={}; (s.payments||[]).forEach(p=>{const k=p.by||''; m[k]=(m[k]||0)+num(p.amount)}); if(s.financeReceived&&num(s.finance)) {const k=s.financeBy||''; m[k]=(m[k]||0)+finRecd(s)} return m}
+const mwName=k=>k?pName(k):'Business';
+const mwText=s=>Object.entries(moneyWith(s)).filter(([,v])=>v>0.5).map(([k,v])=>`${mwName(k)} ${rs(v)}`).join(' · ');
 function newSale(stockId,enqId){
   const avail=DB.stock.filter(isIn);
   if(!avail.length){alert('No vehicle in stock. Add the vehicle in the Stock tab first.');go('stock');return}
@@ -514,7 +518,7 @@ function salesTable(rows,summary){
     <div class="stat"><div class="k">Finance pending</div><div class="v" style="color:var(--amber)">${rs(sum(s=>num(s.finance)&&!s.financeReceived?num(s.finance):0))}</div></div>
     <div class="stat"><div class="k">Finance short / excess</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
     <div class="stat"><div class="k">Customer dues</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
-  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Sale Challan</th><th>Purch. Challan</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th class="num">Due</th></tr></thead><tbody>
+  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Sale Challan</th><th>Purch. Challan</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th>Money with</th><th class="num">Due</th></tr></thead><tbody>
   ${rows.map(s=>{const due=saleDue(s);return `<tr class="click" title="Click to open" onclick="if(!event.target.closest('button,a'))viewSale('${s.id}')">
     <td><b>${esc(s.schallan)||'<span class="muted">—</span>'}</b><div class="sub2">Rcpt #${s.inv}</div></td>
     <td>${(st=>st&&st.challan?esc(st.challan):`<span class="muted">—</span>`)(DB.stock.find(x=>x.id===s.stockId))}</td>
@@ -526,19 +530,21 @@ function salesTable(rows,summary){
     <td class="num">${recCell(s)}</td>
     <td class="num">${diffCell(s)}</td>
     <td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
+    <td style="white-space:nowrap">${(m=>m.length?m.map(([k,v])=>`<div><span class="pill ${k?'open':'in'}">${esc(mwName(k))}</span> <span style="font-size:13px">${rs(v)}</span></div>`).join(''):'<span class="muted">—</span>')(Object.entries(moneyWith(s)).filter(([,v])=>v>0.5))}</td>
     <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td></tr>`}).join('')}</tbody>
   <tfoot><tr class="tot"><td colspan="5">Total (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
-    <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td></tr></tfoot></table></div>`;
+    <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td style="white-space:nowrap;font-size:12px">${(t=>Object.entries(t).filter(([,v])=>v>0.5).map(([k,v])=>`${esc(mwName(k))} ${rs(v)}`).join('<br>'))(rows.reduce((t,s)=>{for(const [k,v] of Object.entries(moneyWith(s))) t[k]=(t[k]||0)+v; return t},{}))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td></tr></tfoot></table></div>`;
 }
 function vSales(){
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:14px;row-gap:10px"><h2 class="grow" style="margin:0;min-width:160px">Sale register</h2>
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
+  ${DB.partners.length?`<select style="width:auto" onchange="salesW=this.value;salesList()"><option value="">Money with: all</option><option value="biz" ${salesW==='biz'?'selected':''}>Money with: Business</option>${DB.partners.map(p=>`<option value="${p.id}" ${salesW===p.id?'selected':''}>Money with: ${esc(p.name)}</option>`).join('')}</select>`:''}
   <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','Sales from bill photos (many at once)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
   salesList();
 }
 function salesList(){
   const q=salesQ.toLowerCase();
-  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv),true);
+  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>(!salesW||(moneyWith(s)[salesW==='biz'?'':salesW]||0)>0.5)).filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv),true);
 }
 function viewSale(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return; const due=saleDue(s);
@@ -956,8 +962,8 @@ function csv(which){
   const PB=x=>x.by?pName(x.by)+(x.type==='in'?' (kept)':' (own pocket)'):'Business';
   const R={
     stock:[['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],()=>DB.stock.map(r=>({...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}))],
-    sales:[['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
-      ()=>DB.sales.map(r=>({...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}))],
+    sales:[['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','moneyWith','notes'],
+      ()=>DB.sales.map(r=>({...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):'',moneyWith:mwText(r)}))],
     daybook:[['date','type','head','particulars','amount','mode','paidBy','partner','paidTo','paymentType','forMonth','vendor','bill','ref','challans','notInCash'],
       ()=>dayRows().map(r=>({...r,head:headOf(r),type:r.type==='in'?'Receipt':'Payment',paidBy:r.saleId?'':PB(r),partner:r.pid?pName(r.pid):'',paidTo:r.payee?epName(r.payee):'',paymentType:r.ptype||'',forMonth:mLabel(r.forMonth),notInCash:r.by||r.old?'Yes':''}))],
     enquiries:[['date','name','phone','model','exchange','followUp','status','notes'],()=>DB.enquiries],
@@ -1231,11 +1237,11 @@ function pdfData(which){
     const q=salesQ.toLowerCase(), rows=DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.inv-b.inv);
     const T=k=>rows.reduce((a,s)=>a+k(s),0), dd=v=>Math.abs(v)<0.5?'':(v<0?'− ':'+ ')+rs(Math.abs(v));
     return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[7,8,9,10,11,12],
-      head:['Sale Challan','Purch. Challan','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance received','Short / Excess','From customer','Due'],
+      head:['Sale Challan','Purch. Challan','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance received','Short / Excess','From customer','Due','Money with'],
       rows:rows.map(s=>[s.schallan||('#'+s.inv),(DB.stock.find(x=>x.id===s.stockId)||{}).challan||'',fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
         num(s.finance)?rs(s.finance)+(s.financer?' '+s.financer:''):(s.financer||''),num(s.finance)?(s.financeReceived?rs(finRecd(s)):'pending'):'',
-        s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ Full'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
-      foot:[['','','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
+        s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ Full'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid',mwText(s)]),
+      foot:[['','','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s)))),'']]};
   }
   if(which==='daybook'){
     const rows=dayRows(), ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
