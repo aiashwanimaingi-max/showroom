@@ -190,7 +190,7 @@ const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
 
 /* ---------- navigation ---------- */
-const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['cash','Cash Book'],['ledger','Ledgers'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
 let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
 if(['dealer','rent','exp','partners'].includes(tab)){accT=tab;tab='acc'}
 function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
@@ -201,7 +201,7 @@ function render(){
   $('#hName').textContent=DB.settings.name;
   $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,enq:vEnq,tally:vTally,set:vSet})[tab]();
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,cash:vCash,ledger:vLedger,enq:vEnq,tally:vTally,set:vSet})[tab]();
 }
 
 /* ---------- dashboard ---------- */
@@ -891,7 +891,7 @@ function csv(which){
 }
 
 /* ---------- accounts: reports built only from Day Book entries ---------- */
-let accT='cash', dpF='', epF='', exF='', exM='', capF='';
+let accT='dealer', dpF='', epF='', exF='', exM='', capF='';
 const byCell=x=>x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">${x.type==='in'?'kept it':'own pocket'}</div>`:'Business';
 const editBtn=d=>`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button>`;
 const newBtn=(k,type='out',label='+ New entry in Day Book')=>`<button class="btn sm" onclick="dayPreset={type:'${type}',head:H.${k}};go('day')">${label}</button>`;
@@ -946,10 +946,10 @@ function partnerSummary(){
 const pendPill=p=>p.pending>0.5?`<span class="pill due">${rs(p.pending)} pending</span>`:p.pending<-0.5?`<span class="pill in">${rs(-p.pending)} excess</span>`:'<span class="pill in">Full</span>';
 
 function vAcc(){
-  const T=[['cash','Cash Book'],['ledger','Ledgers'],['dealer','Dealer'],['rent','Rent & Salary'],['exp','Expenses'],['partners','Partners']];
+  const T=[['dealer','Dealer'],['rent','Rent & Salary'],['exp','Expenses'],['partners','Partners']];
   $('#app').innerHTML=`<div class="card" style="padding:12px 16px"><div class="row"><div class="grow row" style="gap:6px">${T.map(([k,v])=>`<button class="btn ${accT===k?'':'plain'} sm" onclick="accT='${k}';vAcc()">${v}</button>`).join('')}</div>
     <span class="note" style="margin:0">Entries are made only in the <a href="#" onclick="go('day');return false">Day Book</a>. This page shows the accounts from them.</span></div></div><div id="acc"></div>`;
-  ({cash:accCash,ledger:accLedger,dealer:accDealer,rent:accRent,exp:accExp,partners:accPartners})[accT]();
+  ({dealer:accDealer,rent:accRent,exp:accExp,partners:accPartners})[accT]();
 }
 function accDealer(){
   const A=dealerAcct(), bal=A.purchase-A.paid, dn=DB.settings.dealerName||'';
@@ -1077,17 +1077,17 @@ function accLedger(){
   if(!ledK){
     const S=L.map(l=>({l,...ledData(l,ledFrom,ledTo)})).filter(x=>x.rows.length||Math.abs(x.ob)>0.5);
     const groups=[...new Set(S.map(x=>x.l.g))];
-    $('#acc').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Ledgers – summary</h2>${ledDates('vAcc()')}
+    $('#acc').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Ledgers – summary</h2>${ledDates('render()')}
       <button class="btn plain sm" onclick="pdfExport('ledsum')">📄 PDF</button></div>
     ${S.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Ledger</th><th class="num">Opening</th><th class="num">Debit</th><th class="num">Credit</th><th class="num">Closing</th></tr></thead><tbody>
-    ${groups.map(g=>`<tr><td colspan="5" style="background:#faf7f7;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--muted,#777)">${esc(g)}</td></tr>`+S.filter(x=>x.l.g===g).map(x=>`<tr class="click" onclick="ledK='${x.l.k.replace(/'/g,"\\'")}';vAcc()"><td><b>${esc(x.l.name)}</b></td><td class="num">${drcr(x.ob)}</td><td class="num">${x.dr?rs(x.dr):'—'}</td><td class="num">${x.cr?rs(x.cr):'—'}</td><td class="num"><b>${drcr(x.cb)}</b></td></tr>`).join('')).join('')}</tbody></table></div>
+    ${groups.map(g=>`<tr><td colspan="5" style="background:#faf7f7;font-weight:700;font-size:12px;text-transform:uppercase;color:var(--muted,#777)">${esc(g)}</td></tr>`+S.filter(x=>x.l.g===g).map(x=>`<tr class="click" onclick="ledK='${x.l.k.replace(/'/g,"\\'")}';render()"><td><b>${esc(x.l.name)}</b></td><td class="num">${drcr(x.ob)}</td><td class="num">${x.dr?rs(x.dr):'—'}</td><td class="num">${x.cr?rs(x.cr):'—'}</td><td class="num"><b>${drcr(x.cb)}</b></td></tr>`).join('')).join('')}</tbody></table></div>
     <p class="note">Click a ledger to open it. Dr = debit (money spent / paid out on that account, or cash & bank balance), Cr = credit (money received on that account, or partner capital).</p>`:'<div class="empty">No entries in these dates.</div>'}</div>`;
     return;
   }
   const l=ledOf(ledK), D=ledData(l,ledFrom,ledTo);
-  $('#acc').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><button class="btn plain sm" onclick="ledK='';vAcc()">← All ledgers</button>
-    <select style="width:auto;max-width:320px" onchange="ledK=this.value;vAcc()">${[...new Set(L.map(x=>x.g))].map(g=>`<optgroup label="${esc(g)}">${L.filter(x=>x.g===g).map(x=>`<option value="${esc(x.k)}" ${x.k===ledK?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select>
-    <span class="grow"></span>${ledDates('vAcc()')}<button class="btn plain sm" onclick="csv('ledger')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('ledger')">📄 PDF</button></div>
+  $('#acc').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><button class="btn plain sm" onclick="ledK='';render()">← All ledgers</button>
+    <select style="width:auto;max-width:320px" onchange="ledK=this.value;render()">${[...new Set(L.map(x=>x.g))].map(g=>`<optgroup label="${esc(g)}">${L.filter(x=>x.g===g).map(x=>`<option value="${esc(x.k)}" ${x.k===ledK?'selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`).join('')}</select>
+    <span class="grow"></span>${ledDates('render()')}<button class="btn plain sm" onclick="csv('ledger')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('ledger')">📄 PDF</button></div>
     <h2 style="margin:0 0 10px">${esc(l.name)} <span class="note" style="font-weight:400">· ${fd(ledFrom)} to ${fd(ledTo)}</span></h2>
     ${ledTable(D,false)}</div>`;
 }
@@ -1105,11 +1105,14 @@ function accCash(){
     <div class="stat"><div class="k">Payments</div><div class="v" style="color:var(--red)">${rs(D.cr)}</div></div>
     <div class="stat red"><div class="k">Closing balance</div><div class="v">${rs(D.cb)}</div></div></div>
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">${cbK==='cash'?'Cash Book':'Bank Book'}</h2>
-    <select style="width:auto" onchange="cbK=this.value;vAcc()"><option value="cash" ${cbK==='cash'?'selected':''}>Cash Book</option><option value="bank" ${cbK==='bank'?'selected':''}>Bank Book (Bank / UPI / Cheque)</option></select>
-    ${ledDates('vAcc()')}<button class="btn plain sm" onclick="dayPreset={type:'out'};go('day')">+ New entry</button><button class="btn plain sm" onclick="csv('cashbook')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('cashbook')">📄 PDF</button></div>
+    <select style="width:auto" onchange="cbK=this.value;render()"><option value="cash" ${cbK==='cash'?'selected':''}>Cash Book</option><option value="bank" ${cbK==='bank'?'selected':''}>Bank Book (Bank / UPI / Cheque)</option></select>
+    ${ledDates('render()')}<button class="btn plain sm" onclick="dayPreset={type:'out'};go('day')">+ New entry</button><button class="btn plain sm" onclick="csv('cashbook')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('cashbook')">📄 PDF</button></div>
     ${ledTable(D,true)}
     <p class="note">Shows only money that actually came into / went out of the ${cbK==='cash'?'cash box':'bank'}. Entries paid or kept by a partner personally, and old entries, are not included.</p></div>`;
 }
+
+function vCash(){ $('#app').innerHTML='<div id="acc"></div>'; accCash() }
+function vLedger(){ $('#app').innerHTML='<div id="acc"></div>'; accLedger() }
 
 /* ---------- PDF export ---------- */
 function loadPDF(){return window.html2pdf?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');
