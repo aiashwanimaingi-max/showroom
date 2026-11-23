@@ -221,6 +221,7 @@ function vDash(){
   $('#app').innerHTML=`
   ${!storageOK?'<div class="warn">⚠ Saving in this browser failed. Use “Backup now” immediately.</div>':''}
   ${CLOUD?((daysSince===null||daysSince>=30)&&localHas()?`<div class="warn">Your data is safe in the cloud. Still, once a month <a href="#" onclick="backupJSON();return false">take a backup</a>.</div>`:''):(daysSince===null||daysSince>=3)&&(DB.stock.length+DB.sales.length+DB.daybook.length)>0?`<div class="warn">Your data is saved only in this browser. Last backup: <b>${lb?fd(lb.slice(0,10))+' ('+daysSince+' days ago)':'never'}</b>. <a href="#" onclick="backupJSON();return false">Download a backup now</a> and keep it on a pen drive / Google Drive.</div>`:''}
+  ${dupBanner()}
   <div class="stats">
     <div class="stat red"><div class="k">Vehicles in stock</div><div class="v">${inStock.length}</div></div>
     <div class="stat"><div class="k">Sold today</div><div class="v">${todaySales.length}</div></div>
@@ -456,6 +457,10 @@ function saleCalc(){const f=$('#fs');if(!f)return;const t=num(f.price.value)+num
 function saveSale(enqId){
   const f=$('#fs'); if(!f.reportValidity()) return; const d=formData(f);
   const st=DB.stock.find(s=>s.id===d.stockId);
+  const sc=d.schallan&&DB.sales.find(x=>txt(x.schallan).toUpperCase()===txt(d.schallan).toUpperCase());
+  if(sc&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nSale challan ${d.schallan} is already used for ${sc.name} (${sc.model}, ${fd(sc.date)}).\n\nSave anyway?`)) return;
+  const sv=st&&DB.sales.find(x=>x.chassis&&x.chassis===st.chassis);
+  if(sv&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nThis vehicle (chassis ${st.chassis}) is already sold to ${sv.name} on ${fd(sv.date)}.\n\nSave anyway?`)) return;
   const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
   const sale={id,inv,schallan:d.schallan,created:Date.now(),date:d.date,stockId:st.id,model:st.model,colour:st.colour,chassis:st.chassis,engine:st.engine,key:st.key,
     name:d.name,rel:d.rel,relName:d.relName,phone:d.phone,address:d.address,price:num(d.price),extra:num(d.extra),total:num(d.price)+num(d.extra),
@@ -477,7 +482,7 @@ function receivePay(id){
   openDlg('Receive payment – '+s.name,`<p class="muted" style="margin-top:0">Balance due: <b>${rs(saleDue(s))}</b></p><form id="fp" class="grid">
     <label>Date<input type="date" name="date" value="${today()}"></label><label>Amount<input name="amount" inputmode="decimal" value="${Math.max(0,Math.round(saleDue(s)))}"></label>
     <label>Mode<select name="mode"><option>Cash</option><option>Cheque</option><option>UPI</option><option>Bank</option></select></label><label>Cheque / UTR no<input name="ref"></label>${DB.partners.length?recvBy(''):''}</form>`,
-  `<button class="btn" onclick="const d=formData($('#fp'));if(num(d.amount)<=0)return;addPayment(DB.sales.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Payment recorded in Day Book')">Save payment</button>`);
+  `<button class="btn" onclick="const d=formData($('#fp'));if(num(d.amount)<=0)return;if(!dupConfirm(DB.daybook.filter(x=>x.saleId==='${id}'&&!x.fin&&x.date===(d.date||today())&&Math.round(num(x.amount))===Math.round(num(d.amount))),'A payment of the same amount on the same date for this sale'))return;addPayment(DB.sales.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Payment recorded in Day Book')">Save payment</button>`);
 }
 const finRecd=s=>s.financeReceived?(s.financeRecdAmt!=null&&s.financeRecdAmt!==''?num(s.financeRecdAmt):num(s.finance)):0;
 const finDiff=s=>s.financeReceived?finRecd(s)-num(s.finance):0;
@@ -564,7 +569,7 @@ function vSales(){
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
   ${DB.partners.length?`<select style="width:auto" onchange="salesW=this.value;salesList()"><option value="">Money with: all</option><option value="biz" ${salesW==='biz'?'selected':''}>Money with: Business</option>${DB.partners.map(p=>`<option value="${p.id}" ${salesW===p.id?'selected':''}>Money with: ${esc(p.name)}</option>`).join('')}</select>`:''}
   <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','Sales from bill photos (many at once)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
-  salesList();
+  salesList(); const b=dupBanner(); if(b) $('#app').insertAdjacentHTML('afterbegin',b);
 }
 function salesList(){
   const q=salesQ.toLowerCase();
@@ -727,7 +732,7 @@ function dayRec(d){
 function vDay(){
   const pre=dayPreset||{}; dayPreset=null;
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New entry</h2>${photoBtn('aiPay','Expense bills / receipts from photo (many at once)')}</div>
-  <form id="fd" class="grid" onsubmit="addDay(event)">${dayForm(pre)}<div style="align-self:end"><button class="btn">Save entry</button></div></form>
+  ${dupBanner()}<form id="fd" class="grid" onsubmit="addDay(event)">${dayForm(pre)}<div style="align-self:end"><button class="btn">Save entry</button></div></form>
   ${dl('dlPart',[...new Set(DB.daybook.filter(d=>!d.saleId).map(d=>d.particulars).filter(Boolean))].slice(-80))}${dl('dlVend',[...new Set(DB.daybook.map(d=>d.vendor).filter(Boolean))])}
   <p class="note">All money entries are made here – dealer, rent, salary, expenses, partner money. The <b>Accounts</b> tab shows the dealer balance, rent / salary month-wise, expenses and each partner’s capital from these entries. Sale and finance receipts come in automatically from the Sales tab.<br>
   <b>Paid / received by a partner:</b> added to (or taken from) that partner’s capital; the business cash does not change. <b>Old entry:</b> for amounts from before you started using the software, so cash in hand is not affected.</p></div>
@@ -766,6 +771,7 @@ function dayList(){
 }
 function addDay(e){
   e.preventDefault(); const d=formData(e.target); if(num(d.amount)<=0) return; const r=dayRec(d); if(!r) return;
+  if(!dupConfirm(daySame(r),'This entry')) return;
   DB.daybook.push({id:uid(),created:Date.now(),...r}); save();
   toast(r.by?`Saved – ${r.type==='out'?'added to':'taken from'} ${pName(r.by)}’s capital`:'Entry saved');
   dayPreset={date:r.date,type:r.type,head:r.head,mode:r.mode}; vDay();
@@ -778,6 +784,7 @@ function editDay(id){
 }
 function saveDayEdit(id){
   const i=DB.daybook.findIndex(z=>z.id===id); if(i<0) return; const d=formData($('#fde')); if(num(d.amount)<=0) return; const r=dayRec(d); if(!r) return;
+  if(!dupConfirm(daySame(r,id),'Another entry like this')) return;
   DB.daybook[i]={id,created:DB.daybook[i].created,...r}; save(); dlg.close(); dayRefresh(); toast('Entry updated');
 }
 function delDay(id){ if(!confirm('Delete this entry?')) return; DB.daybook=DB.daybook.filter(x=>x.id!==id); save(); if(dlg.open) dlg.close(); dayRefresh() }
@@ -883,6 +890,40 @@ function discountDlg(id){
   <p class="note">Due before discount: ${rs(saleDue(s)+num(s.discount))}</p>`,
   `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="const d=formData($('#fdc')),s=DB.sales.find(x=>x.id==='${id}');s.discount=num(d.discount);s.discountNote=d.discountNote;save();dlg.close();render();toast('Saved')">Save</button>`);
 }
+
+/* ---------- double-entry check ---------- */
+const dupKey=d=>[d.date,d.type,Math.round(num(d.amount)),headOf(d)].join('|');
+// Day Book entries already in the book that look the same as r (same date, in/out, amount and head)
+const daySame=(r,skipId)=>DB.daybook.filter(x=>x.id!==skipId&&!x.dupOk&&dupKey(x)===dupKey(r));
+function dupConfirm(list,what){
+  if(!list.length) return true;
+  return confirm(`⚠ Possible DOUBLE ENTRY\n\n${what} already exists:\n`+list.slice(0,3).map(x=>`• ${fd(x.date)} · ${headOf(x)||''} · ${rs(x.amount)} · ${x.particulars||''}`).join('\n')+`\n\nSave it again anyway?`);
+}
+function dupScan(){
+  const G=[], byK={};
+  DB.daybook.filter(d=>!d.dupOk&&num(d.amount)>0).forEach(d=>(byK[dupKey(d)]=byK[dupKey(d)]||[]).push(d));
+  for(const k in byK) if(byK[k].length>1) G.push({kind:'day',items:byK[k]});
+  const grp=(f,label)=>{const m={}; DB.sales.forEach(s=>{const v=txt(f(s)).toUpperCase(); if(v&&!s.dupOk) (m[v]=m[v]||[]).push(s)}); for(const v in m) if(m[v].length>1) G.push({kind:'sale',label:label+' '+v,items:m[v]})};
+  grp(s=>s.chassis,'Same chassis'); grp(s=>s.schallan,'Same sale challan');
+  const sm={}; DB.stock.filter(s=>!s.dupOk&&s.status!=='returned').forEach(s=>{const v=txt(s.chassis).toUpperCase(); if(v)(sm[v]=sm[v]||[]).push(s)});
+  for(const v in sm) if(sm[v].length>1) G.push({kind:'stock',label:'Same chassis in stock '+v,items:sm[v]});
+  return G;
+}
+const dupBanner=()=>{const n=dupScan().length; return n?`<div class="warn" style="cursor:pointer" onclick="dupReviewAll()">⚠ <b>${n} possible double ${n>1?'entries':'entry'}</b> found (same date, amount and head / same chassis). <u>Click to check</u></div>`:''};
+function dupReviewAll(){
+  const G=dupScan();
+  if(!G.length){toast('No double entries found ✓');return}
+  const row=(g,i)=>g.kind==='day'?`<div class="card" style="margin:0 0 10px;padding:12px"><b>${fd(g.items[0].date)} · ${esc(headOf(g.items[0])||(g.items[0].type==='in'?'Receipt':'Payment'))} · ${rs(g.items[0].amount)}</b> <span class="muted">(${g.items.length} times)</span>
+      <table style="margin-top:6px">${g.items.map(d=>`<tr><td style="white-space:normal">${esc(d.particulars)} ${byPill(d)}${dayDesc(d)?`<div class="sub2">${esc(dayDesc(d))}</div>`:''}</td><td>${esc(d.mode)}</td><td style="white-space:nowrap">${d.saleId?`<button class="btn plain sm" onclick="viewSale('${d.saleId}')">Open sale</button>`:`<button class="btn plain sm" style="color:var(--red)" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dupReviewAll();render()}">Delete</button>`}</td></tr>`).join('')}</table>
+      <button class="btn plain sm" style="margin-top:6px" onclick="dupOk(${i})">These are different – not a double entry</button></div>`
+    :`<div class="card" style="margin:0 0 10px;padding:12px"><b>${esc(g.label)}</b> <span class="muted">(${g.items.length} ${g.kind==='sale'?'sales':'vehicles'})</span>
+      <table style="margin-top:6px">${g.items.map(x=>g.kind==='sale'?`<tr><td>${fd(x.date)}</td><td><b>${esc(x.name)}</b> · ${esc(x.model)} · #${x.inv}</td><td>${rs(x.total)}</td><td><button class="btn plain sm" onclick="viewSale('${x.id}')">Open</button></td></tr>`
+        :`<tr><td>${fd(x.date)}</td><td>${esc(x.model)} ${esc(x.colour)} · Challan ${esc(x.challan)}</td><td>${x.status==='sold'?'Sold':'In stock'}</td></tr>`).join('')}</table>
+      ${g.kind==='stock'?'<p class="note" style="margin:6px 0 0">Use Stock → “Remove duplicates” to remove the extra one.</p>':''}
+      <button class="btn plain sm" style="margin-top:6px" onclick="dupOk(${i})">Not a double entry</button></div>`;
+  openDlg(`⚠ ${G.length} possible double ${G.length>1?'entries':'entry'}`,`<p class="muted" style="margin-top:0">These look the same. Delete the extra one, or mark them as different if both are correct.</p>${G.map(row).join('')}`,'<button class="btn" onclick="dlg.close()">Done</button>');
+}
+function dupOk(i){ const g=dupScan()[i]; if(!g) return; g.items.forEach(x=>x.dupOk=1); save(); dupReviewAll(); render() }
 
 /* ---------- enquiries ---------- */
 let enqF='Open';
@@ -1233,7 +1274,7 @@ function ledTable(D,cash){
 }
 function accCash(){
   const l=ledOf(cbK), D=ledData(l,ledFrom,ledTo);
-  $('#acc').innerHTML=`<div class="stats">
+  $('#acc').innerHTML=`${dupBanner()}<div class="stats">
     <div class="stat"><div class="k">Opening balance</div><div class="v">${rs(D.ob)}</div></div>
     <div class="stat"><div class="k">Receipts</div><div class="v" style="color:var(--green)">${rs(D.dr)}</div></div>
     <div class="stat"><div class="k">Payments</div><div class="v" style="color:var(--red)">${rs(D.cr)}</div></div>
