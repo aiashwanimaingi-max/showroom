@@ -241,7 +241,7 @@ function vStock(){
     <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="all">All</option></select>
     <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
     <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button>
-    ${impBtn('stock')}${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 डबल गाड़ियाँ हटाएँ (${n})</button>`:'')(dupPlan().remove.length)}
+    ${impBtn('stock')}<button class="btn plain sm" style="color:var(--red);border-color:var(--red)" onclick="stDeleteAll()">🗑 सारी गाड़ियाँ हटाएँ</button>${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 डबल गाड़ियाँ हटाएँ (${n})</button>`:'')(dupPlan().remove.length)}
   </div><div id="stockList"></div></div>
   <div class="card"><h2>Stock summary</h2>${stockSummary()}</div>`;
   $('#sf').value=stockF; stockList();
@@ -260,6 +260,15 @@ function stockList(){
   :'<div class="empty">No vehicles found.</div>');
 }
 function stockRows(){const q=stockQ.toLowerCase();return DB.stock.filter(s=>(stockF==='all'||(stockF==='sold')===(s.status==='sold'))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))}
+function stDeleteAll(){
+  const rows=stockRows(), sold=rows.filter(s=>s.status==='sold'&&s.saleId&&DB.sales.some(z=>z.id===s.saleId)), del=rows.filter(s=>!sold.includes(s));
+  if(!del.length){alert(rows.length?'इस list की सभी गाड़ियाँ बिक चुकी हैं — इन्हें नहीं हटाया जा सकता।':'list में कोई गाड़ी नहीं है।');return}
+  const what=stockQ?`search “${stockQ}” वाली`:stockF==='in'?'स्टॉक की (In stock)':stockF==='sold'?'बिकी (Sold) list की':'सारी';
+  const ans=prompt(`⚠ ${what} ${del.length} गाड़ियाँ हमेशा के लिए हट जाएँगी — सभी डिवाइस से।${sold.length?`\n(${sold.length} बिकी हुई गाड़ियाँ नहीं हटेंगी।)`:''}\n\nपहले Backup ले लें।\n\nपक्का करने के लिए नीचे गिनती ${del.length} लिखें:`);
+  if(ans===null) return;
+  if(txt(ans)!==String(del.length)){alert('गिनती मेल नहीं खाई — कुछ नहीं हटाया।');return}
+  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} गाड़ियाँ हटा दीं`);
+}
 function stDelete(){
   const sel=DB.stock.filter(s=>stSel.has(s.id));
   const sold=sel.filter(s=>s.status==='sold'&&s.saleId&&DB.sales.some(z=>z.id===s.saleId)), del=sel.filter(s=>!sold.includes(s));
