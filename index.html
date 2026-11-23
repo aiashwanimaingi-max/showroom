@@ -27,7 +27,7 @@ header .grow{flex:1}
 nav{display:flex;gap:4px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);padding:0 8px;position:sticky;top:0;z-index:5}
 nav button{border:0;background:none;padding:12px 14px;font:inherit;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
 nav button.on{color:var(--red);border-bottom-color:var(--red)}
-main{max-width:1200px;margin:0 auto;padding:16px}
+main{max-width:1440px;margin:0 auto;padding:16px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
 .card h2{margin:0 0 12px;font-size:16px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -60,11 +60,12 @@ th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white
 th{background:#fafaf9;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:hover td{background:#fcfcfb}
-table.nice th{background:#fbf3f3;color:#7a2a2a;font-size:11.5px;padding:10px 12px;border-bottom:2px solid #f0dcdc}
-table.nice td{padding:11px 12px;vertical-align:top}
+table.nice th{background:#fbf3f3;color:#7a2a2a;font-size:11px;padding:10px 9px;border-bottom:2px solid #f0dcdc}
+table.nice td{padding:11px 9px;vertical-align:top}
 table.nice tbody tr:nth-child(even) td{background:#fcfcfb}
-table.nice tbody tr:hover td{background:#fff8f0}
-table.nice td.wrap{white-space:normal;min-width:150px;max-width:230px}
+table.nice tbody tr:hover td{background:#fff3e6}
+tr.click{cursor:pointer}
+table.nice td.wrap{white-space:normal;min-width:130px;max-width:210px}
 table.nice tfoot td{border-top:2px solid #e3e3e1;padding:12px}
 .sub2{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400}
 .amt{font-weight:700;font-variant-numeric:tabular-nums}.amt.neg{color:#c00}.amt.pos{color:var(--green)}.amt.ok{color:var(--green)}
@@ -120,7 +121,7 @@ html{-webkit-text-size-adjust:100%}
 <main id="app"></main>
 <dialog id="dlg"><div class="dh"><span id="dlgT" class="grow"></span><button class="btn plain sm" onclick="dlg.close()">✕</button></div><div class="db" id="dlgB"></div><div class="df" id="dlgF"></div></dialog>
 <div id="toast"></div>
-<div id="syncbar" class="hide">दूसरे डिवाइस से नई एंट्री आई है <button class="btn sm" onclick="render()">दिखाएँ</button></div>
+<div id="syncbar" class="hide">New entries arrived from another device <button class="btn sm" onclick="render()">Show</button></div>
 <div id="print"></div>
 
 <script>
@@ -141,14 +142,14 @@ try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
 if(!DB) DB=structuredClone(DEFAULTS);
 for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]);
 let storageOK=true;
-/* cloud config: Firebase project की config (बाद में यहाँ भरी जाएगी; खाली हो तो Settings में paste की गई config चलती है) */
+/* cloud config: Firebase project config (if null, a config pasted in Settings is used) */
 const FB_CONFIG={apiKey:"AIzaSyBwEfdGtbhXbaiqVv34K1olQDwWSvD301E",authDomain:"honda-showroom-8cda6.firebaseapp.com",projectId:"honda-showroom-8cda6",storageBucket:"honda-showroom-8cda6.firebasestorage.app",messagingSenderId:"966756070246",appId:"1:966756070246:web:e9ec70a7539ad2fb2e8ea7"};
 const FBK=KEY+'_fbcfg';
 function fbCfg(){if(FB_CONFIG)return FB_CONFIG;try{return JSON.parse(localStorage.getItem(FBK))||null}catch(e){return null}}
 const CLOUD=!!fbCfg();
 let FB=null,cloudReady=false,READONLY=false,SYNCED={},UNSUB=[],appDirty=false,cloudEmail='',pendingN=0,SYNC_ST='';
 function save(){
-  if(READONLY){ try{DB=JSON.parse(localStorage.getItem(KEY))||DB}catch(e){} toast('📴 इंटरनेट नहीं — यह एंट्री सेव नहीं हुई'); setTimeout(render,0); return }
+  if(READONLY){ try{DB=JSON.parse(localStorage.getItem(KEY))||DB}catch(e){} toast('📴 No internet — this entry was not saved'); setTimeout(render,0); return }
   try{ localStorage.setItem(KEY,JSON.stringify(DB)); storageOK=true }catch(e){ storageOK=CLOUD; if(!CLOUD) toast('⚠ Could not save — take a backup!') }
   if(CLOUD&&cloudReady) cloudPush();
 }
@@ -198,7 +199,7 @@ function vDash(){
   const daysSince=lb?Math.floor((Date.now()-new Date(lb))/864e5):null;
   $('#app').innerHTML=`
   ${!storageOK?'<div class="warn">⚠ Saving in this browser failed. Use “Backup now” immediately.</div>':''}
-  ${CLOUD?((daysSince===null||daysSince>=30)&&localHas()?`<div class="warn">डेटा cloud में सुरक्षित है। फिर भी महीने में एक बार <a href="#" onclick="backupJSON();return false">backup ले लें</a>।</div>`:''):(daysSince===null||daysSince>=3)&&(DB.stock.length+DB.sales.length+DB.daybook.length)>0?`<div class="warn">Your data is saved only in this browser. Last backup: <b>${lb?fd(lb.slice(0,10))+' ('+daysSince+' days ago)':'never'}</b>. <a href="#" onclick="backupJSON();return false">Download a backup now</a> and keep it on a pen drive / Google Drive.</div>`:''}
+  ${CLOUD?((daysSince===null||daysSince>=30)&&localHas()?`<div class="warn">Your data is safe in the cloud. Still, once a month <a href="#" onclick="backupJSON();return false">take a backup</a>.</div>`:''):(daysSince===null||daysSince>=3)&&(DB.stock.length+DB.sales.length+DB.daybook.length)>0?`<div class="warn">Your data is saved only in this browser. Last backup: <b>${lb?fd(lb.slice(0,10))+' ('+daysSince+' days ago)':'never'}</b>. <a href="#" onclick="backupJSON();return false">Download a backup now</a> and keep it on a pen drive / Google Drive.</div>`:''}
   <div class="stats">
     <div class="stat red"><div class="k">Vehicles in stock</div><div class="v">${inStock.length}</div></div>
     <div class="stat"><div class="k">Sold today</div><div class="v">${todaySales.length}</div></div>
@@ -206,7 +207,7 @@ function vDash(){
     <div class="stat"><div class="k">Cash in hand</div><div class="v">${rs(bal.cash)}</div></div>
     <div class="stat"><div class="k">Customer dues</div><div class="v">${rs(dues.reduce((a,s)=>a+saleDue(s),0))}</div></div>
     <div class="stat"><div class="k">Finance pending</div><div class="v">${rs(finPend.reduce((a,s)=>a+num(s.finance),0))}</div></div>
-    ${(t=>t?`<div class="stat"><div class="k">Finance कम आया (कुल)</div><div class="v" style="color:var(--amber)">${rs(t)}</div></div>`:'')(DB.sales.reduce((a,s)=>a+Math.max(0,-finDiff(s)),0))}
+    ${(t=>t?`<div class="stat"><div class="k">Finance short (total)</div><div class="v" style="color:var(--amber)">${rs(t)}</div></div>`:'')(DB.sales.reduce((a,s)=>a+Math.max(0,-finDiff(s)),0))}
   </div>
   <div class="row" style="margin-bottom:16px">
     <button class="btn" onclick="go('stock');setTimeout(()=>$('#fStock [name=chassis]')?.focus(),0)">+ Add vehicle to stock</button>
@@ -214,7 +215,7 @@ function vDash(){
     <button class="btn ghost" onclick="go('day')">+ Day Book entry</button>
     <button class="btn ghost" onclick="go('enq')">+ New enquiry</button>
   </div>
-  ${DB.partners.length?(S=>`<div class="card"><h2>Partners – किसने कितना लगाया <a href="#" style="font-size:13px;font-weight:400" onclick="go('partners');return false">पूरा हिसाब →</a></h2><div class="stats" style="margin:0">${S.P.map(p=>`<div class="stat"><div class="k">${esc(p.name)} (${p.share}%)</div><div class="v">${rs(p.net)}</div><div style="margin-top:4px">${pendPill(p)}</div></div>`).join('')}</div></div>`)(partnerSummary()):''}
+  ${DB.partners.length?(S=>`<div class="card"><h2>Partners – capital invested <a href="#" style="font-size:13px;font-weight:400" onclick="go('partners');return false">Full details →</a></h2><div class="stats" style="margin:0">${S.P.map(p=>`<div class="stat"><div class="k">${esc(p.name)} (${p.share}%)</div><div class="v">${rs(p.net)}</div><div style="margin-top:4px">${pendPill(p)}</div></div>`).join('')}</div></div>`)(partnerSummary()):''}
   <div class="card"><h2>Stock summary (model × colour)</h2>${stockSummary()}</div>
   <div class="card"><h2>Follow-ups due (${fups.length})</h2>${fups.length?enqTable(fups):'<div class="empty">No follow-ups due today.</div>'}</div>
   <div class="card"><h2>Pending payments</h2>${(dues.length||finPend.length)?salesTable([...new Set([...dues,...finPend])]):'<div class="empty">Nothing pending.</div>'}</div>`;
@@ -235,10 +236,10 @@ function vStock(){
   const S=DB.settings;
   $('#app').innerHTML=`
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Add vehicle to stock (inward)</h2>
-    <label class="btn">📷 चालान की फोटो से भरें<input type="file" accept="image/*,.pdf,application/pdf" multiple class="hide" onchange="aiChallan([...this.files]);this.value=''"></label></div>
+    <label class="btn">📷 Fill from challan photo<input type="file" accept="image/*,.pdf,application/pdf" multiple class="hide" onchange="aiChallan([...this.files]);this.value=''"></label></div>
   <form id="fStock" class="grid" onsubmit="addStock(event)">
     <label>Date<input type="date" name="date" value="${today()}" required></label>
-    <label>Purchase Challan No<input name="challan" required></label>
+    <label>Purchase Challan No <span style="font-weight:400">(optional — can fill later)</span><input name="challan"></label>
     <label>Model<input name="model" list="dlModels" required></label>
     <label>Colour<input name="colour" list="dlCols"></label>
     <label>Engine No<input name="engine" class="mono" required></label>
@@ -252,7 +253,7 @@ function vStock(){
     <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="all">All</option></select>
     <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
     <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('stock')">📄 PDF</button>
-    ${impBtn('stock')}<button class="btn plain sm" style="color:var(--red);border-color:var(--red)" onclick="stDeleteAll()">🗑 सारी गाड़ियाँ हटाएँ</button>${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 डबल गाड़ियाँ हटाएँ (${n})</button>`:'')(dupPlan().remove.length)}
+    ${impBtn('stock')}<button class="btn plain sm" style="color:var(--red);border-color:var(--red)" onclick="stDeleteAll()">🗑 Delete all vehicles</button>${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 Remove duplicates (${n})</button>`:'')(dupPlan().remove.length)}
   </div><div id="stockList"></div></div>
   <div class="card"><h2>Stock summary</h2>${stockSummary()}</div>`;
   $('#sf').value=stockF; stockList();
@@ -263,9 +264,9 @@ function stockList(){
     .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
   const ids=new Set(DB.stock.map(s=>s.id)); [...stSel].forEach(id=>{if(!ids.has(id))stSel.delete(id)});
   const allOn=rows.length&&rows.every(s=>stSel.has(s.id));
-  $('#stockList').innerHTML=(stSel.size?`<div class="warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>${stSel.size} गाड़ियाँ चुनी हैं</b><button class="btn sm" onclick="stDelete()">🗑 चुनी हुई गाड़ियाँ हटाएँ</button><button class="btn plain sm" onclick="stSel.clear();stockList()">चुनाव हटाएँ</button></div>`:'')+
-  (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="सब चुनें" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Purchase Challan</th><th>Sale Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
-  ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ भरें</a>`}</td><td>${(sl=>sl?(sl.schallan?esc(sl.schallan):`<a href="#" onclick="setSChallan('${sl.id}');return false" style="color:var(--amber)">+ भरें</a>`):'<span class="muted">—</span>')(s.saleId&&DB.sales.find(z=>z.id===s.saleId))}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
+  $('#stockList').innerHTML=(stSel.size?`<div class="warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>${stSel.size} vehicles selected</b><button class="btn sm" onclick="stDelete()">🗑 Delete selected</button><button class="btn plain sm" onclick="stSel.clear();stockList()">Clear selection</button></div>`:'')+
+  (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="Select all" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Purchase Challan</th><th>Sale Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
+  ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ Fill</a>`}</td><td>${(sl=>sl?(sl.schallan?esc(sl.schallan):`<a href="#" onclick="setSChallan('${sl.id}');return false" style="color:var(--amber)">+ Fill</a>`):'<span class="muted">—</span>')(s.saleId&&DB.sales.find(z=>z.id===s.saleId))}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
   <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':'<span class="pill in">In stock</span>'}</td>
   <td>${s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
   :'<div class="empty">No vehicles found.</div>');
@@ -273,19 +274,19 @@ function stockList(){
 function stockRows(){const q=stockQ.toLowerCase();return DB.stock.filter(s=>(stockF==='all'||(stockF==='sold')===(s.status==='sold'))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))}
 function stDeleteAll(){
   const rows=stockRows(), sold=rows.filter(s=>s.status==='sold'&&s.saleId&&DB.sales.some(z=>z.id===s.saleId)), del=rows.filter(s=>!sold.includes(s));
-  if(!del.length){alert(rows.length?'इस list की सभी गाड़ियाँ बिक चुकी हैं — इन्हें नहीं हटाया जा सकता।':'list में कोई गाड़ी नहीं है।');return}
-  const what=stockQ?`search “${stockQ}” वाली`:stockF==='in'?'स्टॉक की (In stock)':stockF==='sold'?'बिकी (Sold) list की':'सारी';
-  const ans=prompt(`⚠ ${what} ${del.length} गाड़ियाँ हमेशा के लिए हट जाएँगी — सभी डिवाइस से।${sold.length?`\n(${sold.length} बिकी हुई गाड़ियाँ नहीं हटेंगी।)`:''}\n\nपहले Backup ले लें।\n\nपक्का करने के लिए नीचे गिनती ${del.length} लिखें:`);
+  if(!del.length){alert(rows.length?'All vehicles in this list are sold — they cannot be deleted.':'There are no vehicles in the list.');return}
+  const what=stockQ?`search “${stockQ}”`:stockF==='in'?'in-stock':stockF==='sold'?'sold-list':'all';
+  const ans=prompt(`⚠ ${del.length} (${what}) vehicles will be permanently deleted — from all devices.${sold.length?`\n(${sold.length} sold vehicles will not be deleted.)`:''}\n\nTake a backup first.\n\nTo confirm, type the number ${del.length} below:`);
   if(ans===null) return;
-  if(txt(ans)!==String(del.length)){alert('गिनती मेल नहीं खाई — कुछ नहीं हटाया।');return}
-  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} गाड़ियाँ हटा दीं`);
+  if(txt(ans)!==String(del.length)){alert('Number did not match — nothing was deleted.');return}
+  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} vehicles deleted`);
 }
 function stDelete(){
   const sel=DB.stock.filter(s=>stSel.has(s.id));
   const sold=sel.filter(s=>s.status==='sold'&&s.saleId&&DB.sales.some(z=>z.id===s.saleId)), del=sel.filter(s=>!sold.includes(s));
-  if(!del.length){alert('चुनी हुई सभी गाड़ियाँ बिक चुकी हैं। बिकी गाड़ी हटाने के लिए पहले Sales में उसकी सेल Cancel करें।');return}
-  if(!confirm(`${del.length} गाड़ियाँ स्टॉक से हमेशा के लिए हटेंगी (सभी डिवाइस से)।${sold.length?`\n${sold.length} बिकी हुई गाड़ियाँ नहीं हटेंगी।`:''}\n\nपक्का हटाएँ?`)) return;
-  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} गाड़ियाँ हटा दीं`);
+  if(!del.length){alert('All selected vehicles are sold. To delete a sold vehicle, first cancel its sale in Sales.');return}
+  if(!confirm(`${del.length} vehicles will be permanently deleted from stock (all devices).${sold.length?`\n${sold.length} sold vehicles will not be deleted.`:''}\n\nDelete them?`)) return;
+  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} vehicles deleted`);
 }
 function addStock(e){
   e.preventDefault(); const f=e.target, d=formData(f);
@@ -320,19 +321,19 @@ function dupPlan(){
 }
 function dupReview(){
   const P=dupPlan();
-  if(!P.remove.length){toast('कोई डबल गाड़ी नहीं मिली');return}
-  openDlg(`${P.remove.length} डबल गाड़ियाँ मिलीं`,`<p style="margin-top:0">एक ही Chassis / Engine नंबर वाली गाड़ी एक से ज़्यादा बार चढ़ी है। हर गाड़ी की <b>एक</b> एंट्री रहेगी (जिसकी सेल हुई है या जिसमें सही चालान नं. है), बाकी हटेंगी:</p>
-  <div class="tablewrap imp"><table><tr><th>हटेगी</th><th>Model</th><th>Engine</th><th>Chassis</th><th>Challan</th><th>Date</th><th>रहेगी (Challan)</th></tr>
+  if(!P.remove.length){toast('No duplicate vehicles found');return}
+  openDlg(`${P.remove.length} duplicate vehicles found`,`<p style="margin-top:0">The same Chassis / Engine number has been entered more than once. <b>One</b> entry per vehicle will be kept (the sold one, or the one with a proper challan no.); the rest will be removed:</p>
+  <div class="tablewrap imp"><table><tr><th>Remove</th><th>Model</th><th>Engine</th><th>Chassis</th><th>Challan</th><th>Date</th><th>Keep (Challan)</th></tr>
   ${P.remove.map(({x,k})=>`<tr><td>❌</td><td>${esc(x.model)}</td><td class="mono">${esc(x.engine)}</td><td class="mono">${esc(x.chassis)}</td><td style="white-space:normal;max-width:180px">${esc(x.challan)||'—'}</td><td>${fd(x.date)}</td><td>✅ ${esc(k.challan)||'—'} · ${fd(k.date)}</td></tr>`).join('')}</table></div>
-  ${P.stuck.length?`<p class="warn">${P.stuck.length} गाड़ियाँ दो बार बिकी दिख रही हैं — इन्हें नहीं छुआ गया, Sales में देख लें।</p>`:''}
-  <p class="note">पहले <b>Backup now</b> ले लें। हटाई गई एंट्री सभी डिवाइस से हट जाएगी।</p>`,
-  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dupApply()">${P.remove.length} डबल एंट्री हटाएँ</button>`);
+  ${P.stuck.length?`<p class="warn">${P.stuck.length} vehicles appear sold twice — not touched, please check in Sales.</p>`:''}
+  <p class="note">Take a <b>Backup now</b> first. Removed entries are removed from all devices.</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dupApply()">${P.remove.length} duplicate entries — remove</button>`);
 }
 function dupApply(){
   const P=dupPlan(), ids=new Set(P.remove.map(r=>r.x.id));
   // keep a better challan/date/key/cost from a removed copy if the kept one lacks it
   P.remove.forEach(({x,k})=>{ for(const f of ['challan','key','cost','colour']) if(!txt(k[f])&&txt(x[f])&&!(f==='challan'&&/[,;&]/.test(x[f]))) k[f]=x[f] });
-  DB.stock=DB.stock.filter(s=>!ids.has(s.id)); save(); dlg.close(); render(); toast(`${ids.size} डबल एंट्री हटा दीं`);
+  DB.stock=DB.stock.filter(s=>!ids.has(s.id)); save(); dlg.close(); render(); toast(`${ids.size} duplicate entries removed`);
 }
 function editStock(id){
   const s=DB.stock.find(x=>x.id===id);
@@ -352,7 +353,7 @@ function newSale(stockId,enqId){
   if(!avail.length){alert('No vehicle in stock. Add the vehicle in the Stock tab first.');go('stock');return}
   const e=enqId?DB.enquiries.find(x=>x.id===enqId):null;
   openDlg('New sale',`<form id="fs" class="grid">
-    <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}</option>`).join('')}</select></label>
+    <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}${s.challan?' · Purch. challan '+esc(s.challan):''}</option>`).join('')}</select></label>
     <label>Date<input type="date" name="date" value="${today()}" required></label>
     <label>Sale Challan / Bill No<input name="schallan"></label>
     <label>Customer name<input name="name" value="${esc(e?.name)}" required></label>
@@ -401,47 +402,47 @@ function receivePay(id){
 }
 const finRecd=s=>s.financeReceived?(s.financeRecdAmt!=null&&s.financeRecdAmt!==''?num(s.financeRecdAmt):num(s.finance)):0;
 const finDiff=s=>s.financeReceived?finRecd(s)-num(s.finance):0;
-const diffPill=d=>Math.abs(d)<0.5?'':d<0?`<span class="pill due">${rs(-d)} कम आया</span>`:`<span class="pill open">${rs(d)} ज़्यादा आया</span>`;
+const diffPill=d=>Math.abs(d)<0.5?'':d<0?`<span class="pill due">${rs(-d)} short</span>`:`<span class="pill open">${rs(d)} excess</span>`;
 function finCell(s){
   if(!num(s.finance)&&!s.financer) return '—';
-  if(!num(s.finance)) return `<a href="#" onclick="setFinance('${s.id}');return false" style="color:var(--amber)">+ राशि भरें</a><div class="muted" style="font-size:12px">${esc(s.financer)}</div>`;
-  return rs(s.finance)+'<br>'+(s.financeReceived?`<span class="pill in">आया ${rs(finRecd(s))}</span> ${diffPill(finDiff(s))}`:'<span class="pill due">pending</span>');
+  if(!num(s.finance)) return `<a href="#" onclick="setFinance('${s.id}');return false" style="color:var(--amber)">+ Add amount</a><div class="muted" style="font-size:12px">${esc(s.financer)}</div>`;
+  return rs(s.finance)+'<br>'+(s.financeReceived?`<span class="pill in">Recd ${rs(finRecd(s))}</span> ${diffPill(finDiff(s))}`:'<span class="pill due">pending</span>');
 }
 function setFinance(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
   openDlg('Finance – '+s.name,`<form id="ffn" class="grid">
-    <label>Finance राशि (बिल वाली)<input name="finance" inputmode="decimal" value="${num(s.finance)||''}"></label>
+    <label>Finance amount (as per bill)<input name="finance" inputmode="decimal" value="${num(s.finance)||''}"></label>
     <label>Financer / bank<input name="financer" value="${esc(s.financer)}" placeholder="HDFC, Bajaj, IDFC…"></label></form>
-    ${s.financeReceived?'<p class="note">इस सेल का finance पहले ही आ चुका है — आई हुई राशि अलग से “Finance आया” में बदलें।</p>':''}`,
+    ${s.financeReceived?'<p class="note">Finance for this sale is already received — change the received amount under “Finance received”.</p>':''}`,
   `<button class="btn plain" onclick="viewSale('${id}')">Back</button><button class="btn" onclick="const d=formData($('#ffn'));const s=DB.sales.find(x=>x.id==='${id}');s.finance=num(d.finance);s.financer=d.financer;save();render();viewSale('${id}');toast('Finance saved')">Save</button>`);
 }
 function financeRecv(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
-  if(!num(s.finance)){setFinance(id);toast('पहले finance की राशि भरें');return}
+  if(!num(s.finance)){setFinance(id);toast('Enter the finance amount first');return}
   const de=DB.daybook.find(d=>d.fin&&d.saleId===id);
-  openDlg(`Finance आया – ${s.name} (${esc(s.financer)||'financer'})`,`
-  <p class="muted" style="margin-top:0">बिल में finance: <b>${rs(s.finance)}</b></p>
+  openDlg(`Finance received – ${s.name} (${esc(s.financer)||'financer'})`,`
+  <p class="muted" style="margin-top:0">Finance as per bill: <b>${rs(s.finance)}</b></p>
   <form id="ffr" class="grid">
-    <label>किस तारीख़ को आया<input type="date" name="date" value="${esc(s.financeRecdDate||de?.date||today())}"></label>
-    <label>कितना आया ₹<input name="amount" inputmode="decimal" value="${s.financeReceived?finRecd(s):num(s.finance)}" oninput="const v=num(this.value)-${num(s.finance)};$('#frd').innerHTML=this.value?(Math.abs(v)<0.5?'<span class=&quot;pill in&quot;>पूरा आया</span>':diffPill(v)):''"></label>
+    <label>Date received<input type="date" name="date" value="${esc(s.financeRecdDate||de?.date||today())}"></label>
+    <label>Amount received ₹<input name="amount" inputmode="decimal" value="${s.financeReceived?finRecd(s):num(s.finance)}" oninput="const v=num(this.value)-${num(s.finance)};$('#frd').innerHTML=this.value?(Math.abs(v)<0.5?'<span class=&quot;pill in&quot;>Received in full</span>':diffPill(v)):''"></label>
     <label>Mode<select name="mode">${opts(['Bank','Cheque','UPI','Cash'],de?.mode||'Bank')}</select></label>
     <label>UTR / Cheque no<input name="ref" value="${esc(s.financeRef||'')}"></label>
-    <label class="span2">कम / ज़्यादा का कारण (अगर हो)<input name="note" value="${esc(s.financeNote||'')}" placeholder="जैसे processing fee, subvention, insurance कटा…"></label>
-  </form><p id="frd" style="margin:8px 0 0"><span class="pill in">पूरा आया</span></p>`,
-  `${s.financeReceived?`<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="financeUndo('${id}')">“आया” हटाएँ</button>`:''}<button class="btn plain" onclick="viewSale('${id}')">Back</button><button class="btn" onclick="financeSave('${id}')">Save</button>`);
+    <label class="span2">Reason for short / excess (if any)<input name="note" value="${esc(s.financeNote||'')}" placeholder="e.g. processing fee, subvention, insurance deducted…"></label>
+  </form><p id="frd" style="margin:8px 0 0"><span class="pill in">Received in full</span></p>`,
+  `${s.financeReceived?`<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="financeUndo('${id}')">Undo “received”</button>`:''}<button class="btn plain" onclick="viewSale('${id}')">Back</button><button class="btn" onclick="financeSave('${id}')">Save</button>`);
   $('#ffr [name=amount]').dispatchEvent(new Event('input'));
 }
 function financeSave(id){
-  const s=DB.sales.find(x=>x.id===id), d=formData($('#ffr')), a=num(d.amount); if(a<=0){alert('आई हुई राशि भरें।');return}
+  const s=DB.sales.find(x=>x.id===id), d=formData($('#ffr')), a=num(d.amount); if(a<=0){alert('Enter the amount received.');return}
   Object.assign(s,{financeReceived:true,financeRecdAmt:a,financeRecdDate:d.date||today(),financeRef:d.ref,financeNote:d.note});
   const part=`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}${d.ref?' · '+d.ref:''}`;
   let de=DB.daybook.find(x=>x.fin&&x.saleId===id);
   if(de) Object.assign(de,{date:s.financeRecdDate,amount:a,mode:d.mode,particulars:part});
   else DB.daybook.push({id:uid(),created:Date.now(),date:s.financeRecdDate,type:'in',mode:d.mode,amount:a,particulars:part,saleId:id,fin:true});
-  save(); render(); viewSale(id); const df=a-num(s.finance); toast(Math.abs(df)<0.5?'Finance पूरा आया ✓':df<0?`Finance ${rs(-df)} कम आया`:`Finance ${rs(df)} ज़्यादा आया`);
+  save(); render(); viewSale(id); const df=a-num(s.finance); toast(Math.abs(df)<0.5?'Finance received in full ✓':df<0?`Finance ${rs(-df)} short`:`Finance ${rs(df)} excess`);
 }
 function financeUndo(id){
-  if(!confirm('Finance “आया” हटाएँ? Day Book से इसकी एंट्री भी हट जाएगी।')) return;
+  if(!confirm('Undo finance “received”? Its Day Book entry will also be removed.')) return;
   const s=DB.sales.find(x=>x.id===id); s.financeReceived=false; delete s.financeRecdAmt; delete s.financeRecdDate;
   DB.daybook=DB.daybook.filter(x=>!(x.fin&&x.saleId===id)); save(); render(); viewSale(id);
 }
@@ -449,20 +450,21 @@ function salesTable(rows,summary){
   if(!rows.length) return '<div class="empty">No sales yet.</div>';
   const sum=f=>rows.reduce((a,s)=>a+f(s),0);
   const diffCell=s=>{ if(!num(s.finance)) return '<span class="muted">—</span>'; if(!s.financeReceived) return '<span class="muted">—</span>';
-    const d=finDiff(s); return Math.abs(d)<0.5?'<span class="amt ok">✓ पूरा</span>':d<0?`<span class="amt neg">− ${rs(-d)}</span><div class="sub2">कम आया</div>`:`<span class="amt pos">+ ${rs(d)}</span><div class="sub2">ज़्यादा आया</div>`};
-  const finCellN=s=>num(s.finance)?`<b>${rs(s.finance)}</b><div class="sub2">${esc(s.financer)||''}</div>`:(s.financer?`<a href="#" class="fill" onclick="setFinance('${s.id}');return false">+ राशि भरें</a><div class="sub2">${esc(s.financer)}</div>`:'<span class="muted">—</span>');
-  const recCell=s=>!num(s.finance)?'<span class="muted">—</span>':s.financeReceived?`<b>${rs(finRecd(s))}</b><div class="sub2">${fd(s.financeRecdDate||'')}</div>`:`<button class="btn ghost sm" onclick="financeRecv('${s.id}')">आया — भरें</button>`;
+    const d=finDiff(s); return Math.abs(d)<0.5?'<span class="amt ok">✓ Full</span>':d<0?`<span class="amt neg">− ${rs(-d)}</span><div class="sub2">short</div>`:`<span class="amt pos">+ ${rs(d)}</span><div class="sub2">excess</div>`};
+  const finCellN=s=>num(s.finance)?`<b>${rs(s.finance)}</b><div class="sub2">${esc(s.financer)||''}</div>`:(s.financer?`<a href="#" class="fill" onclick="setFinance('${s.id}');return false">+ Add amount</a><div class="sub2">${esc(s.financer)}</div>`:'<span class="muted">—</span>');
+  const recCell=s=>!num(s.finance)?'<span class="muted">—</span>':s.financeReceived?`<b>${rs(finRecd(s))}</b><div class="sub2">${fd(s.financeRecdDate||'')}</div>`:`<button class="btn ghost sm" onclick="financeRecv('${s.id}')">Mark received</button>`;
   const tD=sum(s=>finDiff(s));
   const cards=summary?`<div class="stats" style="margin-bottom:14px">
-    <div class="stat"><div class="k">कुल सेल</div><div class="v">${rows.length}</div><div class="sub2">${rs(sum(s=>num(s.total)))}</div></div>
-    <div class="stat"><div class="k">Finance (बिल)</div><div class="v">${rs(sum(s=>num(s.finance)))}</div></div>
-    <div class="stat"><div class="k">Finance आया</div><div class="v" style="color:var(--green)">${rs(sum(s=>finRecd(s)))}</div></div>
+    <div class="stat"><div class="k">Total sales</div><div class="v">${rows.length}</div><div class="sub2">${rs(sum(s=>num(s.total)))}</div></div>
+    <div class="stat"><div class="k">Finance (bill)</div><div class="v">${rs(sum(s=>num(s.finance)))}</div></div>
+    <div class="stat"><div class="k">Finance received</div><div class="v" style="color:var(--green)">${rs(sum(s=>finRecd(s)))}</div></div>
     <div class="stat"><div class="k">Finance pending</div><div class="v" style="color:var(--amber)">${rs(sum(s=>num(s.finance)&&!s.financeReceived?num(s.finance):0))}</div></div>
-    <div class="stat"><div class="k">Finance कम / ज़्यादा</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
-    <div class="stat"><div class="k">ग्राहकों का बाकी</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
-  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Bill</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance आया</th><th class="num">कम / ज़्यादा</th><th class="num">ग्राहक से मिला</th><th class="num">बाकी</th><th></th></tr></thead><tbody>
-  ${rows.map(s=>{const due=saleDue(s);return `<tr>
+    <div class="stat"><div class="k">Finance short / excess</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
+    <div class="stat"><div class="k">Customer dues</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
+  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Sale Challan</th><th>Purch. Challan</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance received</th><th class="num">Short / Excess</th><th class="num">From customer</th><th class="num">Due</th></tr></thead><tbody>
+  ${rows.map(s=>{const due=saleDue(s);return `<tr class="click" title="Click to open" onclick="if(!event.target.closest('button,a'))viewSale('${s.id}')">
     <td><b>${esc(s.schallan)||'<span class="muted">—</span>'}</b><div class="sub2">Rcpt #${s.inv}</div></td>
+    <td>${(st=>st&&st.challan?esc(st.challan):`<span class="muted">—</span>`)(DB.stock.find(x=>x.id===s.stockId))}</td>
     <td>${fd(s.date)}</td>
     <td class="wrap"><b>${esc(s.name)}</b><div class="sub2">${esc(s.rel||'')} ${esc(s.relName||'')}${s.phone?' · '+esc(s.phone):''}</div></td>
     <td class="wrap">${esc(s.model)} <span class="muted">${esc(s.colour||'')}</span><div class="sub2 mono">${esc(s.chassis)}</div></td>
@@ -471,15 +473,14 @@ function salesTable(rows,summary){
     <td class="num">${recCell(s)}</td>
     <td class="num">${diffCell(s)}</td>
     <td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
-    <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td>
-    <td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</tbody>
-  <tfoot><tr class="tot"><td colspan="4">कुल (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
-    <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td><td></td></tr></tfoot></table></div>`;
+    <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td></tr>`}).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="5">Total (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
+    <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td></tr></tfoot></table></div>`;
 }
 function vSales(){
   $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:14px;row-gap:10px"><h2 class="grow" style="margin:0;min-width:160px">Sale register</h2>
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
-  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','बिलों की फोटो से सेल (कई एक साथ)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
+  <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','Sales from bill photos (many at once)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
   salesList();
 }
 function salesList(){
@@ -489,18 +490,73 @@ function salesList(){
 function viewSale(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return; const due=saleDue(s);
   openDlg(`Sale #${s.inv} – ${s.name}`,`
-  <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Sale Challan</td><td>${esc(s.schallan)||'—'} <button class="btn plain sm" onclick="setSChallan('${s.id}')">${s.schallan?'बदलें':'+ भरें'}</button></td></tr><tr><td class="muted">Purchase Challan</td><td>${esc((DB.stock.find(x=>x.id===s.stockId)||{}).challan)||'—'}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
+  <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Sale Challan</td><td>${esc(s.schallan)||'—'} <button class="btn plain sm" onclick="setSChallan('${s.id}')">${s.schallan?'Change':'+ Fill'}</button></td></tr><tr><td class="muted">Purchase Challan</td><td>${esc((DB.stock.find(x=>x.id===s.stockId)||{}).challan)||'—'}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
   <tr><td class="muted">Vehicle</td><td>${esc(s.model)} · ${esc(s.colour)}<br><span class="mono">Ch: ${esc(s.chassis)}<br>Eng: ${esc(s.engine)} · Key: ${esc(s.key)}</span></td></tr>
   <tr><td class="muted">Price + extra</td><td>${rs(s.price)} + ${rs(s.extra)} = <b>${rs(s.total)}</b></td></tr>
-  <tr><td class="muted">Finance</td><td style="white-space:normal">${num(s.finance)?`बिल में <b>${rs(s.finance)}</b>`:'<span class="muted">राशि नहीं भरी</span>'}${s.financer?' · '+esc(s.financer):''} <button class="btn plain sm" onclick="setFinance('${s.id}')">${num(s.finance)?'बदलें':'+ भरें'}</button>
-    ${num(s.finance)?(s.financeReceived?`<br>आया <b>${rs(finRecd(s))}</b> · ${fd(s.financeRecdDate||'')} ${diffPill(finDiff(s))||'<span class="pill in">पूरा</span>'}${s.financeNote?`<div class="muted" style="font-size:12px">${esc(s.financeNote)}</div>`:''} <button class="btn plain sm" onclick="financeRecv('${s.id}')">बदलें</button>`:`<br><span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Finance आया — भरें</button>`):''}</td></tr>
+  <tr><td class="muted">Finance</td><td style="white-space:normal">${num(s.finance)?`Bill: <b>${rs(s.finance)}</b>`:'<span class="muted">amount not entered</span>'}${s.financer?' · '+esc(s.financer):''} <button class="btn plain sm" onclick="setFinance('${s.id}')">${num(s.finance)?'Change':'+ Fill'}</button>
+    ${num(s.finance)?(s.financeReceived?`<br>Received <b>${rs(finRecd(s))}</b> · ${fd(s.financeRecdDate||'')} ${diffPill(finDiff(s))||'<span class="pill in">Full</span>'}${s.financeNote?`<div class="muted" style="font-size:12px">${esc(s.financeNote)}</div>`:''} <button class="btn plain sm" onclick="financeRecv('${s.id}')">Change</button>`:`<br><span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Mark finance received</button>`):''}</td></tr>
   ${s.exchangeValue?`<tr><td class="muted">Exchange</td><td>${esc(s.exchange)} · ${rs(s.exchangeValue)}</td></tr>`:''}
   <tr><td class="muted">Payments</td><td>${s.payments.length?s.payments.map(p=>`${fd(p.date)} · ${esc(p.mode)} · <b>${rs(p.amount)}</b> ${esc(p.ref)}`).join('<br>'):'—'}</td></tr>
   <tr><td class="muted">Balance due</td><td>${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Fully paid</span>'}</td></tr>
   ${s.notes?`<tr><td class="muted">Notes</td><td style="white-space:normal">${esc(s.notes)}</td></tr>`:''}</table>`,
   `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="delSale('${s.id}')">Cancel sale</button>
    ${due>0.5?`<button class="btn ghost" onclick="receivePay('${s.id}')">Receive payment</button>`:''}
-   <button class="btn" onclick="printSale('${s.id}')">🖨 Print receipt</button>`);
+   <button class="btn ghost" onclick="editSale('${s.id}')">✎ Edit</button><button class="btn" onclick="printSale('${s.id}')">🖨 Print receipt</button>`);
+}
+function editSale(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return; const st=DB.stock.find(x=>x.id===s.stockId)||{};
+  const pay=(s.payments||[]).map((p,i)=>`<tr data-pid="${esc(p.id||'')}"><td><input type="date" name="pdate" value="${esc(p.date)}"></td><td><input name="pamt" inputmode="decimal" value="${num(p.amount)}" style="width:100px"></td>
+    <td><select name="pmode" style="width:auto">${opts(['Cash','Cheque','UPI','Bank'],p.mode)}</select></td><td><input name="pref" value="${esc(p.ref)}" style="width:110px"></td>
+    <td><label style="flex-direction:row;align-items:center;gap:4px;font-weight:400"><input type="checkbox" name="pdel" style="width:auto"> Delete</label></td></tr>`).join('');
+  openDlg(`Edit sale – ${s.name}`,`<form id="fes" class="grid">
+    <label>Sale Challan No<input name="schallan" value="${esc(s.schallan)}"></label>
+    <label>Purchase Challan No<input name="pchallan" value="${esc(st.challan)}"></label>
+    <label>Sale date<input type="date" name="date" value="${esc(s.date)}"></label>
+    <label>Customer name<input name="name" value="${esc(s.name)}" required></label>
+    <label>Relation<select name="rel">${opts(['S/o','W/o','D/o','C/o'],s.rel||'S/o')}</select></label>
+    <label>Father / husband name<input name="relName" value="${esc(s.relName)}"></label>
+    <label>Mobile<input name="phone" inputmode="tel" value="${esc(s.phone)}"></label>
+    <label class="span2">Address<input name="address" value="${esc(s.address)}"></label>
+    <label>Model<input name="model" list="dlModels" value="${esc(s.model)}"></label>
+    <label>Colour<input name="colour" list="dlCols" value="${esc(s.colour)}"></label>
+    <label>Chassis No<input name="chassis" class="mono" value="${esc(s.chassis)}"></label>
+    <label>Engine No<input name="engine" class="mono" value="${esc(s.engine)}"></label>
+    <label>Key No<input name="key" class="mono" value="${esc(s.key||st.key)}"></label>
+    <label>Vehicle price<input name="price" inputmode="decimal" value="${num(s.price)}"></label>
+    <label>Accessories / extra<input name="extra" inputmode="decimal" value="${num(s.extra)||''}"></label>
+    <label>Finance amount<input name="finance" inputmode="decimal" value="${num(s.finance)||''}"></label>
+    <label>Financer / bank<input name="financer" value="${esc(s.financer)}"></label>
+    <label>Old vehicle (exchange)<input name="exchange" value="${esc(s.exchange)}"></label>
+    <label>Exchange value<input name="exchangeValue" inputmode="decimal" value="${num(s.exchangeValue)||''}"></label>
+    <label class="span2">Notes<input name="notes" value="${esc(s.notes)}"></label>
+  </form>${dl('dlModels',DB.settings.models)}${dl('dlCols',DB.settings.colours)}
+  ${pay?`<h3 style="font-size:14px;margin:16px 0 6px">Payments received from customer</h3><div class="tablewrap imp"><table id="espT"><tr><th>Date</th><th>Amount ₹</th><th>Mode</th><th>Cheque / UTR</th><th></th></tr>${pay}</table></div>
+  <p class="note">Changes here also update the Day Book. Finance received is edited separately (“Finance” row → Change).</p>`:''}`,
+  `<button class="btn plain" onclick="viewSale('${id}')">Cancel</button><button class="btn" onclick="saveEditSale('${id}')">Save changes</button>`);
+  dlg.style.maxWidth='900px'; dlg.addEventListener('close',()=>dlg.style.maxWidth='',{once:true});
+}
+function saveEditSale(id){
+  const f=$('#fes'); if(!f.reportValidity()) return; const d=formData(f), s=DB.sales.find(x=>x.id===id), st=DB.stock.find(x=>x.id===s.stockId);
+  const ch=up(d.chassis), en=up(d.engine);
+  const clash=DB.stock.find(x=>x.id!==s.stockId&&((ch&&x.chassis===ch)||(en&&x.engine===en)));
+  if(clash&&!confirm(`Another vehicle in stock already has this ${clash.chassis===ch?'chassis':'engine'} number (${clash.model}). Save anyway?`)) return;
+  Object.assign(s,{schallan:d.schallan,date:d.date||s.date,name:d.name,rel:d.rel,relName:d.relName,phone:d.phone,address:d.address,model:d.model,colour:d.colour,chassis:ch,engine:en,key:up(d.key),
+    price:num(d.price),extra:num(d.extra),total:num(d.price)+num(d.extra),finance:num(d.finance),financer:d.financer,exchange:d.exchange,exchangeValue:num(d.exchangeValue),notes:d.notes});
+  if(st) Object.assign(st,{challan:d.pchallan,model:d.model,colour:d.colour,chassis:ch,engine:en,key:up(d.key)});
+  if(d.model&&!DB.settings.models.includes(d.model))DB.settings.models.push(d.model);
+  if(d.colour&&!DB.settings.colours.includes(d.colour))DB.settings.colours.push(d.colour);
+  const keep=[];
+  document.querySelectorAll('#espT tr[data-pid]').forEach((tr,i)=>{
+    const p=s.payments[i]; if(!p) return; const g=n=>tr.querySelector(`[name=${n}]`);
+    const de=p.id&&DB.daybook.find(x=>x.payId===p.id);
+    if(g('pdel').checked){ if(de) DB.daybook=DB.daybook.filter(x=>x!==de); return }
+    Object.assign(p,{date:g('pdate').value||p.date,amount:num(g('pamt').value),mode:g('pmode').value,ref:txt(g('pref').value)});
+    if(de) Object.assign(de,{date:p.date,amount:p.amount,mode:p.mode,particulars:`Sale #${s.inv} – ${s.name} (${s.model})${p.ref?' · '+p.ref:''}`});
+    keep.push(p);
+  });
+  if(document.querySelector('#espT')) s.payments=keep;
+  const fe=DB.daybook.find(x=>x.fin&&x.saleId===id); if(fe) fe.particulars=`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}`;
+  save(); render(); viewSale(id); toast('Sale updated');
 }
 function setSChallan(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
@@ -535,10 +591,10 @@ function dayBalance(before){
   return {cash,total};
 }
 function vDay(){
-  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New entry · रोजनामचा</h2>${photoBtn('aiPay','बिल / रसीद की फोटो से')}</div>
+  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New entry</h2>${photoBtn('aiPay','From bill / receipt photo')}</div>
   <form id="fd" class="grid" onsubmit="addDay(event)">
     <label>Date<input type="date" name="date" value="${today()}" required></label>
-    <label>Type<select name="type"><option value="in">Receipt (आमद / money in)</option><option value="out">Payment (खर्चा / money out)</option></select></label>
+    <label>Type<select name="type"><option value="in">Receipt (money in)</option><option value="out">Payment (money out)</option></select></label>
     <label class="span2">Particulars<input name="particulars" list="dlPart" required placeholder="e.g. Plumber, Electricity bill, Tea, Service repair…"></label>
     <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
     <label>Mode<select name="mode"><option>Cash</option><option>Bank</option><option>UPI</option><option>Cheque</option></select></label>
@@ -621,26 +677,26 @@ function vSet(){
     <label class="span2">Colours (one per line)<textarea name="colours">${esc(S.colours.join('\n'))}</textarea></label>
   </form><div style="margin-top:10px"><button class="btn" onclick="saveSet()">Save settings</button></div></div>
   <div class="card"><h2>Backup & restore</h2>
-  ${CLOUD?'<p style="margin-top:0">डेटा <b>cloud (Firebase)</b> में है और सभी डिवाइस पर sync होता है। फिर भी महीने में एक बार backup ले लें।</p>':''}<p style="margin-top:0" class="${CLOUD?'hide':''}">All data is stored <b>only in this browser on this computer</b>. Download a backup every day (takes 1 second) and keep it safe — on a pen drive, Google Drive or WhatsApp to yourself.</p>${IOS&&!CLOUD?'<p class="warn">iPad: Backup दबाने पर Share खुलेगा — “Save to Files” या WhatsApp चुनें। ध्यान दें: Home Screen से ऐप का आइकन हटाने पर उसका सारा डेटा भी मिट जाता है, इसलिए रोज़ backup लें।</p>':''}
+  ${CLOUD?'<p style="margin-top:0">Data is stored in the <b>cloud (Firebase)</b> and syncs across all devices. Still, take a backup once a month.</p>':''}<p style="margin-top:0" class="${CLOUD?'hide':''}">All data is stored <b>only in this browser on this computer</b>. Download a backup every day (takes 1 second) and keep it safe — on a pen drive, Google Drive or WhatsApp to yourself.</p>${IOS&&!CLOUD?'<p class="warn">iPad: Backup opens the Share sheet — choose “Save to Files” or WhatsApp. Note: removing the app icon from the Home Screen also deletes its data, so take a backup daily.</p>':''}
   <p class="muted">Last backup: ${S.lastBackup?new Date(S.lastBackup).toLocaleString('en-IN'):'never'} · Records: ${DB.stock.length} vehicles, ${DB.sales.length} sales, ${DB.daybook.length} day book entries, ${DB.enquiries.length} enquiries</p>
   <div class="row"><button class="btn" onclick="backupJSON()">⬇ Download full backup</button>
   <label class="btn ghost" style="flex-direction:row;color:var(--red);font-size:15px">⬆ Restore from backup<input type="file" accept=".json" class="hide" onchange="restoreJSON(this.files[0])"></label></div>
   <p class="note">Excel exports: <a href="#" onclick="csv('stock');return false">Stock</a> · <a href="#" onclick="csv('sales');return false">Sales</a> · <a href="#" onclick="csv('daybook');return false">Day Book</a> · <a href="#" onclick="csv('enquiries');return false">Enquiries</a></p></div>
   ${cloudCard()}
-  <div class="card"><h2>फोटो से एंट्री (AI) – चालान, सेल बिल, खर्चे / रसीद</h2>
-  <p style="margin-top:0">Sales टैब में <b>“📷 बिलों की फोटो से सेल”</b> और Day Book में <b>“📷 बिल / रसीद की फोटो से”</b> भी यही key इस्तेमाल करते हैं।</p>
-  <p style="margin-top:0">Stock टैब में <b>“📷 चालान की फोटो से भरें”</b> से चालान की फोटो/PDF डालें — गाड़ियाँ अपने-आप भर जाएँगी, आप जाँच कर Save करें।</p>
-  <div class="row" style="margin-bottom:8px"><label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink)">कौन सा AI:
+  <div class="card"><h2>Entry from photos (AI) – challans, sale bills, expenses / receipts</h2>
+  <p style="margin-top:0"><b>“📷 Sales from bill photos”</b> in Sales and <b>“📷 From bill / receipt photo”</b> in Day Book use the same key.</p>
+  <p style="margin-top:0">In Stock, use <b>“📷 Fill from challan photo”</b> to add challan photos / PDFs — vehicles are filled automatically; check and Save.</p>
+  <div class="row" style="margin-bottom:8px"><label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--ink)">Which AI:
     <select style="width:auto" onchange="ls(AIP,this.value);render()">${[['openai','ChatGPT (OpenAI)'],['claude','Claude (Anthropic)']].map(([v,l])=>`<option value="${v}" ${aiProv()===v?'selected':''}>${l}</option>`).join('')}</select></label></div>
-  ${aiProv()==='openai'?`<p class="warn" style="margin:0 0 8px">ध्यान दें: ChatGPT का Plus/Pro प्लान यहाँ काम नहीं करता। API का बिल अलग से <b>platform.openai.com</b> पर बनता है।</p>
-  <ol style="padding-left:20px"><li><a href="https://platform.openai.com/" target="_blank" rel="noopener">platform.openai.com</a> पर उसी ChatGPT वाले account से login करें → <b>Billing</b> में थोड़ा balance डालें (जैसे $5)।</li>
-  <li><b>API keys → Create new secret key</b> → key कॉपी करके नीचे डालें।</li></ol>`
-  :`<ol style="padding-left:20px"><li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> पर account बनाएँ, Billing में थोड़ा balance डालें (जैसे $5)।</li>
-  <li>API Keys → Create Key → key कॉपी करके नीचे डालें।</li></ol>`}
-  <div class="row"><input type="password" id="aiKey" placeholder="${getKey()?'✓ Key saved — बदलने के लिए नई key डालें':aiProv()==='openai'?'sk-…':'sk-ant-…'}" style="max-width:360px" autocomplete="off">
+  ${aiProv()==='openai'?`<p class="warn" style="margin:0 0 8px">Note: a ChatGPT Plus/Pro plan does not work here. API usage is billed separately at <b>platform.openai.com</b>.</p>
+  <ol style="padding-left:20px"><li><a href="https://platform.openai.com/" target="_blank" rel="noopener">platform.openai.com</a> — log in with your ChatGPT account → add a little balance under <b>Billing</b> (e.g. $5).</li>
+  <li><b>API keys → Create new secret key</b> → copy the key and paste it below.</li></ol>`
+  :`<ol style="padding-left:20px"><li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a> — create an account and add a little balance under Billing (e.g. $5).</li>
+  <li>API Keys → Create Key → copy the key and paste it below.</li></ol>`}
+  <div class="row"><input type="password" id="aiKey" placeholder="${getKey()?'✓ Key saved — enter a new key to change it':aiProv()==='openai'?'sk-…':'sk-ant-…'}" style="max-width:360px" autocomplete="off">
     <button class="btn" onclick="setKey($('#aiKey').value)">Save key</button>${getKey()?'<button class="btn plain" onclick="setKey(\'\')">Remove key</button>':''}</div>
-  ${aiProv()==='openai'?`<div class="row" style="margin-top:8px"><label style="flex-direction:row;align-items:center;gap:8px">Model <input value="${esc(oaiModel())}" style="width:200px" onchange="ls(OAM,txt(this.value));toast('Model saved')"></label><span class="note" style="margin:0">(आम तौर पर बदलने की ज़रूरत नहीं)</span></div>`:''}
-  <p class="note">Key सिर्फ़ इसी ब्राउज़र में रहती है, backup फ़ाइल में नहीं जाती। फोटो पढ़ने के लिए ${aiProv()==='openai'?'OpenAI':'Anthropic'} के सर्वर पर भेजी जाती है। खर्च लगभग ₹2–10 प्रति चालान (अनुमान; असली खर्च उनकी वेबसाइट पर Usage में दिखेगा)।</p></div>
+  ${aiProv()==='openai'?`<div class="row" style="margin-top:8px"><label style="flex-direction:row;align-items:center;gap:8px">Model <input value="${esc(oaiModel())}" style="width:200px" onchange="ls(OAM,txt(this.value));toast('Model saved')"></label><span class="note" style="margin:0">(usually no need to change)</span></div>`:''}
+  <p class="note">The key stays only in this browser and is not included in backups. To read photos, they are sent to ${aiProv()==='openai'?'OpenAI':'Anthropic'}'s servers. Cost is roughly ₹2–10 per challan (estimate; see Usage on their website for actual cost).</p></div>
   <div class="card"><h2>Import from Excel (purchase / stock & sales)</h2>
   <ol style="margin-top:0;padding-left:20px">
     <li>Download the blank sheet: <a href="#" onclick="impTemplate('stock');return false">Stock / purchase template</a> · <a href="#" onclick="impTemplate('sales');return false">Sales template</a></li>
@@ -665,17 +721,17 @@ function backupJSON(){DB.settings.lastBackup=new Date().toISOString();save();dow
 function restoreJSON(file){
   if(!file) return; const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result); if(!d.settings||!Array.isArray(d.stock)) throw 0;
-    if(!confirm((CLOUD?'⚠ CLOUD: सभी डिवाइस का डेटा इस backup से बदल जाएगा!\n\n':'')+`Replace ALL current data with this backup?\n(${d.stock.length} vehicles, ${d.sales.length} sales, ${d.daybook.length} day book entries)`)) return;
+    if(!confirm((CLOUD?'⚠ CLOUD: data on ALL devices will be replaced by this backup!\n\n':'')+`Replace ALL current data with this backup?\n(${d.stock.length} vehicles, ${d.sales.length} sales, ${d.daybook.length} day book entries)`)) return;
     DB=d; for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]); save(); render(); toast('Backup restored');
   }catch(e){alert('This is not a valid backup file.')}};
   r.readAsText(file);
 }
 function csv(which){
   const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
-    sales:['inv','schallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
+    sales:['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
-  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -698,18 +754,18 @@ function pdfData(which){
   if(which==='sales'){
     const q=salesQ.toLowerCase(), rows=DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.inv-b.inv);
     const T=k=>rows.reduce((a,s)=>a+k(s),0), dd=v=>Math.abs(v)<0.5?'':(v<0?'− ':'+ ')+rs(Math.abs(v));
-    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[6,7,8,9,10,11],
-      head:['Bill','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance आया','कम / ज़्यादा','ग्राहक से मिला','बाकी'],
-      rows:rows.map(s=>[s.schallan||('#'+s.inv),fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
+    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[7,8,9,10,11,12],
+      head:['Sale Challan','Purch. Challan','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance received','Short / Excess','From customer','Due'],
+      rows:rows.map(s=>[s.schallan||('#'+s.inv),(DB.stock.find(x=>x.id===s.stockId)||{}).challan||'',fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
         num(s.finance)?rs(s.finance)+(s.financer?' '+s.financer:''):(s.financer||''),num(s.finance)?(s.financeReceived?rs(finRecd(s)):'pending'):'',
-        s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ पूरा'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
-      foot:[['','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
+        s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ Full'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
+      foot:[['','','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
   }
   if(which==='daybook'){
     const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
     const ob=dayBalance(dayFrom); let tin=0,tout=0,cin=0,cout=0;
     rows.forEach(d=>{const a=num(d.amount); if(d.type==='in'){tin+=a;if(d.mode==='Cash')cin+=a}else{tout+=a;if(d.mode==='Cash')cout+=a}});
-    return {title:'Day Book (रोजनामचा)',sub:`${fd(dayFrom)} to ${fd(dayTo)} · Opening cash ${rs(ob.cash)} · Closing cash ${rs(ob.cash+cin-cout)}`,num:[3,4],
+    return {title:'Day Book',sub:`${fd(dayFrom)} to ${fd(dayTo)} · Opening cash ${rs(ob.cash)} · Closing cash ${rs(ob.cash+cin-cout)}`,num:[3,4],
       head:['Date','Particulars','Mode','Receipt','Payment'],
       rows:rows.map(d=>[fd(d.date),d.particulars,d.mode,d.type==='in'?rs(d.amount):'',d.type==='out'?rs(d.amount):'']),
       foot:[['','Total','',rs(tin),rs(tout)]]};
@@ -722,10 +778,10 @@ function pdfData(which){
   }
   if(which==='capital'){
     const S=partnerSummary(), rows=DB.capital.filter(c=>!capF||c.partnerId===capF).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
-    return {title:'Partners – पूँजी का हिसाब',sub:capF?pName(capF):'All partners',num:[5,6],
-      pre:{head:['Partner','हिस्सा','लगाया','निकाला','कुल पूँजी','लगना चाहिए','बाकी / ज़्यादा'],num:[1,2,3,4,5,6],
-        rows:S.P.map(p=>[p.name,p.share+'%',rs(p.put),rs(p.took),rs(p.net),rs(p.should),p.pending>0.5?rs(p.pending)+' बाकी':p.pending<-0.5?rs(-p.pending)+' ज़्यादा':'पूरा'])},
-      head:['Date','Partner','क्या','Mode','Note','लगाया','निकाला'],
+    return {title:'Partners – capital account',sub:capF?pName(capF):'All partners',num:[5,6],
+      pre:{head:['Partner','Share','Invested','Withdrawn','Net capital','Should be','Pending / Excess'],num:[1,2,3,4,5,6],
+        rows:S.P.map(p=>[p.name,p.share+'%',rs(p.put),rs(p.took),rs(p.net),rs(p.should),p.pending>0.5?rs(p.pending)+' pending':p.pending<-0.5?rs(-p.pending)+' excess':'Complete'])},
+      head:['Date','Partner','Type','Mode','Note','Invested','Withdrawn'],
       rows:rows.map(c=>[fd(c.date),pName(c.partnerId),CAP_T[c.type],c.mode,c.note,c.type!=='out'?rs(c.amount):'',c.type==='out'?rs(c.amount):'']),
       foot:[['','','','','Total',rs(rows.filter(c=>c.type!=='out').reduce((a,c)=>a+num(c.amount),0)),rs(rows.filter(c=>c.type==='out').reduce((a,c)=>a+num(c.amount),0))]]};
   }
@@ -737,7 +793,7 @@ function pdfTable(head,rows,foot,numCols=[]){
   ${(foot||[]).map(r=>`<tr style="font-weight:700;background:#fafafa">${r.length===1?`<td colspan="${head.length}" style="border:1px solid #bbb;padding:4px 5px">${esc(r[0])}</td>`:r.map((v,i)=>td(v,i)).join('')}</tr>`).join('')}</tbody></table>`;
 }
 async function pdfExport(which){
-  const D=pdfData(which); if(!D.rows.length&&!D.pre){alert('इस list में कुछ नहीं है।');return}
+  const D=pdfData(which); if(!D.rows.length&&!D.pre){alert('Nothing in this list.');return}
   const S=DB.settings, now=new Date().toLocaleString('en-IN');
   const el=document.createElement('div');
   el.style.cssText='font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;color:#111;width:1040px;background:#fff;padding:0;margin:0;box-sizing:border-box';
@@ -745,9 +801,9 @@ async function pdfExport(which){
     <div><div style="font-size:18px;font-weight:700;color:#c00">${esc(S.name)}</div><div style="font-size:10px">${esc(S.address)} · ${esc(S.phones)}${S.gstin?' · GSTIN '+esc(S.gstin):''}</div></div>
     <div style="text-align:right"><div style="font-size:15px;font-weight:700">${esc(D.title)}</div><div style="font-size:10px">${esc(D.sub)}</div><div style="font-size:9px;color:#666">Printed ${esc(now)}</div></div></div>
     ${D.pre?pdfTable(D.pre.head,D.pre.rows,null,D.pre.num)+'<div style="height:8px"></div>':''}
-    ${D.rows.length?pdfTable(D.head,D.rows,D.foot,D.num||[]):'<p style="font-size:11px">कोई एंट्री नहीं।</p>'}`;
-  toast('⏳ PDF बन रही है…');
-  try{await loadPDF()}catch(e){alert('PDF बनाने के लिए इंटरनेट चाहिए। इंटरनेट चेक करके फिर कोशिश करें।');return}
+    ${D.rows.length?pdfTable(D.head,D.rows,D.foot,D.num||[]):'<p style="font-size:11px">No entries.</p>'}`;
+  toast('⏳ Creating PDF…');
+  try{await loadPDF()}catch(e){alert('Internet is needed to create a PDF. Check your connection and try again.');return}
   try{
     const blob=await html2pdf().set({margin:[8,8,10,8],image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0},
       jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},pagebreak:{mode:['css','legacy'],avoid:'tr'}}).from(el).outputPdf('blob');
@@ -755,11 +811,11 @@ async function pdfExport(which){
     if(IOS&&navigator.canShare){try{const f=new File([blob],name,{type:'application/pdf'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){if(e&&e.name==='AbortError')return}}
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
     toast('PDF downloaded');
-  }catch(e){alert('PDF नहीं बन पाई: '+(e&&e.message||e))}
+  }catch(e){alert('Could not create PDF: '+(e&&e.message||e))}
 }
 
-/* ---------- partners (साझेदार) ---------- */
-const CAP_T={in:'पैसा लगाया (दुकान में दिया)',exp:'दुकान का खर्च अपनी जेब से दिया',out:'पैसा निकाला'};
+/* ---------- partners ---------- */
+const CAP_T={in:'Money invested (given to business)',exp:'Business expense paid from own pocket',out:'Money withdrawn'};
 const pName=id=>DB.partners.find(p=>p.id===id)?.name||'?';
 let capF='';
 function partnerSummary(){
@@ -773,53 +829,53 @@ function partnerSummary(){
   P.forEach(p=>{p.should=totShare?base*p.share/totShare:0; p.pending=p.should-p.net});
   return {P,totShare,agreed,total:P.reduce((a,p)=>a+p.net,0)};
 }
-const pendPill=p=>p.pending>0.5?`<span class="pill due">${rs(p.pending)} बाकी</span>`:p.pending<-0.5?`<span class="pill in">${rs(-p.pending)} ज़्यादा</span>`:'<span class="pill in">पूरा</span>';
+const pendPill=p=>p.pending>0.5?`<span class="pill due">${rs(p.pending)} pending</span>`:p.pending<-0.5?`<span class="pill in">${rs(-p.pending)} excess</span>`:'<span class="pill in">Full</span>';
 function vPartners(){
   const S=partnerSummary();
   $('#app').innerHTML=`
-  <div class="card"><h2>साझेदार (Partners) – किसने कितना पैसा लगाया</h2>
-  ${DB.partners.length?`<div class="tablewrap"><table><tr><th>Partner</th><th class="num">हिस्सा</th><th class="num">लगाया</th><th class="num">निकाला</th><th class="num">कुल पूँजी</th><th class="num">लगना चाहिए</th><th class="num">बाकी / ज़्यादा</th></tr>
+  <div class="card"><h2>Partners – capital invested</h2>
+  ${DB.partners.length?`<div class="tablewrap"><table><tr><th>Partner</th><th class="num">Share</th><th class="num">Invested</th><th class="num">Withdrawn</th><th class="num">Net capital</th><th class="num">Should be</th><th class="num">Pending / Excess</th></tr>
   ${S.P.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td class="num">${p.share}%</td><td class="num">${rs(p.put)}</td><td class="num">${rs(p.took)}</td><td class="num"><b>${rs(p.net)}</b></td><td class="num">${rs(p.should)}</td><td class="num">${pendPill(p)}</td></tr>`).join('')}
   <tr class="tot"><td>Total</td><td class="num">${S.totShare}%</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.put,0))}</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.took,0))}</td><td class="num">${rs(S.total)}</td><td class="num">${rs(S.P.reduce((a,p)=>a+p.should,0))}</td><td></td></tr></table></div>
-  <p class="note">${S.agreed>0?`तय कुल पूँजी ${rs(S.agreed)} को हिस्से (%) के हिसाब से बाँटकर “लगना चाहिए” निकाला गया है।`:`कुल पूँजी तय नहीं है, इसलिए जिस partner ने अपने हिस्से के हिसाब से सबसे ज़्यादा लगाया है, बाकी partners का “बाकी” उसके बराबर आने तक दिखाया गया है।`}
-  ${S.totShare!==100?' <b>ध्यान दें: हिस्सों का जोड़ 100% नहीं है।</b>':''}</p>`
-  :'<div class="empty">अभी कोई partner नहीं जोड़ा गया। नीचे “Partners सेट करें” में नाम और हिस्सा (%) भरें।</div>'}</div>
-  ${DB.partners.length?`<div class="card"><h2>नई एंट्री</h2><form id="fcap" class="grid" onsubmit="addCap(event)">
+  <p class="note">${S.agreed>0?`The agreed total capital ${rs(S.agreed)} is split by share (%) to get “Should be”.`:`No total capital is set, so “Pending” shows how much each partner must add to match the partner who has invested the most relative to their share.`}
+  ${S.totShare!==100?' <b>Note: shares do not add up to 100%.</b>':''}</p>`
+  :'<div class="empty">No partners added yet. Enter names and shares (%) under “Set up partners” below.</div>'}</div>
+  ${DB.partners.length?`<div class="card"><h2>New entry</h2><form id="fcap" class="grid" onsubmit="addCap(event)">
     <label>Date<input type="date" name="date" value="${today()}" required></label>
     <label>Partner<select name="partnerId">${DB.partners.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></label>
-    <label class="span2">क्या हुआ<select name="type" onchange="$('#capNoteT').textContent=this.value==='exp'?'कौन सा खर्च (जैसे बिजली बिल, पेंटिंग)':'Note (cheque no / वजह)'">${Object.entries(CAP_T).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+    <label class="span2">Type<select name="type" onchange="$('#capNoteT').textContent=this.value==='exp'?'Which expense (e.g. electricity bill, painting)':'Note (cheque no / reason)'">${Object.entries(CAP_T).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
     <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
     <label>Mode<select name="mode"><option>Cash</option><option>Bank</option><option>UPI</option><option>Cheque</option></select></label>
-    <label class="span2"><span id="capNoteT">Note (cheque no / वजह)</span><input name="note"></label>
-    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Day Book में भी लिखें</label>
+    <label class="span2"><span id="capNoteT">Note (cheque no / reason)</span><input name="note"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Also add to Day Book</label>
     <div style="align-self:end"><button class="btn">Save</button></div></form>
-    <p class="note">पुरानी एंट्री डालते समय (जो Day Book में पहले से लिखी हैं, या software शुरू होने से पहले की हैं) “Day Book में भी लिखें” का निशान हटा दें, वरना कैश दो बार गिना जाएगा।</p></div>`:''}
-  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">हिसाब (History)</h2>
-    <select style="width:auto" onchange="capF=this.value;capList()"><option value="">सभी partners</option>${DB.partners.map(p=>`<option value="${p.id}" ${capF===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <p class="note">When entering old amounts (already in the Day Book, or from before using this software), untick “Also add to Day Book”, otherwise cash will be counted twice.</p></div>`:''}
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">History</h2>
+    <select style="width:auto" onchange="capF=this.value;capList()"><option value="">All partners</option>${DB.partners.map(p=>`<option value="${p.id}" ${capF===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
     <button class="btn plain sm" onclick="csv('capital')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('capital')">📄 PDF</button></div><div id="capList"></div></div>
-  <div class="card"><h2>Partners सेट करें</h2><form id="fpt" onsubmit="return false">
+  <div class="card"><h2>Set up partners</h2><form id="fpt" onsubmit="return false">
     <div id="ptRows">${(DB.partners.length?DB.partners:[{},{}]).map(ptRow).join('')}</div>
-    <button type="button" class="btn plain sm" onclick="$('#ptRows').insertAdjacentHTML('beforeend',ptRow({}))">+ Partner जोड़ें</button>
-    <label style="margin-top:12px;max-width:340px">तय कुल पूँजी ₹ (अगर तय है, जैसे 20,00,000)<input name="agreed" inputmode="decimal" value="${esc(DB.settings.agreedCapital||'')}"></label>
+    <button type="button" class="btn plain sm" onclick="$('#ptRows').insertAdjacentHTML('beforeend',ptRow({}))">+ Add partner</button>
+    <label style="margin-top:12px;max-width:340px">Agreed total capital ₹ (if fixed, e.g. 20,00,000)<input name="agreed" inputmode="decimal" value="${esc(DB.settings.agreedCapital||'')}"></label>
   </form><div style="margin-top:10px"><button class="btn" onclick="savePartners()">Save partners</button></div>
-  <p class="note">हिस्सा % = पूँजी और मुनाफ़े में हिस्सेदारी, जैसे 50 और 50। किसी partner को हटाने के लिए उसका नाम खाली करके Save करें (सिर्फ़ तब, जब उसकी कोई एंट्री न हो)।</p></div>`;
+  <p class="note">Share % = share of capital and profit, e.g. 50 and 50. To remove a partner, clear the name and Save (only if they have no entries).</p></div>`;
   capList();
 }
-function ptRow(p){return `<div class="row pt" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${esc(p.id||'')}"><input placeholder="Partner का नाम" value="${esc(p.name)}" style="flex:3;min-width:0"><input placeholder="हिस्सा" inputmode="decimal" value="${esc(p.share??'')}" style="width:80px"><span>%</span></div>`}
+function ptRow(p){return `<div class="row pt" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${esc(p.id||'')}"><input placeholder="Partner name" value="${esc(p.name)}" style="flex:3;min-width:0"><input placeholder="Share" inputmode="decimal" value="${esc(p.share??'')}" style="width:80px"><span>%</span></div>`}
 function savePartners(){
   const rows=[...document.querySelectorAll('#ptRows .pt')].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:String(i[1].value).trim(),share:num(i[2].value)}});
   const keep=rows.filter(p=>p.name), dropped=DB.partners.filter(p=>!keep.some(k=>k.id===p.id));
-  if(dropped.some(p=>DB.capital.some(c=>c.partnerId===p.id))){alert('जिस partner की एंट्री हैं, उसे हटाया नहीं जा सकता। पहले उसकी एंट्री delete करें।');return}
-  if(keep.length&&Math.round(keep.reduce((a,p)=>a+p.share,0))!==100&&!confirm('हिस्सों का जोड़ 100% नहीं है। फिर भी save करें?')) return;
+  if(dropped.some(p=>DB.capital.some(c=>c.partnerId===p.id))){alert('A partner with entries cannot be removed. Delete their entries first.');return}
+  if(keep.length&&Math.round(keep.reduce((a,p)=>a+p.share,0))!==100&&!confirm('Shares do not add up to 100%. Save anyway?')) return;
   DB.partners=keep; DB.settings.agreedCapital=num(formData($('#fpt')).agreed); save(); toast('Partners saved'); vPartners();
 }
 function capList(){
   const el=$('#capList'); if(!el) return;
   const rows=DB.capital.filter(c=>!capF||c.partnerId===capF).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
-  el.innerHTML=rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Partner</th><th>क्या</th><th>Mode</th><th>Note</th><th class="num">लगाया</th><th class="num">निकाला</th><th></th></tr>
+  el.innerHTML=rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Partner</th><th>Type</th><th>Mode</th><th>Note</th><th class="num">Invested</th><th class="num">Withdrawn</th><th></th></tr>
   ${rows.map(c=>`<tr><td>${fd(c.date)}</td><td><b>${esc(pName(c.partnerId))}</b></td><td>${esc(CAP_T[c.type])}</td><td>${esc(c.mode)}</td><td style="white-space:normal">${esc(c.note)}</td>
   <td class="num">${c.type!=='out'?rs(c.amount):''}</td><td class="num">${c.type==='out'?rs(c.amount):''}</td><td><button class="btn plain sm" onclick="delCap('${c.id}')">Delete</button></td></tr>`).join('')}</table></div>`
-  :'<div class="empty">कोई एंट्री नहीं।</div>';
+  :'<div class="empty">No entries.</div>';
 }
 function addCap(e){
   e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
@@ -827,14 +883,14 @@ function addCap(e){
   DB.capital.push({id,created:t0,date:d.date,partnerId:d.partnerId,type:d.type,amount:a,mode:d.mode,note:d.note});
   if(d.toDay){
     // Money a partner brings in is cash in; an expense paid from their own pocket is capital in + expense out.
-    if(d.type!=='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`पूँजी – ${nm}${d.type==='exp'?' (खर्च अपनी जेब से)':note}`,capId:id});
-    if(d.type==='exp') DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`${d.note||'खर्च'} (paid by ${nm})`,capId:id});
-    if(d.type==='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`पैसा निकाला – ${nm}${note}`,capId:id});
+    if(d.type!=='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`Capital – ${nm}${d.type==='exp'?' (expense paid personally)':note}`,capId:id});
+    if(d.type==='exp') DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`${d.note||'Expense'} (paid by ${nm})`,capId:id});
+    if(d.type==='out') DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`Withdrawal – ${nm}${note}`,capId:id});
   }
   save(); toast('Saved'); vPartners();
 }
 function delCap(id){
-  if(!confirm('यह एंट्री delete करें? Day Book से भी हट जाएगी।')) return;
+  if(!confirm('Delete this entry? It will also be removed from the Day Book.')) return;
   DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); save(); vPartners();
 }
 
@@ -843,17 +899,17 @@ const photoBtn=(fn,label)=>`<label class="btn ghost sm">📷 ${label}<input type
 async function aiPrep(files,title){
   if(!files.length) return null;
   const key=getKey();
-  if(!key){openDlg('API key चाहिए',`<p style="margin-top:0">फोटो पढ़ने के लिए पहले <b>Settings & Backup</b> में ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} की API key डालें (एक बार)।</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Settings खोलें</button>`);return null}
-  openDlg(title,'<div class="empty">⏳ फोटो पढ़ी जा रही है — 20 से 60 सेकंड लग सकते हैं। यह खिड़की बंद न करें।</div>','');
+  if(!key){openDlg('API key needed',`<p style="margin-top:0">To read photos, first enter the ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} API key in <b>Settings & Backup</b> (one time).</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Open Settings</button>`);return null}
+  openDlg(title,'<div class="empty">⏳ Reading photos — this can take 20 to 60 seconds. Please keep this window open.</div>','');
   const parts=[];
   for(const f of files) parts.push(f.type==='application/pdf'||/\.pdf$/i.test(f.name)?{pdf:true,name:f.name,b64:await fileB64(f)}:{pdf:false,b64:await shrinkImage(f)});
   return {key,parts};
 }
 const aiRun=(key,parts,prompt,schema,name)=>aiProv()==='openai'?readOpenAI(key,parts,prompt,schema,name):readClaude(key,parts,prompt,schema);
-function aiFail(e){openDlg('फोटो नहीं पढ़ी जा सकी',`<p style="margin-top:0">${esc(e.message==='IMG'?'यह फोटो खुल नहीं रही। JPG / PNG फोटो या PDF डालें (iPhone की HEIC फोटो हो तो JPG में बदलें)।':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">ठीक है</button>')}
+function aiFail(e){openDlg('Could not read the photo',`<p style="margin-top:0">${esc(e.message==='IMG'?'This photo could not be opened. Use a JPG / PNG photo or a PDF (convert iPhone HEIC photos to JPG).':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">OK</button>')}
 const objSchema=props=>({type:'object',additionalProperties:false,required:Object.keys(props),properties:props});
 const S_STR={type:'string'}, S_NUM={type:'number'};
-const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
+const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,purchase_challan_no:S_STR,key_no:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
   model:S_STR,colour:S_STR,engine:S_STR,chassis:S_STR,price:S_NUM,accessories:S_NUM,finance_amount:S_NUM,financer:S_STR,exchange_vehicle:S_STR,exchange_value:S_NUM,
   paid_amount:S_NUM,payment_mode:{type:'string',enum:['Cash','Cheque','UPI','Bank']},payment_ref:S_STR,notes:S_STR});
 const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,direction:{type:'string',enum:['in','out']},particulars:S_STR,amount:S_NUM,
@@ -862,11 +918,16 @@ const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,di
 const SALES_SCHEMA=objSchema({sales:{type:'array',items:SALE_SCHEMA}});
 async function aiSale(files){
   try{
-    const a=await aiPrep(files,'बिल पढ़े जा रहे हैं…'); if(!a) return;
+    const a=await aiPrep(files,'Reading bills…'); if(!a) return;
     const prompt=`These are sale documents from an Indian two-wheeler dealership (Honda): sale invoices / bills, booking forms, delivery challans / receipts, or handwritten sale register pages. There may be MANY bills — one or more per photo or page.
 Return EVERY vehicle sale you find in "sales", one entry per vehicle sold. Do not merge two bills, and do not skip any.
 For each sale:
-- sale_challan_no: the showroom's own sale challan / delivery challan / bill / invoice number printed on THAT bill (ONE number only, never several joined).
+- sale_challan_no: the SHOWROOM'S OWN sale number for that bill. On handwritten register pages this is the number written inside a CIRCLE at the top of the page (e.g. a circled "48"). On printed bills it is the bill / invoice / delivery challan number. ONE number only, never several joined.
+- purchase_challan_no: the supplier's challan number with which this vehicle was PURCHASED by the showroom. On handwritten pages it is written as "Challan No: ...." (e.g. "Challan No: 7316"). Empty if not shown. Never put the circled number here.
+- key_no: key number if written (e.g. "Key No: PN90").
+- A date written in the margin or top corner of a handwritten page (e.g. 22-11-26) is the sale date.
+- phone: the first mobile number. notes: put any second mobile number and the battery number here, e.g. "Mob 2: 7015712076 · Battery: 50611320467598".
+- Example of a handwritten page: circled "47" at top → sale_challan_no "47"; "Challan No: 6411" → purchase_challan_no "6411"; "Name: Sani W/o Moseen" → customer_name "Sani", relation "W/o", relative_name "Moseen".
 - customer_name; relation (S/o, W/o, D/o or C/o as written); relative_name (father / husband name); phone (10-digit mobile); address.
 - model, colour, engine number and chassis (frame / VIN) number. Copy engine and chassis exactly, in capitals with no spaces; do not confuse 0/O, 1/I, 5/S, 8/B.
   If the model or colour matches one of these names used by the dealership, use that exact name: Models: ${DB.settings.models.join(', ')}. Colours: ${DB.settings.colours.join(', ')}.
@@ -877,7 +938,7 @@ For each sale:
 - If the same bill appears twice (same bill number and chassis), list it once.
 - Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
     const d=await aiRun(a.key,a.parts,prompt,SALES_SCHEMA,'sales');
-    if(!d.sales?.length) throw new Error('इन फोटो में कोई सेल बिल नहीं मिला। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    if(!d.sales?.length) throw new Error('No sale bill found in these photos. Try again with clear, straight photos.');
     reviewSales(d.sales);
   }catch(e){aiFail(e)}
 }
@@ -897,20 +958,20 @@ function reviewSales(L){
     const sold=!st&&DB.stock.some(s=>s.status==='sold'&&((ch&&s.chassis===ch)||(en&&s.engine===en)));
     const k=(ch||en)+'|'+one(d.sale_challan_no), twice=!!(ch||en)&&seen.has(k); seen.add(k);
     if(sold)nSold++; if(twice)nTwice++; if(!st&&!sold)nNew++;
-    const tag=sold?'<span class="pill sold">पहले ही बिक चुकी</span>':twice?'<span class="pill due">दो बार आया</span>':st?`<span class="pill in">स्टॉक में मिली</span>${st.chassis!==ch?`<div class="muted mono" style="font-size:11px">${esc(st.chassis)}</div>`:''}`:'<span class="pill due">स्टॉक में नहीं — जुड़ जाएगी</span>';
+    const tag=sold?'<span class="pill sold">Already sold</span>':twice?'<span class="pill due">Appears twice</span>':st?`<span class="pill in">Found in stock</span>${st.chassis!==ch?`<div class="muted mono" style="font-size:11px">${esc(st.chassis)}</div>`:''}`:'<span class="pill due">Not in stock — will be added</span>';
     return `<tr data-i="${i}" data-st="${st?st.id:''}"><td><input type="checkbox" ${sold||twice?'':'checked'} style="width:auto"></td>
-    <td>${inp('schallan',one(d.sale_challan_no),80,'placeholder="बिल नं."')}</td><td><input type="date" name="date" value="${esc(toISO(d.date)||today())}"></td>
-    <td>${inp('name',txt(d.customer_name),130)}</td><td>${inp('relName',txt(d.relative_name),110,'placeholder="पिता/पति"')}</td><td>${inp('phone',txt(d.phone),100)}</td>
+    <td>${inp('schallan',one(d.sale_challan_no),70,'placeholder="Sale no."')}</td><td>${inp('pchallan',one(d.purchase_challan_no)||(st&&st.challan)||'',75,'placeholder="Purch. no."')}</td><td><input type="date" name="date" value="${esc(toISO(d.date)||today())}"></td>
+    <td>${inp('name',txt(d.customer_name),130)}</td><td>${inp('relName',txt(d.relative_name),110,'placeholder="Father/Husband"')}</td><td>${inp('phone',txt(d.phone),100)}</td>
     <td>${inp('model',txt(d.model),120,'list="dlModels"')}</td><td>${inp('chassis',ch,160,'class="mono"')}</td><td>${inp('engine',en,120,'class="mono"')}</td>
     <td>${inp('price',num(d.price)||'',80,'inputmode="decimal"')}</td><td>${inp('finance',num(d.finance_amount)||'',75,'inputmode="decimal"')}</td><td>${inp('financer',txt(d.financer),80)}</td>
     <td>${inp('paid',num(d.paid_amount)||'',75,'inputmode="decimal"')}</td><td><select name="mode" style="width:auto">${opts(['Cash','Cheque','UPI','Bank'],d.payment_mode||'Cash')}</select></td><td>${tag}</td></tr>`}).join('');
-  openDlg(`बिलों से ${L.length} सेल मिलीं — जाँच कर Save करें`,`
-  ${nSold||nTwice?`<p class="warn" style="margin-top:0">${nSold?`<b>${nSold}</b> गाड़ी पहले ही बिक चुकी है। `:''}${nTwice?`<b>${nTwice}</b> बिल दो बार आया है। `:''}इनका ✓ हटा दिया है, ये दोबारा नहीं चढ़ेंगी।</p>`:''}
-  ${nNew?`<p class="note" style="margin-top:0">${nNew} गाड़ियाँ स्टॉक में नहीं मिलीं — Save करने पर ये स्टॉक में जुड़कर बिकी हुई दिखेंगी। Chassis नंबर एक बार ज़रूर मिला लें।</p>`:''}
-  <div class="tablewrap imp"><table id="slT"><tr><th></th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>S/o</th><th>Mobile</th><th>Model</th><th>Chassis</th><th>Engine</th><th>Price</th><th>Finance</th><th>Financer</th><th>Paid</th><th>Mode</th><th></th></tr>${rows}</table></div>
+  openDlg(`${L.length} sales found in bills — check and Save`,`
+  ${nSold||nTwice?`<p class="warn" style="margin-top:0">${nSold?`<b>${nSold}</b> already sold. `:''}${nTwice?`<b>${nTwice}</b> bill(s) appear twice. `:''}These are unticked and will not be added again.</p>`:''}
+  ${nNew?`<p class="note" style="margin-top:0">${nNew} vehicle(s) not found in stock — on Save they will be added to stock as sold. Please double-check the chassis numbers.</p>`:''}
+  <div class="tablewrap imp"><table id="slT"><tr><th></th><th>Sale Challan</th><th>Purchase Challan</th><th>Date</th><th>Customer</th><th>S/o</th><th>Mobile</th><th>Model</th><th>Chassis</th><th>Engine</th><th>Price</th><th>Finance</th><th>Financer</th><th>Paid</th><th>Mode</th><th></th></tr>${rows}</table></div>
   ${dl('dlModels',DB.settings.models)}
-  <p class="note">⚠ AI से पढ़े नाम, नंबर और रकम एक बार बिलों से मिला लें। जो सेल नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
-  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveSales()">सारी सेल Save करें</button>`);
+  <p class="note">⚠ Check the names, numbers and amounts read by AI against the bills. Untick any sale you do not want to add.</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveSales()">Save all sales</button>`);
   dlg.style.maxWidth='1400px'; dlg.addEventListener('close',()=>dlg.style.maxWidth='',{once:true});
 }
 function saveSales(){
@@ -919,20 +980,21 @@ function saveSales(){
   [...document.querySelectorAll('#slT tr')].slice(1).forEach((tr,n)=>{
     if(!tr.querySelector('input[type=checkbox]').checked) return;
     const g=k=>{const e=tr.querySelector(`[name=${k}]`);return e?txt(e.value):''}, d=L[+tr.dataset.i]||{};
-    const r={schallan:g('schallan'),date:g('date')||today(),name:g('name'),relName:g('relName'),phone:g('phone'),model:g('model'),chassis:up(g('chassis')),engine:up(g('engine')),
+    const r={schallan:g('schallan'),pchallan:g('pchallan'),key:up(d.key_no),date:g('date')||today(),name:g('name'),relName:g('relName'),phone:g('phone'),model:g('model'),chassis:up(g('chassis')),engine:up(g('engine')),
       price:num(g('price')),finance:num(g('finance')),financer:g('financer'),paid:num(g('paid')),mode:g('mode')||'Cash',
       rel:d.relation||'S/o',address:txt(d.address),extra:num(d.accessories),exchange:txt(d.exchange_vehicle),exchangeValue:num(d.exchange_value),ref:txt(d.payment_ref),notes:txt(d.notes),colour:txt(d.colour)};
     if(!r.name||!(r.chassis||r.engine)){bad.push(n+1);return}
     out.push(r);
   });
-  if(bad.length){alert(`लाइन ${bad.join(', ')} में ग्राहक का नाम या Chassis/Engine नंबर खाली है। भरें या ✓ हटा दें।`);return}
-  if(!out.length){alert('कोई सेल चुनी नहीं गई।');return}
+  if(bad.length){alert(`Line ${bad.join(', ')}: customer name or Chassis/Engine no. is empty. Fill it in or untick it.`);return}
+  if(!out.length){alert('No sale selected.');return}
   let made=0;
   for(const r of out){
     const avail=DB.stock.filter(s=>s.status!=='sold'&&!used.has(s.id));
     let st=saleMatch(r.chassis,r.engine,avail);
     if(!st&&DB.stock.some(s=>s.status==='sold'&&((r.chassis&&s.chassis===r.chassis)||(r.engine&&s.engine===r.engine)))){skipped.push(r.chassis||r.engine);continue}
-    if(!st){st={id:uid(),created:Date.now(),status:'in',date:r.date,challan:'',model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:'',cost:''};DB.stock.push(st);
+    if(st){if(!st.challan&&r.pchallan)st.challan=r.pchallan; if(!st.key&&r.key)st.key=r.key}
+    if(!st){st={id:uid(),created:Date.now(),status:'in',date:r.date,challan:r.pchallan,model:r.model,colour:r.colour,engine:r.engine,chassis:r.chassis,key:r.key,cost:''};DB.stock.push(st);
       if(r.model&&!DB.settings.models.includes(r.model))DB.settings.models.push(r.model)}
     used.add(st.id);
     const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
@@ -943,12 +1005,12 @@ function saveSales(){
     if(r.paid>0) addPayment(sale,{date:r.date,amount:r.paid,mode:r.mode,ref:r.ref});
     made++;
   }
-  save(); dlg.close(); toast(`${made} सेल जुड़ गईं`+(skipped.length?` · ${skipped.length} पहले से बिकी थीं, छोड़ दीं`:'')); go('sales');
+  save(); dlg.close(); toast(`${made} sales added`+(skipped.length?` · ${skipped.length} already sold, skipped`:'')); go('sales');
 }
 
 async function aiPay(files){
   try{
-    const a=await aiPrep(files,'बिल / रसीद पढ़ी जा रही है…'); if(!a) return;
+    const a=await aiPrep(files,'Reading bill / receipt…'); if(!a) return;
     const prompt=`This photo is from an Indian two-wheeler showroom's accounts. It may be an expense bill or receipt (electricity, rent, fuel, tea, repairs, purchases), a receipt the showroom gave to someone, a UPI / bank payment screenshot, a cheque, or a handwritten cash book / day book page with many lines.
 Extract every money transaction shown.
 - direction: "out" if the showroom paid money (expense bill, purchase, payment made); "in" if the showroom received money. On a day book page, Receipts / आमद are "in" and Payments / खर्चा are "out".
@@ -959,19 +1021,19 @@ Extract every money transaction shown.
 - date as YYYY-MM-DD (Indian dates are day-month-year); for ditto use the date above; "" if not shown.
 - Skip total, balance and carried-forward lines. Never invent a value.`;
     const d=await aiRun(a.key,a.parts,prompt,PAY_SCHEMA,'payments');
-    if(!d.entries?.length) throw new Error('इस फोटो में कोई रकम नहीं मिली। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    if(!d.entries?.length) throw new Error('No amount found in this photo. Try again with a clear, straight photo.');
     reviewPhotoPay(d.entries);
   }catch(e){aiFail(e)}
 }
 function reviewPhotoPay(E){
   const dup=e=>DB.daybook.some(x=>x.date===(toISO(e.date)||today())&&x.type===e.direction&&Math.round(num(x.amount))===Math.round(num(e.amount)));
   const sel=(n,arr,v)=>`<select name="${n}" style="width:auto">${arr.map(([k,l])=>`<option value="${k}" ${k===v?'selected':''}>${l}</option>`).join('')}</select>`;
-  openDlg(`फोटो से ${E.length} एंट्री मिलीं — जाँच कर Save करें`,`<div class="tablewrap imp"><table id="pyT"><tr><th></th><th>Date</th><th>आमद / खर्चा</th><th>Particulars</th><th>Amount ₹</th><th>Mode</th><th>Bill / Ref</th><th></th></tr>
+  openDlg(`${E.length} entries found in photo — check and Save`,`<div class="tablewrap imp"><table id="pyT"><tr><th></th><th>Date</th><th>In / Out</th><th>Particulars</th><th>Amount ₹</th><th>Mode</th><th>Bill / Ref</th><th></th></tr>
   ${E.map(e=>{const dp=dup(e);return `<tr><td><input type="checkbox" ${dp?'':'checked'} style="width:auto"></td><td><input type="date" name="date" value="${esc(toISO(e.date)||today())}"></td>
-  <td>${sel('type',[['in','आमद (in)'],['out','खर्चा (out)']],e.direction)}</td><td><input name="particulars" value="${esc(e.particulars)}" style="min-width:200px"></td>
+  <td>${sel('type',[['in','Receipt (in)'],['out','Payment (out)']],e.direction)}</td><td><input name="particulars" value="${esc(e.particulars)}" style="min-width:200px"></td>
   <td><input name="amount" inputmode="decimal" value="${num(e.amount)||''}" style="width:100px"></td><td>${sel('mode',['Cash','Bank','UPI','Cheque'].map(m=>[m,m]),e.mode)}</td>
-  <td><input name="ref" value="${esc(e.ref)}" style="width:110px"></td><td>${dp?'<span class="pill due">शायद पहले से है</span>':''}</td></tr>`}).join('')}</table></div>
-  <p class="note">⚠ AI से पढ़ी रकम एक बार बिल से मिला लें। जो एंट्री नहीं डालनी, उसका ✓ हटा दें। ग्राहक से गाड़ी का पैसा Sales में “Receive payment” से लें, ताकि उसका बकाया भी कटे।</p>`,
+  <td><input name="ref" value="${esc(e.ref)}" style="width:110px"></td><td>${dp?'<span class="pill due">Possibly duplicate</span>':''}</td></tr>`}).join('')}</table></div>
+  <p class="note">⚠ Check amounts read by AI against the bill. Untick any entry you do not want. Record vehicle payments from customers via “Receive payment” in Sales so their dues update.</p>`,
   `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="savePhotoPay()">Save to Day Book</button>`);
 }
 function savePhotoPay(){
@@ -981,9 +1043,9 @@ function savePhotoPay(){
     const g=n=>txt(tr.querySelector(`[name=${n}]`).value), a=num(g('amount'));
     if(a>0&&g('particulars')) out.push({date:g('date')||today(),type:g('type'),particulars:g('particulars')+(g('ref')?' · '+g('ref'):''),mode:g('mode'),amount:a});
   });
-  if(!out.length){alert('कोई एंट्री चुनी नहीं गई (या रकम / Particulars खाली है)।');return}
+  if(!out.length){alert('No entry selected (or amount / particulars empty).');return}
   const t0=Date.now(); out.forEach((e,i)=>DB.daybook.push({id:uid(),created:t0+i,...e}));
-  save(); dlg.close(); toast(`${out.length} एंट्री Day Book में जुड़ गईं`); render();
+  save(); dlg.close(); toast(`${out.length} entries added to Day Book`); render();
 }
 
 /* ---------- import from Excel / CSV ---------- */
@@ -1245,7 +1307,7 @@ const aiProv=()=>ls(AIP)||'openai';
 const oaiModel=()=>ls(OAM)||'gpt-6.2-sol';
 const getKey=()=>ls(aiProv()==='openai'?OAK:AIK);
 function setKey(v){v=txt(v);const oa=aiProv()==='openai';
-  if(v&&(!/^sk-/.test(v)||(oa&&/^sk-ant-/.test(v))||(!oa&&!/^sk-ant-/.test(v)))){alert(oa?'यह OpenAI की API key नहीं लगती (sk-… से शुरू होती है)।':'यह Claude की API key नहीं लगती (sk-ant-… से शुरू होती है)।');return}
+  if(v&&(!/^sk-/.test(v)||(oa&&/^sk-ant-/.test(v))||(!oa&&!/^sk-ant-/.test(v)))){alert(oa?'This does not look like an OpenAI API key (it starts with sk-…).':'This does not look like a Claude API key (it starts with sk-ant-…).');return}
   ls(oa?OAK:AIK,v);toast(v?'Key saved':'Key removed');render()}
 const CH_SCHEMA={type:'object',additionalProperties:false,required:['challan_no','date','supplier','vehicles'],properties:{
   challan_no:{type:'string'},date:{type:'string',description:'YYYY-MM-DD, or empty'},supplier:{type:'string'},
@@ -1260,8 +1322,8 @@ const fileB64=f=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(
 async function aiChallan(files){
   if(!files.length) return;
   const key=getKey();
-  if(!key){openDlg('API key चाहिए',`<p style="margin-top:0">चालान की फोटो पढ़ने के लिए पहले <b>Settings & Backup</b> में ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} की API key डालें (एक बार)।</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Settings खोलें</button>`);return}
-  openDlg('चालान पढ़ा जा रहा है…','<div class="empty">⏳ फोटो पढ़ी जा रही है — 20 से 60 सेकंड लग सकते हैं। यह खिड़की बंद न करें।</div>','');
+  if(!key){openDlg('API key needed',`<p style="margin-top:0">To read challan photos, first enter the ${aiProv()==='openai'?'OpenAI (ChatGPT)':'Anthropic (Claude)'} API key in <b>Settings & Backup</b> (one time).</p>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dlg.close();go('set')">Open Settings</button>`);return}
+  openDlg('Reading challan…','<div class="empty">⏳ Reading photos — this can take 20 to 60 seconds. Please keep this window open.</div>','');
   try{
     const parts=[];
     for(const f of files){
@@ -1281,10 +1343,10 @@ Extract every vehicle listed. For each vehicle give model, colour, engine number
 - If the same vehicle (same chassis or engine number) appears on more than one page, list it only once.
 - Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
     const data=aiProv()==='openai'?await readOpenAI(key,parts,prompt):await readClaude(key,parts,prompt);
-    if(!data.vehicles?.length) throw new Error('इस फोटो में कोई गाड़ी नहीं मिली। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
+    if(!data.vehicles?.length) throw new Error('No vehicle found in this photo. Try again with a clear, straight photo.');
     reviewChallan(data);
   }catch(e){
-    openDlg('चालान नहीं पढ़ा जा सका',`<p style="margin-top:0">${esc(e.message==='IMG'?'यह फोटो खुल नहीं रही। JPG / PNG फोटो या PDF डालें (iPhone की HEIC फोटो हो तो Safari में खोलें या JPG में बदलें)।':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">ठीक है</button>');
+    openDlg('Could not read the challan',`<p style="margin-top:0">${esc(e.message==='IMG'?'This photo could not be opened. Use a JPG / PNG photo or a PDF (convert iPhone HEIC photos to JPG).':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">OK</button>');
   }
 }
 async function readOpenAI(key,parts,prompt,schema=CH_SCHEMA,sname='challan'){
@@ -1295,16 +1357,16 @@ async function readOpenAI(key,parts,prompt,schema=CH_SCHEMA,sname='challan'){
     res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+key},
       body:JSON.stringify({model:oaiModel(),max_completion_tokens:16000,messages:[{role:'user',content}],
         response_format:{type:'json_schema',json_schema:{name:sname,strict:true,schema}}})});
-  }catch(e){throw new Error('इंटरनेट से जुड़ नहीं पाया। इंटरनेट चेक करके फिर कोशिश करें।')}
+  }catch(e){throw new Error('Could not connect to the internet. Check your connection and try again.')}
   const j=await res.json().catch(()=>({})), er=j?.error||{}, em=er.message||'';
-  if(!res.ok) throw new Error(res.status===401?'API key गलत है। Settings में सही key डालें।'
-    :er.code==='insufficient_quota'||/quota|billing|credit/i.test(em)?'OpenAI API account में balance नहीं है। platform.openai.com → Billing में balance डालें (ChatGPT Plus का पैसा यहाँ नहीं गिना जाता)।'
-    :er.code==='model_not_found'||/model/i.test(em)&&res.status===404?`Model "${oaiModel()}" आपके account में नहीं मिला। Settings में model का नाम जाँचें।`
-    :[429,500,502,503].includes(res.status)?'सर्वर अभी व्यस्त है, 1–2 मिनट बाद फिर कोशिश करें।':'Error '+res.status+': '+em);
+  if(!res.ok) throw new Error(res.status===401?'API key is wrong. Enter the correct key in Settings.'
+    :er.code==='insufficient_quota'||/quota|billing|credit/i.test(em)?'Your OpenAI API account has no balance. Add balance at platform.openai.com → Billing (ChatGPT Plus does not count here).'
+    :er.code==='model_not_found'||/model/i.test(em)&&res.status===404?`Model "${oaiModel()}" was not found in your account. Check the model name in Settings.`
+    :[429,500,502,503].includes(res.status)?'The server is busy. Try again in 1–2 minutes.':'Error '+res.status+': '+em);
   const ch=j.choices?.[0]||{}, m=ch.message||{};
-  if(m.refusal) throw new Error('यह फोटो पढ़ी नहीं जा सकी। दूसरी फोटो डालकर देखें।');
-  if(ch.finish_reason==='length') throw new Error('चालान बहुत लंबा है। पेज अलग-अलग करके डालें।');
-  try{return JSON.parse(m.content||'')}catch(e){throw new Error('जवाब समझ नहीं आया, फिर से कोशिश करें।')}
+  if(m.refusal) throw new Error('This photo could not be read. Try another photo.');
+  if(ch.finish_reason==='length') throw new Error('Too many pages. Add the pages in smaller batches.');
+  try{return JSON.parse(m.content||'')}catch(e){throw new Error('Could not understand the response. Please try again.')}
 }
 async function readClaude(key,parts,prompt,schema=CH_SCHEMA){
     const content=[...parts.map(p=>p.pdf?{type:'document',source:{type:'base64',media_type:'application/pdf',data:p.b64}}
@@ -1314,15 +1376,15 @@ async function readClaude(key,parts,prompt,schema=CH_SCHEMA){
       res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2026-10-21',
         'anthropic-beta':'server-side-fallback-2026-07-01','anthropic-dangerous-direct-browser-access':'true'},
         body:JSON.stringify({model:'claude-opus-5-5',max_tokens:16000,fallbacks:'default',output_config:{format:{type:'json_schema',schema}},messages:[{role:'user',content}]})});
-    }catch(e){throw new Error('इंटरनेट से जुड़ नहीं पाया। इंटरनेट चेक करके फिर कोशिश करें।')}
+    }catch(e){throw new Error('Could not connect to the internet. Check your connection and try again.')}
     const j=await res.json().catch(()=>({})), em=j?.error?.message||'';
-    if(!res.ok) throw new Error(res.status===401?'API key गलत है। Settings में सही key डालें।'
-      :/credit|balance|billing/i.test(em)?'Anthropic account में balance नहीं है। console.anthropic.com → Billing में balance डालें।'
-      :[429,500,502,503,529].includes(res.status)?'सर्वर अभी व्यस्त है, 1–2 मिनट बाद फिर कोशिश करें।'
-      :/too large|size|exceed/i.test(em)?'फ़ाइल बहुत बड़ी है। कम पेज या छोटी फोटो डालें।':'Error '+res.status+': '+em);
-    if(j.stop_reason==='refusal') throw new Error('यह फोटो पढ़ी नहीं जा सकी। दूसरी फोटो डालकर देखें।');
-    if(j.stop_reason==='max_tokens') throw new Error('चालान बहुत लंबा है। पेज अलग-अलग करके डालें।');
-    try{return JSON.parse((j.content||[]).find(b=>b.type==='text')?.text||'')}catch(e){throw new Error('जवाब समझ नहीं आया, फिर से कोशिश करें।')}
+    if(!res.ok) throw new Error(res.status===401?'API key is wrong. Enter the correct key in Settings.'
+      :/credit|balance|billing/i.test(em)?'Your Anthropic account has no balance. Add balance at console.anthropic.com → Billing.'
+      :[429,500,502,503,529].includes(res.status)?'The server is busy. Try again in 1–2 minutes.'
+      :/too large|size|exceed/i.test(em)?'File too large. Use fewer pages or smaller photos.':'Error '+res.status+': '+em);
+    if(j.stop_reason==='refusal') throw new Error('This photo could not be read. Try another photo.');
+    if(j.stop_reason==='max_tokens') throw new Error('Too many pages. Add the pages in smaller batches.');
+    try{return JSON.parse((j.content||[]).find(b=>b.type==='text')?.text||'')}catch(e){throw new Error('Could not understand the response. Please try again.')}
 }
 function reviewChallan(d){
   const sc=new Set(DB.stock.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.stock.map(s=>s.engine).filter(Boolean));
@@ -1336,19 +1398,19 @@ function reviewChallan(d){
     if(ch)bc.add(ch); if(en)be.add(en); if(dup)nDup++; if(twice)nTwice++;
     const cn=one(v.challan_no)||(anyPer?'':topN), cd=toISO(v.date)||(anyPer?'':topD);
     return `<tr><td><input type="checkbox" ${dup||twice?'':'checked'} style="width:auto"></td>
-    <td>${inp('challan',cn,90,'placeholder="चालान नं."'+(cn?'':' style="min-width:90px;border-color:var(--amber)"'))}</td><td><input type="date" name="date" value="${esc(cd)}"></td>
+    <td>${inp('challan',cn,90,'placeholder="Challan no."'+(cn?'':' style="min-width:90px;border-color:var(--amber)"'))}</td><td><input type="date" name="date" value="${esc(cd)}"></td>
     <td>${inp('model',v.model,150,'list="dlModels"')}</td><td>${inp('colour',v.colour,100,'list="dlCols"')}</td>
     <td>${inp('engine',en,140,'class="mono"')}</td><td>${inp('chassis',ch,180,'class="mono"')}</td><td>${inp('key',up(v.key),70,'class="mono"')}</td><td>${inp('cost',num(v.price)||'',90,'inputmode="decimal"')}</td>
-    <td>${dup?'<span class="pill due">पहले से स्टॉक में</span>':twice?'<span class="pill due">फोटो में दो बार</span>':''}</td></tr>`}).join('');
-  openDlg(`चालान से ${d.vehicles.length} गाड़ियाँ मिलीं — जाँच कर Save करें`,`
-  ${nDup||nTwice?`<p class="warn" style="margin-top:0">${nDup?`<b>${nDup}</b> गाड़ी पहले से स्टॉक में है। `:''}${nTwice?`<b>${nTwice}</b> गाड़ी फोटो में दो बार आई है। `:''}इनका ✓ हटा दिया गया है, ये दोबारा नहीं चढ़ेंगी।</p>`:''}
-  <div class="row"><label class="grow">खाली चालान नं. वाली गाड़ियों के लिए<input id="chN" value="${esc(topN)}" placeholder="चालान नं."></label>
-    <label class="grow">खाली तारीख़ वाली गाड़ियों के लिए<input type="date" id="chD" value="${esc(topD||today())}"></label></div>
+    <td>${dup?'<span class="pill due">Already in stock</span>':twice?'<span class="pill due">Twice in photos</span>':''}</td></tr>`}).join('');
+  openDlg(`${d.vehicles.length} vehicles found in challan — check and Save`,`
+  ${nDup||nTwice?`<p class="warn" style="margin-top:0">${nDup?`<b>${nDup}</b> already in stock. `:''}${nTwice?`<b>${nTwice}</b> appear twice in the photos. `:''}These are unticked and will not be added again.</p>`:''}
+  <div class="row"><label class="grow">Challan no. for rows left blank<input id="chN" value="${esc(topN)}" placeholder="Challan no."></label>
+    <label class="grow">Date for rows left blank<input type="date" id="chD" value="${esc(topD||today())}"></label></div>
   ${d.supplier?`<p class="note">Supplier: ${esc(d.supplier)}</p>`:''}
   <div class="tablewrap imp" style="margin-top:10px"><table id="chT"><tr><th></th><th>Challan</th><th>Date</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Price</th><th></th></tr>
   ${rows}</table></div>
   ${dl('dlModels',DB.settings.models)}${dl('dlCols',DB.settings.colours)}
-  <p class="note">⚠ AI से पढ़े नंबर एक बार चालान से ज़रूर मिला लें — खासकर Engine और Chassis No। हर गाड़ी का चालान नं. और तारीख़ अलग-अलग बदल सकते हैं। जो गाड़ी नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
+  <p class="note">⚠ Check the numbers read by AI against the challan — especially Engine and Chassis No. Challan no. and date can be changed per vehicle (or left blank and filled later). Untick any vehicle you do not want to add.</p>`,
   `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveChallan()">Save to stock</button>`);
   dlg.style.maxWidth='1100px'; dlg.addEventListener('close',()=>dlg.style.maxWidth='',{once:true});
 }
@@ -1363,13 +1425,13 @@ function saveChallan(){
     if((s.chassis&&sc.has(s.chassis))||(s.engine&&se.has(s.engine))){skipped.push(s.chassis||s.engine);return}
     if(s.chassis)sc.add(s.chassis); if(s.engine)se.add(s.engine); out.push(s);
   });
-  if(bad.length){alert(`लाइन ${bad.join(', ')} में Model या Chassis/Engine No खाली है। भरें या ✓ हटा दें।`);return}
-  if(!out.length){alert(skipped.length?`चुनी हुई सभी गाड़ियाँ (${skipped.length}) पहले से स्टॉक में हैं — कुछ नहीं जोड़ा।`:'कोई गाड़ी चुनी नहीं गई।');return}
+  if(bad.length){alert(`Line ${bad.join(', ')}: Model or Chassis/Engine No is empty. Fill it in or untick it.`);return}
+  if(!out.length){alert(skipped.length?`All selected vehicles (${skipped.length}) are already in stock — nothing added.`:'No vehicle selected.');return}
   const t0=Date.now();
   out.forEach((s,i)=>{DB.stock.push({id:uid(),created:t0+i,status:'in',...s});
     if(s.model&&!DB.settings.models.includes(s.model))DB.settings.models.push(s.model);
     if(s.colour&&!DB.settings.colours.includes(s.colour))DB.settings.colours.push(s.colour)});
-  save(); dlg.close(); toast(`${out.length} गाड़ियाँ स्टॉक में जुड़ गईं`+(skipped.length?` · ${skipped.length} पहले से थीं, छोड़ दीं`:'')); go('stock');
+  save(); dlg.close(); toast(`${out.length} vehicles added to stock`+(skipped.length?` · ${skipped.length} already existed, skipped`:'')); go('stock');
 }
 
 /* ---------- cloud sync (Firebase) ---------- */
@@ -1380,17 +1442,17 @@ const localHas=()=>COLS.some(c=>(DB[c]||[]).length);
 function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
 function cloudScreen(html){$('#nav').innerHTML='';$('#app').innerHTML=`<div class="card" style="max-width:460px;margin:40px auto">${html}</div>`}
 function syncLabel(){
-  if(READONLY) return '📴 Offline – सिर्फ़ देखने के लिए';
+  if(READONLY) return '📴 Offline – view only';
   if(!cloudReady) return '';
-  if(SYNC_ST==='err') return '⚠ Sync में दिक्कत';
-  if(pendingN>0) return navigator.onLine?'⏳ Saving…':'📴 Offline – नेट आने पर sync होगा';
+  if(SYNC_ST==='err') return '⚠ Sync problem';
+  if(pendingN>0) return navigator.onLine?'⏳ Saving…':'📴 Offline – will sync when online';
   return '☁ Synced';
 }
 function setSync(s){if(s!==undefined)SYNC_ST=s;const t=syncLabel();const a=$('#sync');if(a)a.textContent=t+(cloudReady&&cloudEmail?' · '+cloudEmail:'');const b=$('#sync2');if(b)b.textContent=t}
 addEventListener('online',()=>setSync());addEventListener('offline',()=>setSync());
 
 async function cloudInit(){
-  cloudScreen('<div class="empty">⏳ Cloud से जुड़ रहा है…</div>');
+  cloudScreen('<div class="empty">⏳ Connecting to cloud…</div>');
   const b=window.__FBBASE||`https://www.gstatic.com/firebasejs/${FBV}/`;
   try{
     const [A,U,F]=await Promise.all(['app','auth','firestore'].map(m=>import(b+'firebase-'+m+'.js')));
@@ -1398,7 +1460,7 @@ async function cloudInit(){
     let db; try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
     FB={A,U,F,app,auth,db};
   }catch(e){
-    cloudScreen(`<h2>इंटरनेट नहीं मिला</h2><p style="margin-top:0">Cloud से जुड़ने के लिए इंटरनेट चाहिए।</p><div class="row"><button class="btn" onclick="location.reload()">फिर कोशिश करें</button>${localHas()?'<button class="btn plain" onclick="READONLY=true;setSync();render()">पुराना डेटा देखें (सिर्फ़ देखने के लिए)</button>':''}</div>`);
+    cloudScreen(`<h2>No internet</h2><p style="margin-top:0">Internet is needed to connect to the cloud.</p><div class="row"><button class="btn" onclick="location.reload()">Try again</button>${localHas()?'<button class="btn plain" onclick="READONLY=true;setSync();render()">View saved data (read only)</button>':''}</div>`);
     return;
   }
   FB.U.onAuthStateChanged(FB.auth,u=>{if(u){cloudEmail=u.email||'';cloudStart()}else showLogin()});
@@ -1410,20 +1472,20 @@ function showLogin(msg=''){
     <label>Email<input name="email" type="email" autocomplete="username" autocapitalize="none" required></label>
     <label>Password<input name="pw" type="password" autocomplete="current-password" required></label>
     <button class="btn">Login</button></form>
-  <p class="note"><a href="#" onclick="forgotPw();return false">Password भूल गए?</a></p>`);
+  <p class="note"><a href="#" onclick="forgotPw();return false">Forgot password?</a></p>`);
 }
-function authMsg(er){const c=(er&&er.code)||'';return /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c)?'Email या password गलत है।':/too-many/.test(c)?'बहुत बार गलत कोशिश हुई। थोड़ी देर बाद फिर करें।':/network/.test(c)?'इंटरनेट नहीं मिला।':'Login नहीं हुआ ('+(c||er)+')'}
+function authMsg(er){const c=(er&&er.code)||'';return /invalid-credential|wrong-password|user-not-found|invalid-email|invalid-login/.test(c)?'Wrong email or password.':/too-many/.test(c)?'Too many failed attempts. Try again later.':/network/.test(c)?'No internet.':'Login failed ('+(c||er)+')'}
 async function doLogin(e){
   e.preventDefault(); const d=formData(e.target), b=e.target.querySelector('button'); b.disabled=true; b.textContent='⏳ …';
   try{await FB.U.signInWithEmailAndPassword(FB.auth,d.email,d.pw)}catch(er){showLogin(authMsg(er))}
 }
 async function forgotPw(){
-  const em=txt($('#flog [name=email]').value); if(!em){alert('पहले ऊपर अपना email लिखें।');return}
-  try{await FB.U.sendPasswordResetEmail(FB.auth,em);alert('Password बदलने का link '+em+' पर भेज दिया है (Spam folder भी देखें)।')}catch(er){alert(authMsg(er))}
+  const em=txt($('#flog [name=email]').value); if(!em){alert('Enter your email above first.');return}
+  try{await FB.U.sendPasswordResetEmail(FB.auth,em);alert('A password reset link has been sent to '+em+' (check the Spam folder too).')}catch(er){alert(authMsg(er))}
 }
 function cloudStart(){
-  cloudScreen('<div class="empty">⏳ डेटा आ रहा है…</div>');
-  const slow=setTimeout(()=>{if(!cloudReady&&!READONLY)cloudScreen('<div class="empty">⏳ डेटा आ रहा है… इंटरनेट धीमा लग रहा है।<br><br><button class="btn plain" onclick="location.reload()">फिर कोशिश करें</button></div>')},20000);
+  cloudScreen('<div class="empty">⏳ Loading data…</div>');
+  const slow=setTimeout(()=>{if(!cloudReady&&!READONLY)cloudScreen('<div class="empty">⏳ Loading data… the internet seems slow.<br><br><button class="btn plain" onclick="location.reload()">Try again</button></div>')},20000);
   const {F,db}=FB, init={}, need=COLS.length+1; let started=false;
   const begin=()=>{if(started||Object.keys(init).length<need)return; started=true; clearTimeout(slow); cloudFirst(init)};
   COLS.forEach(c=>UNSUB.push(F.onSnapshot(F.collection(db,'shops',SHOP,c),{includeMetadataChanges:true},snap=>{
@@ -1448,14 +1510,14 @@ function cloudFirst(init){
     for(const k in DEFAULTS) if(!(k in DB)) DB[k]=structuredClone(DEFAULTS[k]);
     try{localStorage.setItem(CPK,pid)}catch(e){}
     cloudReady=true; cacheLocal(); cloudPush(); setSync('ok'); render();
-    if(choice==='cloud'&&localStorage.getItem(PRE)&&!wasCache&&localHas0) toast('इस डिवाइस का पुराना डेटा अलग रख दिया है (Settings में)');
+    if(choice==='cloud'&&localStorage.getItem(PRE)&&!wasCache&&localHas0) toast('This device’s old data has been kept aside (see Settings)');
   };
   const localHas0=localHas();
   if(cloudEmpty&&localHas0&&!wasCache){
     const n=c=>(DB[c]||[]).length;
-    cloudScreen(`<h2>Cloud अभी खाली है</h2><p style="margin-top:0">इस डिवाइस पर <b>${n('stock')}</b> गाड़ियाँ, <b>${n('sales')}</b> सेल, <b>${n('daybook')}</b> रोजनामचा एंट्री हैं।</p>
-    <p>क्या यह डेटा cloud में चढ़ा दें? फिर बाकी सभी डिवाइस पर यही दिखेगा।</p>
-    <div class="row"><button class="btn" onclick="__cloudFinish('upload')">हाँ, cloud में चढ़ाएँ</button><button class="btn plain" onclick="if(confirm('Cloud खाली शुरू होगा। इस डिवाइस का डेटा Settings में अलग रखा रहेगा। ठीक?'))__cloudFinish('fresh')">नहीं, खाली शुरू करें</button></div>`);
+    cloudScreen(`<h2>The cloud is empty</h2><p style="margin-top:0">This device has <b>${n('stock')}</b> vehicles, <b>${n('sales')}</b> sales, <b>${n('daybook')}</b> day book entries.</p>
+    <p>Upload this data to the cloud? It will then appear on all devices.</p>
+    <div class="row"><button class="btn" onclick="__cloudFinish('upload')">Yes, upload to cloud</button><button class="btn plain" onclick="if(confirm('The cloud will start empty. This device’s data will be kept aside in Settings. OK?'))__cloudFinish('fresh')">No, start empty</button></div>`);
   } else if(cloudEmpty) __cloudFinish('upload');
   else __cloudFinish('cloud');
 }
@@ -1496,11 +1558,11 @@ function cloudPush(){
 function cloudErr(e){
   const c=(e&&e.code)||'';
   if(/permission-denied/.test(c)){ cloudReady=false; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[];
-    cloudScreen(`<h2>इजाज़त नहीं है</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> को इस showroom का डेटा देखने की इजाज़त नहीं है। Firebase के Firestore Rules में यह email जोड़ें।</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`); return }
+    cloudScreen(`<h2>Access denied</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> does not have access to this showroom’s data. Add this email to the Firestore Rules in Firebase.</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`); return }
   toast('⚠ Sync error: '+(c||(e&&e.message)||e));
 }
 async function cloudLogout(force){
-  if(!force&&pendingN>0&&!confirm('कुछ एंट्री अभी cloud में नहीं पहुँचीं (इंटरनेट नहीं)। Logout करने पर वे खो जाएँगी। फिर भी Logout करें?')) return;
+  if(!force&&pendingN>0&&!confirm('Some entries have not reached the cloud yet (no internet). Logging out will lose them. Log out anyway?')) return;
   UNSUB.forEach(u=>{try{u()}catch(e){}}); UNSUB=[];
   try{localStorage.removeItem(KEY);localStorage.removeItem(CPK)}catch(e){}
   try{await FB.U.signOut(FB.auth)}catch(e){}
@@ -1521,25 +1583,25 @@ service cloud.firestore {
 function parseFbCfg(t){const o={};String(t||'').replace(/["']?(\w+)["']?\s*:\s*["']([^"']+)["']/g,(m,k,v)=>{o[k]=v});
   return o.apiKey&&o.projectId&&o.appId?{apiKey:o.apiKey,authDomain:o.authDomain||'',projectId:o.projectId,storageBucket:o.storageBucket||'',messagingSenderId:o.messagingSenderId||'',appId:o.appId}:null}
 function saveFbCfg(){const c=parseFbCfg($('#fbIn').value);
-  if(!c){alert('Config पूरी नहीं है। Firebase में “firebaseConfig = { … }” वाला पूरा हिस्सा कॉपी करके डालें।');return}
-  if(!confirm('Cloud चालू करें? इसके बाद login करना होगा।'))return;
+  if(!c){alert('Config is incomplete. Copy the whole “firebaseConfig = { … }” block from Firebase.');return}
+  if(!confirm('Turn on cloud? You will need to log in after this.'))return;
   try{localStorage.setItem(FBK,JSON.stringify(c))}catch(e){} location.reload()}
-function rulesBox(v){return `<details style="margin-top:10px"><summary>Firebase Rules – किन emails को इजाज़त है</summary>
-  <p class="note">सभी login वाले emails comma लगाकर लिखें, फिर नीचे का पूरा text Firebase → Firestore → Rules में paste करके Publish करें।</p>
+function rulesBox(v){return `<details style="margin-top:10px"><summary>Firebase Rules – which emails have access</summary>
+  <p class="note">Enter all login emails separated by commas, then paste the full text below into Firebase → Firestore → Rules and Publish.</p>
   <input id="rulesEm" value="${esc(v)}" placeholder="aap@gmail.com, partner@gmail.com" oninput="$('#rulesOut').value=rulesText(this.value)">
   <textarea id="rulesOut" readonly style="min-height:170px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:6px">${esc(rulesText(v))}</textarea></details>`}
 function cloudCard(){
-  if(!CLOUD) return `<div class="card"><h2>☁ Cloud sync – लैपटॉप, iPad, फ़ोन पर एक ही डेटा</h2>
-  <p style="margin-top:0">Firebase project बनने के बाद उसकी config (firebaseConfig) यहाँ paste करें।</p>
+  if(!CLOUD) return `<div class="card"><h2>☁ Cloud sync – same data on laptop, iPad and phone</h2>
+  <p style="margin-top:0">After creating a Firebase project, paste its config (firebaseConfig) here.</p>
   <textarea id="fbIn" placeholder="const firebaseConfig = {&#10;  apiKey: &quot;…&quot;,&#10;  projectId: &quot;…&quot;, …&#10;};"></textarea>
-  <div style="margin-top:8px"><button class="btn" onclick="saveFbCfg()">Cloud चालू करें</button></div>${rulesBox('')}</div>`;
+  <div style="margin-top:8px"><button class="btn" onclick="saveFbCfg()">Turn on cloud</button></div>${rulesBox('')}</div>`;
   const pre=(()=>{try{return localStorage.getItem(PRE)}catch(e){return ''}})();
   return `<div class="card"><h2>☁ Cloud sync</h2>
   <p style="margin-top:0">Login: <b>${esc(cloudEmail)}</b> · Project: <span class="mono">${esc(fbCfg().projectId)}</span> · <span id="sync2">${syncLabel()}</span></p>
-  <p class="note" style="margin-top:0">हर एंट्री अपने-आप cloud में जाती है और बाकी डिवाइस पर कुछ सेकंड में दिख जाती है। इंटरनेट न हो तो भी एंट्री होती रहेगी, नेट आते ही sync हो जाएगी।</p>
+  <p class="note" style="margin-top:0">Every entry is saved to the cloud automatically and appears on other devices within seconds. Without internet you can keep working; it syncs when you are back online.</p>
   <div class="row" style="margin-top:8px"><button class="btn plain" onclick="cloudLogout()">Logout</button>
-  ${!FB_CONFIG?`<button class="btn plain" onclick="if(confirm('इस डिवाइस पर cloud बंद करें? (cloud का डेटा नहीं मिटेगा)')){try{localStorage.removeItem(FBK)}catch(e){};cloudLogout()}">इस डिवाइस पर Cloud बंद करें</button>`:''}
-  ${pre?`<button class="btn plain" onclick="download('old-device-data-${today()}.json',localStorage.getItem(PRE),'application/json')">⬇ इस डिवाइस का पुराना (cloud से पहले का) डेटा</button>`:''}</div>
+  ${!FB_CONFIG?`<button class="btn plain" onclick="if(confirm('Turn off cloud on this device? (cloud data will not be deleted)')){try{localStorage.removeItem(FBK)}catch(e){};cloudLogout()}">Turn off cloud on this device</button>`:''}
+  ${pre?`<button class="btn plain" onclick="download('old-device-data-${today()}.json',localStorage.getItem(PRE),'application/json')">⬇ This device’s old (pre-cloud) data</button>`:''}</div>
   ${rulesBox(cloudEmail)}</div>`;
 }
 $('#app').addEventListener('input',()=>{appDirty=true});
