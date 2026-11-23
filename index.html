@@ -135,7 +135,7 @@ const DEFAULTS={
     models:['Activa STD','Activa DLX','Activa 125 Drum','Activa 125 Disc','Shine 100 DX','CB Shine 125 Drum','CB Shine 125 Disc','SP 125 Disc','CB Hornet 125','Dio','Unicorn'],
     colours:['White','Black','Grey','Matt Grey','Blue','PS Blue','Black Red','Red','Yellow']
   },
-  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[]
+  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[], dealerPay:[], expPay:[]
 };
 let DB;
 try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
@@ -173,7 +173,7 @@ const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
 
 /* ---------- navigation ---------- */
-const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['partners','Partners'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['dealer','Dealer Payments'],['rent','Rent & Salary'],['partners','Partners'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
 let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
 function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
 function render(){
@@ -182,7 +182,7 @@ function render(){
   $('#hName').textContent=DB.settings.name;
   $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,partners:vPartners,enq:vEnq,tally:vTally,set:vSet})[tab]();
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,dealer:vDealer,rent:vRent,partners:vPartners,enq:vEnq,tally:vTally,set:vSet})[tab]();
 }
 
 /* ---------- dashboard ---------- */
@@ -250,7 +250,7 @@ function vStock(){
   </form>${dl('dlModels',S.models)}${dl('dlCols',S.colours)}</div>
   <div class="card"><div class="row" style="margin-bottom:12px">
     <h2 class="grow" style="margin:0">Stock register</h2>
-    <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="returned">Returned / replaced</option><option value="all">All</option></select>
+    <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="returned">Returned</option><option value="all">All</option></select>
     <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
     <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('stock')">📄 PDF</button>
     ${impBtn('stock')}<button class="btn plain sm" style="color:var(--red);border-color:var(--red)" onclick="stDeleteAll()">🗑 Delete all vehicles</button>${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 Remove duplicates (${n})</button>`:'')(dupPlan().remove.length)}
@@ -267,58 +267,38 @@ function stockList(){
   $('#stockList').innerHTML=(stSel.size?`<div class="warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>${stSel.size} vehicles selected</b><button class="btn sm" onclick="stDelete()">🗑 Delete selected</button><button class="btn plain sm" onclick="stSel.clear();stockList()">Clear selection</button></div>`:'')+
   (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="Select all" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Purchase Challan</th><th>Sale Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
   ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ Fill</a>`}</td><td>${(sl=>sl?(sl.schallan?esc(sl.schallan):`<a href="#" onclick="setSChallan('${sl.id}');return false" style="color:var(--amber)">+ Fill</a>`):'<span class="muted">—</span>')(s.saleId&&DB.sales.find(z=>z.id===s.saleId))}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
-  <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':s.status==='returned'?`<span class="pill lost">Returned</span>${(n=>n?`<div class="sub2">→ replaced by <span class="mono">${esc(n.chassis)}</span></div>`:'')(DB.stock.find(x=>x.id===s.replacedBy))}`:'<span class="pill in">In stock</span>'}${(o=>o?`<div class="sub2">replaces <span class="mono">${esc(o.chassis)}</span></div>`:'')(s.replaces&&DB.stock.find(x=>x.id===s.replaces))}</td>
-  <td>${s.status==='returned'?`<button class="btn plain sm" onclick="viewReplace('${s.id}')">Details</button>`:s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button> <button class="btn plain sm" onclick="replaceStock('${s.id}')">Replace</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
+  <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':s.status==='returned'?`<span class="pill lost">Returned</span>${s.returnDate?`<div class="sub2">${fd(s.returnDate)}${s.returnReason?' · '+esc(s.returnReason):''}</div>`:''}`:'<span class="pill in">In stock</span>'}</td>
+  <td>${s.status==='returned'?`<button class="btn plain sm" onclick="viewReturn('${s.id}')">Details</button>`:s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button> <button class="btn plain sm" style="color:var(--red)" onclick="returnStock('${s.id}')">Return</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
   :'<div class="empty">No vehicles found.</div>');
 }
 const isIn=s=>s.status!=='sold'&&s.status!=='returned';
-function replaceStock(id){
+function returnStock(id){
   const o=DB.stock.find(x=>x.id===id); if(!o) return;
-  openDlg('Replace vehicle (defect / exchange with supplier)',`
-  <div class="warn" style="margin-top:0">Returning: <b>${esc(o.model)} ${esc(o.colour)}</b> · <span class="mono">Ch ${esc(o.chassis)} · Eng ${esc(o.engine)}</span> · Purchase challan ${esc(o.challan)||'—'}</div>
-  <form id="frp" class="grid">
-    <label>Replacement date<input type="date" name="date" value="${today()}"></label>
-    <label class="span2">Reason<input name="reason" placeholder="e.g. paint defect, scratch, engine noise"></label>
-    <label>Replacement / return challan no.<input name="rchallan" placeholder="optional"></label>
-    <h3 class="span2" style="grid-column:1/-1;font-size:14px;margin:8px 0 0">New vehicle received</h3>
-    <label>Model<input name="model" list="dlModels" value="${esc(o.model)}" required></label>
-    <label>Colour<input name="colour" list="dlCols" value="${esc(o.colour)}"></label>
-    <label>Engine No<input name="engine" class="mono" required></label>
-    <label>Chassis No<input name="chassis" class="mono" required></label>
-    <label>Key No<input name="key" class="mono"></label>
-    <label>Purchase Challan No<input name="challan" value="${esc(o.challan)}"></label>
-  </form>${dl('dlModels',DB.settings.models)}${dl('dlCols',DB.settings.colours)}
-  <p class="note">The old vehicle is kept in records as <b>Returned</b> (filter “Returned / replaced”) and linked to the new one. The new vehicle goes into stock.</p>`,
-  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveReplace('${id}')">Save replacement</button>`);
+  openDlg('Return vehicle to supplier',`
+  <div class="warn" style="margin-top:0"><b>${esc(o.model)} ${esc(o.colour)}</b> · <span class="mono">Ch ${esc(o.chassis)} · Eng ${esc(o.engine)}</span> · Purchase challan ${esc(o.challan)||'—'}</div>
+  <form id="frt" class="grid">
+    <label>Return date<input type="date" name="date" value="${today()}"></label>
+    <label>Return challan no.<input name="rchallan" placeholder="optional"></label>
+    <label class="span2">Reason<input name="reason" placeholder="e.g. defect, paint damage"></label>
+  </form>
+  <p class="note">The vehicle is removed from stock and kept in records as <b>Returned</b> (Stock → filter “Returned”). If a new vehicle comes back from the company, add it with “Add vehicle to stock”.</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveReturn('${id}')">Return vehicle</button>`);
 }
-function saveReplace(id){
-  const f=$('#frp'); if(!f.reportValidity()) return; const d=formData(f), o=DB.stock.find(x=>x.id===id);
-  const ch=up(d.chassis), en=up(d.engine);
-  const dup=DB.stock.find(x=>(ch&&x.chassis===ch)||(en&&x.engine===en));
-  if(dup){alert(`A vehicle with this ${dup.chassis===ch?'chassis':'engine'} number is already in the records (${dup.model}).`);return}
-  const nid=uid();
-  DB.stock.push({id:nid,created:Date.now(),status:'in',date:d.date||today(),challan:d.challan,model:d.model,colour:d.colour,engine:en,chassis:ch,key:up(d.key),cost:o.cost||'',replaces:o.id,replaceNote:[d.reason,d.rchallan?'Repl. challan '+d.rchallan:''].filter(Boolean).join(' · ')});
-  Object.assign(o,{status:'returned',replacedBy:nid,returnDate:d.date||today(),returnReason:d.reason,returnChallan:d.rchallan});
-  stSel.delete(o.id);
-  if(d.model&&!DB.settings.models.includes(d.model))DB.settings.models.push(d.model);
-  if(d.colour&&!DB.settings.colours.includes(d.colour))DB.settings.colours.push(d.colour);
-  save(); dlg.close(); render(); toast('Vehicle replaced');
+function saveReturn(id){
+  const d=formData($('#frt')), o=DB.stock.find(x=>x.id===id);
+  Object.assign(o,{status:'returned',returnDate:d.date||today(),returnReason:d.reason,returnChallan:d.rchallan});
+  stSel.delete(o.id); save(); dlg.close(); render(); toast('Vehicle returned — removed from stock');
 }
-function viewReplace(id){
-  const o=DB.stock.find(x=>x.id===id), n=DB.stock.find(x=>x.id===o.replacedBy);
-  const row=(l,v)=>`<tr><td class="muted">${l}</td><td>${v}</td></tr>`;
-  openDlg('Replaced vehicle',`<table>${row('Returned vehicle',`${esc(o.model)} ${esc(o.colour)}<br><span class="mono">Ch ${esc(o.chassis)} · Eng ${esc(o.engine)}</span>`)}
-  ${row('Purchase challan',esc(o.challan)||'—')}${row('Returned on',fd(o.returnDate||''))}${row('Reason',esc(o.returnReason)||'—')}${row('Replacement challan',esc(o.returnChallan)||'—')}
-  ${n?row('Replaced by',`${esc(n.model)} ${esc(n.colour)}<br><span class="mono">Ch ${esc(n.chassis)} · Eng ${esc(n.engine)}</span><br>Status: ${n.status==='sold'?'Sold':n.status==='returned'?'Returned':'In stock'}`):''}</table>`,
-  `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="undoReplace('${id}')">Undo replacement</button><button class="btn" onclick="dlg.close()">Close</button>`);
+function viewReturn(id){
+  const o=DB.stock.find(x=>x.id===id), row=(l,v)=>`<tr><td class="muted">${l}</td><td>${v}</td></tr>`;
+  openDlg('Returned vehicle',`<table>${row('Vehicle',`${esc(o.model)} ${esc(o.colour)}<br><span class="mono">Ch ${esc(o.chassis)} · Eng ${esc(o.engine)} · Key ${esc(o.key)}</span>`)}
+  ${row('Purchase challan',esc(o.challan)||'—')}${row('Returned on',fd(o.returnDate||'')||'—')}${row('Return challan',esc(o.returnChallan)||'—')}${row('Reason',esc(o.returnReason)||'—')}</table>`,
+  `<button class="btn plain" style="margin-right:auto" onclick="undoReturn('${id}')">Undo return (back to stock)</button><button class="btn" onclick="dlg.close()">Close</button>`);
 }
-function undoReplace(id){
-  const o=DB.stock.find(x=>x.id===id), n=DB.stock.find(x=>x.id===o.replacedBy);
-  if(n&&n.status==='sold'){alert('The replacement vehicle is already sold — cancel that sale first.');return}
-  if(!confirm('Undo this replacement? The new vehicle will be removed and the old one goes back to stock.')) return;
-  if(n) DB.stock=DB.stock.filter(x=>x.id!==n.id);
-  o.status='in'; delete o.replacedBy; delete o.returnDate; delete o.returnReason; delete o.returnChallan;
-  save(); dlg.close(); render(); toast('Replacement undone');
+function undoReturn(id){
+  if(!confirm('Put this vehicle back in stock?')) return;
+  const o=DB.stock.find(x=>x.id===id); o.status='in'; delete o.returnDate; delete o.returnReason; delete o.returnChallan; delete o.replacedBy;
+  save(); dlg.close(); render(); toast('Vehicle back in stock');
 }
 function stockRows(){const q=stockQ.toLowerCase();return DB.stock.filter(s=>(stockF==='all'||(stockF==='sold'?s.status==='sold':stockF==='returned'?s.status==='returned':isIn(s)))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))}
 function stDeleteAll(){
@@ -668,7 +648,7 @@ function dayList(){
     <div class="stat red"><div class="k">Closing cash in hand</div><div class="v">${rs(ob.cash+cin-cout)}</div></div></div>
   ${rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Particulars</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr>
   ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td style="white-space:normal">${esc(d.particulars)}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
-  <td>${d.saleId||d.capId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
+  <td>${d.saleId||d.capId||d.dpId||d.epId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
   <tr class="tot"><td colspan="3">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
 }
 function addDay(e){
@@ -779,12 +759,171 @@ function csv(which){
   const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
     sales:['inv','schallan','purchaseChallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','financeRecdAmt','financeRecdDate','financeShortExcess','financeNote','exchange','exchangeValue','received','due','notes'],
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
-    capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
-  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+    capital:['date','partner','type','mode','note','invested','withdrawn'],
+    dealerPay:['date','amount','mode','paidBy','ref','challans','note'],
+    expPay:['date','payee','type','month','amount','mode','paidBy','ref','note']}[which];
+  const rows=(DB[which]||[]).map(r=>which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
   download(`${which}-${today()}.csv`,'﻿'+[cols.join(','),...rows.map(r=>cols.map(c=>q(t(r[c]))).join(','))].join('\n'),'text/csv');
+}
+
+/* ---------- dealer payments ---------- */
+let dpF='';
+const dpRows=()=>(DB.dealerPay||[]).filter(x=>!dpF||(dpF==='biz'?!x.by:x.by===dpF));
+function dealerAcct(){
+  const live=DB.stock.filter(s=>s.status!=='returned');
+  const purchase=live.reduce((a,s)=>a+num(s.cost),0), noCost=live.filter(s=>!num(s.cost)).length;
+  const paid=(DB.dealerPay||[]).reduce((a,x)=>a+num(x.amount),0);
+  const by={}; (DB.dealerPay||[]).forEach(x=>{const k=x.by||'biz'; by[k]=(by[k]||0)+num(x.amount)});
+  return {purchase,noCost,paid,by};
+}
+function vDealer(){
+  const A=dealerAcct(), bal=A.purchase-A.paid, dn=DB.settings.dealerName||'';
+  $('#app').innerHTML=`
+  <div class="stats">
+    <div class="stat"><div class="k">Purchases (vehicle cost)</div><div class="v">${rs(A.purchase)}</div>${A.noCost?`<div class="sub2">${A.noCost} vehicles have no purchase price</div>`:''}</div>
+    <div class="stat"><div class="k">Paid to dealer</div><div class="v" style="color:var(--green)">${rs(A.paid)}</div></div>
+    <div class="stat"><div class="k">${bal>=0?'Balance to pay':'Paid in advance'}</div><div class="v" style="color:${bal>0.5?'var(--red)':'var(--green)'}">${rs(Math.abs(bal))}</div></div>
+    ${Object.entries(A.by).map(([k,v])=>`<div class="stat"><div class="k">Paid by ${esc(k==='biz'?'Business account':pName(k))}</div><div class="v">${rs(v)}</div></div>`).join('')}
+  </div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New dealer payment</h2>
+    <label style="flex-direction:row;align-items:center;gap:8px">Dealer name <input id="dname" value="${esc(dn)}" placeholder="e.g. Honda distributor name" style="width:260px" onchange="DB.settings.dealerName=txt(this.value);save();toast('Dealer name saved')"></label></div>
+  <form id="fdp" class="grid" onsubmit="addDealerPay(event)">
+    <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
+    <label>Mode<select name="mode">${opts(['Bank','RTGS / NEFT','UPI','Cheque','Cash'],'Bank')}</select></label>
+    <label>Paid by<select name="by"><option value="">Business account</option>${DB.partners.map(p=>`<option value="${p.id}">${esc(p.name)} (own pocket)</option>`).join('')}</select></label>
+    <label>UTR / Cheque no<input name="ref"></label>
+    <label>Against challan no(s)<input name="challans" placeholder="e.g. 7316, 7320"></label>
+    <label class="span2">Note<input name="note"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Also add to Day Book</label>
+    <div style="align-self:end"><button class="btn">Save payment</button></div>
+  </form>
+  <p class="note">If a partner pays from their own pocket, it is also added to that partner’s capital (Partners tab). ${DB.partners.length?'':'Add partners in the Partners tab to choose them here.'} Untick “Also add to Day Book” for old payments already written in the Day Book.</p></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Payment register</h2>
+    <select style="width:auto" onchange="dpF=this.value;vDealer()"><option value="">All</option><option value="biz" ${dpF==='biz'?'selected':''}>Business account</option>${DB.partners.map(p=>`<option value="${p.id}" ${dpF===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('dealerPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('dealer')">📄 PDF</button></div>
+  ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>UTR / Cheque</th><th>Against challan</th><th>Note</th><th></th></tr></thead><tbody>
+    ${r.map(x=>`<tr><td>${fd(x.date)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="mono">${esc(x.ref)}</td><td>${esc(x.challans)}</td><td class="wrap">${esc(x.note)}</td>
+    <td><button class="btn plain sm" onclick="delDealerPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr class="tot"><td>Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="6"></td></tr></tfoot></table></div>`:'<div class="empty">No dealer payments yet.</div>')(dpRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>`;
+}
+function addDealerPay(e){
+  e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
+  const id=uid(), t0=Date.now(), dn=DB.settings.dealerName||'dealer', ref=d.ref?' · '+d.ref:'', ch=d.challans?' · Challan '+d.challans:'';
+  const rec={id,created:t0,date:d.date,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,challans:d.challans,note:d.note};
+  const dbMode=/cash/i.test(d.mode)?'Cash':/upi/i.test(d.mode)?'UPI':/cheque/i.test(d.mode)?'Cheque':'Bank';
+  if(d.by){
+    const cid=uid(), nm=pName(d.by); rec.capId=cid;
+    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'exp',amount:a,mode:dbMode,note:`Dealer payment – ${dn}${ref}${ch}`});
+    if(d.toDay){
+      DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:dbMode,amount:a,particulars:`Capital – ${nm} (paid dealer personally)`,capId:cid});
+      DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn} (paid by ${nm})${ref}${ch}`,capId:cid,dpId:id});
+    }
+  } else if(d.toDay){
+    DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn}${ref}${ch}`,dpId:id});
+  }
+  (DB.dealerPay=DB.dealerPay||[]).push(rec); save(); toast('Dealer payment saved'); vDealer();
+}
+function delDealerPay(id){
+  if(!confirm('Delete this dealer payment? Its Day Book and partner capital entries will also be removed.')) return;
+  const x=DB.dealerPay.find(r=>r.id===id); if(!x) return;
+  DB.dealerPay=DB.dealerPay.filter(r=>r.id!==id); DB.daybook=DB.daybook.filter(d=>d.dpId!==id&&!(x.capId&&d.capId===x.capId));
+  if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId);
+  save(); vDealer(); toast('Deleted');
+}
+
+/* ---------- rent & salary ---------- */
+let epF='';
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const mLabel=m=>m?MN[+m.slice(5,7)-1]+' '+m.slice(0,4):'';
+const curMonth=()=>today().slice(0,7);
+const emps=()=>{const S=DB.settings; if(!S.employees){S.employees=[{id:'e1',name:'Raman',salary:0},{id:'e2',name:'Sahil',salary:0}]} return S.employees};
+const landlord=()=>DB.settings.landlord||(DB.settings.landlord={name:'',rent:0});
+const epName=id=>id==='landlord'?'Shop owner'+(landlord().name?' ('+landlord().name+')':''):(emps().find(e=>e.id===id)||{}).name||'?';
+const epRows=()=>(DB.expPay||[]).filter(x=>!epF||x.payee===epF);
+function monthsBack(n){const out=[];let d=new Date(curMonth()+'-01');for(let i=0;i<n;i++){out.push(d.toISOString().slice(0,7));d.setMonth(d.getMonth()-1)}return out}
+function payeeMonths(pid,due){
+  const P=(DB.expPay||[]).filter(x=>x.payee===pid), first=P.reduce((m,x)=>x.forMonth&&x.forMonth<m?x.forMonth:m,curMonth());
+  let n=Math.min(24,Math.max(1,(+curMonth().slice(0,4)-+first.slice(0,4))*12+(+curMonth().slice(5,7)-+first.slice(5,7))+1));
+  return monthsBack(n).map(m=>{const L=P.filter(x=>x.forMonth===m), paid=L.reduce((a,x)=>a+num(x.amount),0);
+    return {m,due,paid,adv:L.filter(x=>x.type==='Advance').reduce((a,x)=>a+num(x.amount),0),bonus:L.filter(x=>x.type==='Bonus').reduce((a,x)=>a+num(x.amount),0),
+      dates:L.map(x=>fd(x.date)).join(', ')}});
+}
+function monthTable(rows,label){
+  const st=r=>!r.due?(r.paid?'<span class="pill in">Paid</span>':'<span class="muted">—</span>'):r.paid>=r.due-0.5?(r.paid>r.due+0.5?`<span class="pill open">+${rs(r.paid-r.due)} extra</span>`:'<span class="pill in">Paid</span>'):r.paid>0?`<span class="pill due">${rs(r.due-r.paid)} pending</span>`:`<span class="pill due">${rs(r.due)} pending</span>`;
+  return `<div class="tablewrap"><table class="nice"><thead><tr><th>Month</th><th class="num">${label}</th><th class="num">Paid</th><th>Paid on</th><th>Status</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td><b>${mLabel(r.m)}</b></td><td class="num">${r.due?rs(r.due):'—'}</td><td class="num">${r.paid?rs(r.paid):'—'}${r.adv?`<div class="sub2">incl. advance ${rs(r.adv)}</div>`:''}${r.bonus?`<div class="sub2">incl. bonus ${rs(r.bonus)}</div>`:''}</td><td class="wrap">${r.dates||'<span class="muted">—</span>'}</td><td>${st(r)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function vRent(){
+  const L=landlord(), E=emps(), cm=curMonth();
+  const pend=(pid,due)=>due?Math.max(0,due-(DB.expPay||[]).filter(x=>x.payee===pid&&x.forMonth===cm).reduce((a,x)=>a+num(x.amount),0)):0;
+  $('#app').innerHTML=`
+  <div class="stats">
+    <div class="stat"><div class="k">Rent – ${mLabel(cm)}</div><div class="v" style="color:${pend('landlord',num(L.rent))?'var(--red)':'var(--green)'}">${num(L.rent)?(pend('landlord',num(L.rent))?rs(pend('landlord',num(L.rent)))+' due':'Paid'):'—'}</div></div>
+    ${E.map(e=>`<div class="stat"><div class="k">${esc(e.name)} – ${mLabel(cm)}</div><div class="v" style="color:${pend(e.id,num(e.salary))?'var(--red)':'var(--green)'}">${num(e.salary)?(pend(e.id,num(e.salary))?rs(pend(e.id,num(e.salary)))+' due':'Paid'):'—'}</div></div>`).join('')}
+  </div>
+  <div class="card"><h2>New payment</h2>
+  <form id="fep" class="grid" onsubmit="addExpPay(event)">
+    <label>Pay to<select name="payee" onchange="const t=this.form.type;t.innerHTML=this.value==='landlord'?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'">
+      <option value="landlord">Shop owner (rent)${L.name?' – '+esc(L.name):''}</option>${E.map(e=>`<option value="${e.id}">${esc(e.name)} (employee)</option>`).join('')}</select></label>
+    <label>Type<select name="type"><option>Rent</option></select></label>
+    <label>For month<input type="month" name="forMonth" value="${cm}" required></label>
+    <label>Payment date<input type="date" name="date" value="${today()}" required></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" required></label>
+    <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],'Cash')}</select></label>
+    <label>Paid by<select name="by"><option value="">Business account</option>${DB.partners.map(p=>`<option value="${p.id}">${esc(p.name)} (own pocket)</option>`).join('')}</select></label>
+    <label>UTR / Cheque no<input name="ref"></label>
+    <label class="span2">Note<input name="note"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Also add to Day Book</label>
+    <div style="align-self:end"><button class="btn">Save payment</button></div>
+  </form></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">🏠 Shop rent</h2>
+    <label style="flex-direction:row;align-items:center;gap:6px">Owner <input value="${esc(L.name)}" placeholder="Owner name" style="width:180px" onchange="landlord().name=txt(this.value);save();toast('Saved')"></label>
+    <label style="flex-direction:row;align-items:center;gap:6px">Monthly rent ₹ <input value="${num(L.rent)||''}" inputmode="decimal" style="width:110px" onchange="landlord().rent=num(this.value);save();vRent()"></label></div>
+  ${monthTable(payeeMonths('landlord',num(L.rent)),'Rent')}</div>
+  ${E.map(e=>`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">👤 ${esc(e.name)}</h2>
+    <label style="flex-direction:row;align-items:center;gap:6px">Monthly salary ₹ <input value="${num(e.salary)||''}" inputmode="decimal" style="width:110px" onchange="emps().find(x=>x.id==='${e.id}').salary=num(this.value);save();vRent()"></label></div>
+    ${monthTable(payeeMonths(e.id,num(e.salary)),'Salary')}</div>`).join('')}
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">All payments</h2>
+    <select style="width:auto" onchange="epF=this.value;vRent()"><option value="">All</option><option value="landlord" ${epF==='landlord'?'selected':''}>Shop owner (rent)</option>${E.map(e=>`<option value="${e.id}" ${epF===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('expPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('rent')">📄 PDF</button></div>
+  ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Paid to</th><th>Type</th><th>For month</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>Ref / Note</th><th></th></tr></thead><tbody>
+  ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><b>${esc(epName(x.payee))}</b></td><td>${esc(x.type)}</td><td>${mLabel(x.forMonth)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="wrap">${esc([x.ref,x.note].filter(Boolean).join(' · '))}</td><td><button class="btn plain sm" onclick="delExpPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="4">Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="4"></td></tr></tfoot></table></div>`:'<div class="empty">No payments yet.</div>')(epRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>
+  <div class="card"><h2>Employees</h2><div id="empRows">${E.map(e=>`<div class="row emp" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${e.id}"><input value="${esc(e.name)}" placeholder="Name" style="flex:2;min-width:0"><input value="${num(e.salary)||''}" placeholder="Monthly salary" inputmode="decimal" style="width:140px"></div>`).join('')}</div>
+  <button class="btn plain sm" onclick="$('#empRows').insertAdjacentHTML('beforeend','<div class=&quot;row emp&quot; style=&quot;margin-bottom:6px;flex-wrap:nowrap&quot;><input type=&quot;hidden&quot; value=&quot;&quot;><input placeholder=&quot;Name&quot; style=&quot;flex:2;min-width:0&quot;><input placeholder=&quot;Monthly salary&quot; inputmode=&quot;decimal&quot; style=&quot;width:140px&quot;></div>')">+ Add employee</button>
+  <button class="btn sm" onclick="saveEmps()">Save employees</button><p class="note">To remove an employee, clear the name and Save (only if they have no payments).</p></div>`;
+}
+function saveEmps(){
+  const rows=[...document.querySelectorAll('#empRows .emp')].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:txt(i[1].value),salary:num(i[2].value)}});
+  const keep=rows.filter(e=>e.name), drop=emps().filter(e=>!keep.some(k=>k.id===e.id));
+  if(drop.some(e=>(DB.expPay||[]).some(x=>x.payee===e.id))){alert('An employee with payments cannot be removed.');return}
+  DB.settings.employees=keep; save(); vRent(); toast('Employees saved');
+}
+function addExpPay(e){
+  e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
+  const id=uid(), t0=Date.now(), kind=d.payee==='landlord'?'rent':'salary', who=epName(d.payee), ref=d.ref?' · '+d.ref:'';
+  const label=`${d.type} – ${who} (${mLabel(d.forMonth)})${ref}`;
+  const rec={id,created:t0,date:d.date,payee:d.payee,type:d.type,forMonth:d.forMonth,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,note:d.note};
+  if(d.by){
+    const cid=uid(), nm=pName(d.by); rec.capId=cid;
+    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'exp',amount:a,mode:d.mode,note:label});
+    if(d.toDay){
+      DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`Capital – ${nm} (paid ${kind} personally)`,capId:cid});
+      DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`${label} (paid by ${nm})`,capId:cid,epId:id,epKind:kind});
+    }
+  } else if(d.toDay) DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:d.mode,amount:a,particulars:label,epId:id,epKind:kind});
+  (DB.expPay=DB.expPay||[]).push(rec); save(); toast('Payment saved'); vRent();
+}
+function delExpPay(id){
+  if(!confirm('Delete this payment? Its Day Book and partner capital entries will also be removed.')) return;
+  const x=DB.expPay.find(r=>r.id===id); if(!x) return;
+  DB.expPay=DB.expPay.filter(r=>r.id!==id); DB.daybook=DB.daybook.filter(d=>d.epId!==id&&!(x.capId&&d.capId===x.capId));
+  if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId);
+  save(); vRent(); toast('Deleted');
 }
 
 /* ---------- PDF export ---------- */
@@ -795,9 +934,9 @@ function pdfData(which){
   if(which==='stock'){
     const rows=stockRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
     const sc=s=>(DB.sales.find(z=>z.id===s.saleId)||{}).schallan||'';
-    return {title:'Stock Register',sub:(stockF==='in'?'In stock':stockF==='sold'?'Sold':stockF==='returned'?'Returned / replaced':'All vehicles')+(stockQ?` · search “${stockQ}”`:''),
+    return {title:'Stock Register',sub:(stockF==='in'?'In stock':stockF==='sold'?'Sold':stockF==='returned'?'Returned':'All vehicles')+(stockQ?` · search “${stockQ}”`:''),
       head:['#','Date','Purchase Challan','Sale Challan','Model','Colour','Engine No','Chassis No','Key','Status'],
-      rows:rows.map((s,i)=>[rows.length-i,fd(s.date),s.challan,sc(s),s.model,s.colour,s.engine,s.chassis,s.key,s.status==='sold'?'Sold':s.status==='returned'?'Returned (replaced)':(s.replaces?'In stock (replacement)':'In stock')]),
+      rows:rows.map((s,i)=>[rows.length-i,fd(s.date),s.challan,sc(s),s.model,s.colour,s.engine,s.chassis,s.key,s.status==='sold'?'Sold':s.status==='returned'?'Returned'+(s.returnDate?' '+fd(s.returnDate):''):'In stock']),
       foot:[['Total vehicles: '+rows.length]]};
   }
   if(which==='sales'){
@@ -824,6 +963,18 @@ function pdfData(which){
     return {title:'Enquiry Register',sub:enqF==='All'?'All enquiries':enqF,
       head:['Date','Name','Mobile','Model wanted','Old vehicle','Follow-up','Status','Notes'],
       rows:rows.map(e=>[fd(e.date),e.name,e.phone,e.model,e.exchange,fd(e.followUp),e.status,e.notes]),foot:[['Total: '+rows.length]]};
+  }
+  if(which==='rent'){
+    const rows=epRows().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
+    return {title:'Rent & Salary payments',sub:epF?epName(epF):'All',num:[4],head:['Date','Paid to','Type','For month','Amount','Mode','Paid by','Ref','Note'],
+      rows:rows.map(x=>[fd(x.date),epName(x.payee),x.type,mLabel(x.forMonth),rs(x.amount),x.mode,x.by?pName(x.by):'Business account',x.ref,x.note]),
+      foot:[['','','','Total',rs(rows.reduce((a,x)=>a+num(x.amount),0)),'','','','']]};
+  }
+  if(which==='dealer'){
+    const rows=dpRows().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created), T=rows.reduce((a,x)=>a+num(x.amount),0), A=dealerAcct();
+    return {title:'Dealer Payments – '+(DB.settings.dealerName||'Dealer'),sub:(dpF?'Paid by '+(dpF==='biz'?'Business account':pName(dpF)):'All payments')+` · Purchases ${rs(A.purchase)} · Paid ${rs(A.paid)} · Balance ${rs(A.purchase-A.paid)}`,num:[1],
+      head:['Date','Amount','Mode','Paid by','UTR / Cheque','Against challan','Note'],
+      rows:rows.map(x=>[fd(x.date),rs(x.amount),x.mode,x.by?pName(x.by):'Business account',x.ref,x.challans,x.note]),foot:[['Total',rs(T),'','','','','']]};
   }
   if(which==='capital'){
     const S=partnerSummary(), rows=DB.capital.filter(c=>!capF||c.partnerId===capF).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
@@ -940,7 +1091,7 @@ function addCap(e){
 }
 function delCap(id){
   if(!confirm('Delete this entry? It will also be removed from the Day Book.')) return;
-  DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); save(); vPartners();
+  DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); DB.dealerPay=(DB.dealerPay||[]).filter(x=>x.capId!==id); DB.expPay=(DB.expPay||[]).filter(x=>x.capId!==id); save(); vPartners();
 }
 
 /* ---------- bill photo → sale / day book (same AI as challan) ---------- */
@@ -1255,7 +1406,7 @@ function applyImport(){
 
 /* ---------- Tally export (XML) ---------- */
 const TALLY_DEF={company:'',sales:'Sales',purchase:'Purchase',cash:'Cash',bank:'Bank',supplier:'Honda Motorcycle & Scooter India',
-  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',lastExport:''};
+  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',rentL:'Rent',salaryL:'Salary & Wages',lastExport:''};
 const TL=()=>Object.assign({},TALLY_DEF,DB.settings.tally||{});
 let tFrom='', tTo='';
 function vTally(){
@@ -1279,7 +1430,7 @@ function vTally(){
   <div class="card"><h2>Tally ledger names</h2><form id="ftl" class="grid">
     ${f('company','Tally company name (blank = open company)')}${f('sales','Sales ledger')}${f('purchase','Purchase ledger')}
     ${f('cash','Cash ledger')}${f('bank','Bank ledger (for UPI / cheque / bank / finance)')}${f('supplier','Supplier (Honda / distributor) ledger')}
-    ${f('debtors','Group for customer ledgers')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
+    ${f('debtors','Group for customer ledgers')}${f('rentL','Rent ledger')}${f('salaryL','Salary ledger')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
     ${f('gst','GST rate % in prices (0 = no GST split)','inputmode="decimal"')}${f('cgst','CGST ledger')}${f('sgst','SGST ledger')}
   </form><p class="note">If GST rate is filled (e.g. 18 or 28), vehicle prices are treated as GST-inclusive and split into Sales + CGST + SGST. Leave 0 if you enter GST separately in Tally.</p>
   <div style="margin-top:10px"><button class="btn" onclick="saveTally()">Save ledger names</button></div></div>`;
@@ -1317,6 +1468,8 @@ function tallyVouchers(from,to){
   }
   for(const d of DB.daybook) if(!d.saleId&&ins(d.date)&&num(d.amount)>0){
     const a=num(d.amount), cap=d.capId&&DB.capital.find(c=>c.id===d.capId), capL=cap&&`${pName(cap.partnerId)} Capital A/c`;
+    if(d.epId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[d.epKind==='rent'?T.rentL:T.salaryL,a],[modeL(d.mode),-a]]});continue}
+    if(d.dpId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.supplier,a],[modeL(d.mode),-a]]});continue}
     if(cap&&d.type==='in'){V.push({type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[capL,-a]]});continue}
     if(cap&&cap.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[capL,a],[modeL(d.mode),-a]]});continue}
     V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[T.income,-a]]}
@@ -1485,7 +1638,7 @@ function saveChallan(){
 
 /* ---------- cloud sync (Firebase) ---------- */
 const SHOP='chhachhrauli', FBV='12.19.0', CPK=KEY+'_cloudproj', PRE=KEY+'_precloud';
-const COLS=['stock','sales','daybook','enquiries','partners','capital'];
+const COLS=['stock','sales','daybook','enquiries','partners','capital','dealerPay','expPay'];
 const jparse=j=>{try{return JSON.parse(j)}catch(e){return null}};
 const localHas=()=>COLS.some(c=>(DB[c]||[]).length);
 function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
