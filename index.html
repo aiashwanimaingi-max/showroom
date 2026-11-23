@@ -636,7 +636,7 @@ function dayBalance(before){
   for(const d of DB.daybook){ if(before&&d.date>=before) continue; const v=(d.type==='in'?1:-1)*num(d.amount); total+=v; if(d.mode==='Cash') cash+=v; }
   return {cash,total};
 }
-const HEADS_OUT=['Rent','Salary & Wages','Spare Parts Expenses','Workshop Expenses','Miscellaneous Expenses','Showroom Expenses'];
+const HEADS_OUT=['Payment to Dealer','Payment to Spare Parts Supplier','Rent','Salary & Wages','Spare Parts Expenses','Workshop Expenses','Miscellaneous Expenses','Showroom Expenses'];
 const HEADS_IN=['Miscellaneous Receipts','Service / workshop income','Other income'];
 const headOpts=(type,sel)=>opts(type==='in'?HEADS_IN:HEADS_OUT,sel);
 const HEAD2CAT={'Spare Parts Expenses':'Spare parts','Workshop Expenses':'Workshop','Miscellaneous Expenses':'Miscellaneous'};
@@ -830,7 +830,7 @@ function csv(which){
     dealerPay:['date','amount','mode','paidBy','ref','challans','note'],
     expPay:['date','payee','type','month','amount','mode','paidBy','ref','note'],
     expenses:['date','cat','usedFor','amount','vendor','bill','mode','paidBy','note']}[which];
-  const rows=(which==='expenses'?exAll():DB[which]||[]).map(r=>which==='expenses'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,head:headOf(r),type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=(which==='expenses'?exAll():which==='dealerPay'?dpAll():DB[which]||[]).map(r=>which==='expenses'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,head:headOf(r),type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -839,12 +839,13 @@ function csv(which){
 
 /* ---------- dealer payments ---------- */
 let dpF='';
-const dpRows=()=>(DB.dealerPay||[]).filter(x=>!dpF||(dpF==='biz'?!x.by:x.by===dpF));
+const dpAll=()=>[...(DB.dealerPay||[]),...DB.daybook.filter(d=>d.type==='out'&&!d.dpId&&d.head==='Payment to Dealer').map(d=>({id:'db'+d.id,created:d.created,date:d.date,amount:d.amount,mode:d.mode,by:d.by||'',ref:'',challans:'',note:d.man?d.rem:d.particulars,fromDay:true}))];
+const dpRows=()=>dpAll().filter(x=>!dpF||(dpF==='biz'?!x.by:x.by===dpF));
 function dealerAcct(){
   const live=DB.stock.filter(s=>s.status!=='returned');
   const purchase=live.reduce((a,s)=>a+num(s.cost),0), noCost=live.filter(s=>!num(s.cost)).length;
-  const paid=(DB.dealerPay||[]).reduce((a,x)=>a+num(x.amount),0);
-  const by={}; (DB.dealerPay||[]).forEach(x=>{const k=x.by||'biz'; by[k]=(by[k]||0)+num(x.amount)});
+  const paid=dpAll().reduce((a,x)=>a+num(x.amount),0);
+  const by={}; dpAll().forEach(x=>{const k=x.by||'biz'; by[k]=(by[k]||0)+num(x.amount)});
   return {purchase,noCost,paid,by};
 }
 function vDealer(){
@@ -875,7 +876,7 @@ function vDealer(){
     <button class="btn plain sm" onclick="csv('dealerPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('dealer')">📄 PDF</button></div>
   ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>UTR / Cheque</th><th>Against challan</th><th>Note</th><th></th></tr></thead><tbody>
     ${r.map(x=>`<tr><td>${fd(x.date)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="mono">${esc(x.ref)}</td><td>${esc(x.challans)}</td><td class="wrap">${esc(x.note)}</td>
-    <td style="white-space:nowrap"><button class="btn plain sm" onclick="editDealerPay('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delDealerPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+    <td style="white-space:nowrap">${x.fromDay?'<span class="muted" style="font-size:12px">from Day Book</span>':`<button class="btn plain sm" onclick="editDealerPay('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delDealerPay('${x.id}')">Delete</button>`}</td></tr>`).join('')}</tbody>
     <tfoot><tr class="tot"><td>Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="6"></td></tr></tfoot></table></div>`:'<div class="empty">No dealer payments yet.</div>')(dpRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>`;
 }
 function dpUnlink(x){ DB.daybook=DB.daybook.filter(d=>d.dpId!==x.id&&!(x.capId&&d.capId===x.capId)); if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId); delete x.capId }
@@ -1607,7 +1608,7 @@ function applyImport(){
 
 /* ---------- Tally export (XML) ---------- */
 const TALLY_DEF={company:'',sales:'Sales',purchase:'Purchase',cash:'Cash',bank:'Bank',supplier:'Honda Motorcycle & Scooter India',
-  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',rentL:'Rent',salaryL:'Salary & Wages',spareL:'Spare Parts Expenses',workshopL:'Workshop Expenses',miscL:'Miscellaneous Expenses',lastExport:''};
+  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',rentL:'Rent',salaryL:'Salary & Wages',spareL:'Spare Parts Expenses',spareSup:'Spare Parts Supplier',workshopL:'Workshop Expenses',miscL:'Miscellaneous Expenses',lastExport:''};
 const TL=()=>Object.assign({},TALLY_DEF,DB.settings.tally||{});
 let tFrom='', tTo='';
 function vTally(){
@@ -1631,7 +1632,7 @@ function vTally(){
   <div class="card"><h2>Tally ledger names</h2><form id="ftl" class="grid">
     ${f('company','Tally company name (blank = open company)')}${f('sales','Sales ledger')}${f('purchase','Purchase ledger')}
     ${f('cash','Cash ledger')}${f('bank','Bank ledger (for UPI / cheque / bank / finance)')}${f('supplier','Supplier (Honda / distributor) ledger')}
-    ${f('debtors','Group for customer ledgers')}${f('rentL','Rent ledger')}${f('salaryL','Salary ledger')}${f('spareL','Spare parts ledger')}${f('workshopL','Workshop ledger')}${f('miscL','Miscellaneous ledger')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
+    ${f('debtors','Group for customer ledgers')}${f('rentL','Rent ledger')}${f('salaryL','Salary ledger')}${f('spareL','Spare parts ledger')}${f('spareSup','Spare parts supplier ledger')}${f('workshopL','Workshop ledger')}${f('miscL','Miscellaneous ledger')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
     ${f('gst','GST rate % in prices (0 = no GST split)','inputmode="decimal"')}${f('cgst','CGST ledger')}${f('sgst','SGST ledger')}
   </form><p class="note">If GST rate is filled (e.g. 18 or 28), vehicle prices are treated as GST-inclusive and split into Sales + CGST + SGST. Leave 0 if you enter GST separately in Tally.</p>
   <div style="margin-top:10px"><button class="btn" onclick="saveTally()">Save ledger names</button></div></div>`;
@@ -1672,10 +1673,10 @@ function tallyVouchers(from,to){
     if(d.exId&&d.type==='out'){const c=d.exCat||'';V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[/spare/i.test(c)?T.spareL:/workshop/i.test(c)?T.workshopL:/misc/i.test(c)?T.miscL:T.expense,a],[modeL(d.mode),-a]]});continue}
     if(d.epId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[d.epKind==='rent'?T.rentL:T.salaryL,a],[modeL(d.mode),-a]]});continue}
     if(d.dpId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.supplier,a],[modeL(d.mode),-a]]});continue}
-    if(d.man&&d.head){const HL={'Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income},hl=HL[d.head]||d.head;V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[hl,-a]]}:{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[hl,a],[modeL(d.mode),-a]]});continue}
+    if(d.man&&d.head){const HL={'Payment to Dealer':T.supplier,'Payment to Spare Parts Supplier':T.spareSup||'Spare Parts Supplier','Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income},hl=HL[d.head]||d.head;V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[hl,-a]]}:{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[hl,a],[modeL(d.mode),-a]]});continue}
     if(cap&&d.type==='in'){V.push({type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[capL,-a]]});continue}
     if(cap&&cap.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[capL,a],[modeL(d.mode),-a]]});continue}
-    const HL={'Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income}, hl=d.head&&(HL[d.head]||d.head);
+    const HL={'Payment to Dealer':T.supplier,'Payment to Spare Parts Supplier':T.spareSup||'Spare Parts Supplier','Rent':T.rentL,'Salary & Wages':T.salaryL,'Spare Parts Expenses':T.spareL,'Workshop Expenses':T.workshopL,'Miscellaneous Expenses':T.miscL,'Showroom Expenses':T.expense,'Miscellaneous Receipts':T.income}, hl=d.head&&(HL[d.head]||d.head);
     V.push(d.type==='in'?{type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[hl||T.income,-a]]}
                         :{type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[hl||T.expense,a],[modeL(d.mode),-a]]});
   }
