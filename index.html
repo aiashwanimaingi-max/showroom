@@ -807,25 +807,46 @@ function vDealer(){
     <button class="btn plain sm" onclick="csv('dealerPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('dealer')">📄 PDF</button></div>
   ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>UTR / Cheque</th><th>Against challan</th><th>Note</th><th></th></tr></thead><tbody>
     ${r.map(x=>`<tr><td>${fd(x.date)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="mono">${esc(x.ref)}</td><td>${esc(x.challans)}</td><td class="wrap">${esc(x.note)}</td>
-    <td><button class="btn plain sm" onclick="delDealerPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+    <td style="white-space:nowrap"><button class="btn plain sm" onclick="editDealerPay('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delDealerPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
     <tfoot><tr class="tot"><td>Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="6"></td></tr></tfoot></table></div>`:'<div class="empty">No dealer payments yet.</div>')(dpRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>`;
+}
+function dpUnlink(x){ DB.daybook=DB.daybook.filter(d=>d.dpId!==x.id&&!(x.capId&&d.capId===x.capId)); if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId); delete x.capId }
+function dpLink(rec,toDay){
+  const t0=rec.created||Date.now(), dn=DB.settings.dealerName||'dealer', ref=rec.ref?' · '+rec.ref:'', ch=rec.challans?' · Challan '+rec.challans:'', a=num(rec.amount);
+  const dbMode=/cash/i.test(rec.mode)?'Cash':/upi/i.test(rec.mode)?'UPI':/cheque/i.test(rec.mode)?'Cheque':'Bank';
+  if(rec.by){
+    const cid=uid(), nm=pName(rec.by); rec.capId=cid;
+    DB.capital.push({id:cid,created:t0,date:rec.date,partnerId:rec.by,type:'exp',amount:a,mode:dbMode,note:`Dealer payment – ${dn}${ref}${ch}`});
+    if(toDay){
+      DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'in',mode:dbMode,amount:a,particulars:`Capital – ${nm} (paid dealer personally)`,capId:cid});
+      DB.daybook.push({id:uid(),created:t0+1,date:rec.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn} (paid by ${nm})${ref}${ch}`,capId:cid,dpId:rec.id});
+    }
+  } else if(toDay) DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn}${ref}${ch}`,dpId:rec.id});
 }
 function addDealerPay(e){
   e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
-  const id=uid(), t0=Date.now(), dn=DB.settings.dealerName||'dealer', ref=d.ref?' · '+d.ref:'', ch=d.challans?' · Challan '+d.challans:'';
-  const rec={id,created:t0,date:d.date,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,challans:d.challans,note:d.note};
-  const dbMode=/cash/i.test(d.mode)?'Cash':/upi/i.test(d.mode)?'UPI':/cheque/i.test(d.mode)?'Cheque':'Bank';
-  if(d.by){
-    const cid=uid(), nm=pName(d.by); rec.capId=cid;
-    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'exp',amount:a,mode:dbMode,note:`Dealer payment – ${dn}${ref}${ch}`});
-    if(d.toDay){
-      DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:dbMode,amount:a,particulars:`Capital – ${nm} (paid dealer personally)`,capId:cid});
-      DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn} (paid by ${nm})${ref}${ch}`,capId:cid,dpId:id});
-    }
-  } else if(d.toDay){
-    DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:dbMode,amount:a,particulars:`Dealer payment – ${dn}${ref}${ch}`,dpId:id});
-  }
-  (DB.dealerPay=DB.dealerPay||[]).push(rec); save(); toast('Dealer payment saved'); vDealer();
+  const rec={id:uid(),created:Date.now(),date:d.date,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,challans:d.challans,note:d.note};
+  dpLink(rec,!!d.toDay); (DB.dealerPay=DB.dealerPay||[]).push(rec); save(); toast('Dealer payment saved'); vDealer();
+}
+function editDealerPay(id){
+  const x=DB.dealerPay.find(r=>r.id===id); if(!x) return;
+  const inDay=DB.daybook.some(d=>d.dpId===id);
+  openDlg('Edit dealer payment',`<form id="fdpe" class="grid">
+    <label>Date<input type="date" name="date" value="${esc(x.date)}" required></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" value="${num(x.amount)}" required></label>
+    <label>Mode<select name="mode">${opts(['Bank','RTGS / NEFT','UPI','Cheque','Cash'],x.mode)}</select></label>
+    <label>Paid by<select name="by"><option value="">Business account</option>${DB.partners.map(p=>`<option value="${p.id}" ${x.by===p.id?'selected':''}>${esc(p.name)} (own pocket)</option>`).join('')}</select></label>
+    <label>UTR / Cheque no<input name="ref" value="${esc(x.ref)}"></label>
+    <label>Against challan no(s)<input name="challans" value="${esc(x.challans)}"></label>
+    <label class="span2">Note<input name="note" value="${esc(x.note)}"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" ${inDay?'checked':''} style="width:auto"> Also in Day Book</label>
+  </form>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveDealerPayEdit('${id}')">Save changes</button>`);
+}
+function saveDealerPayEdit(id){
+  const f=$('#fdpe'); if(!f.reportValidity()) return; const d=formData(f), a=num(d.amount); if(a<=0){alert('Enter an amount.');return}
+  const x=DB.dealerPay.find(r=>r.id===id); dpUnlink(x);
+  Object.assign(x,{date:d.date,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,challans:d.challans,note:d.note});
+  dpLink(x,!!d.toDay); save(); dlg.close(); vDealer(); toast('Payment updated');
 }
 function delDealerPay(id){
   if(!confirm('Delete this dealer payment? Its Day Book and partner capital entries will also be removed.')) return;
@@ -891,7 +912,7 @@ function vRent(){
     <select style="width:auto" onchange="epF=this.value;vRent()"><option value="">All</option><option value="landlord" ${epF==='landlord'?'selected':''}>Shop owner (rent)</option>${E.map(e=>`<option value="${e.id}" ${epF===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
     <button class="btn plain sm" onclick="csv('expPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('rent')">📄 PDF</button></div>
   ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Paid to</th><th>Type</th><th>For month</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>Ref / Note</th><th></th></tr></thead><tbody>
-  ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><b>${esc(epName(x.payee))}</b></td><td>${esc(x.type)}</td><td>${mLabel(x.forMonth)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="wrap">${esc([x.ref,x.note].filter(Boolean).join(' · '))}</td><td><button class="btn plain sm" onclick="delExpPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+  ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><b>${esc(epName(x.payee))}</b></td><td>${esc(x.type)}</td><td>${mLabel(x.forMonth)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="wrap">${esc([x.ref,x.note].filter(Boolean).join(' · '))}</td><td style="white-space:nowrap"><button class="btn plain sm" onclick="editExpPay('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delExpPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
   <tfoot><tr class="tot"><td colspan="4">Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="4"></td></tr></tfoot></table></div>`:'<div class="empty">No payments yet.</div>')(epRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>
   <div class="card"><h2>Employees</h2><div id="empRows">${E.map(e=>`<div class="row emp" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${e.id}"><input value="${esc(e.name)}" placeholder="Name" style="flex:2;min-width:0"><input value="${num(e.salary)||''}" placeholder="Monthly salary" inputmode="decimal" style="width:140px"></div>`).join('')}</div>
   <button class="btn plain sm" onclick="$('#empRows').insertAdjacentHTML('beforeend','<div class=&quot;row emp&quot; style=&quot;margin-bottom:6px;flex-wrap:nowrap&quot;><input type=&quot;hidden&quot; value=&quot;&quot;><input placeholder=&quot;Name&quot; style=&quot;flex:2;min-width:0&quot;><input placeholder=&quot;Monthly salary&quot; inputmode=&quot;decimal&quot; style=&quot;width:140px&quot;></div>')">+ Add employee</button>
@@ -903,20 +924,46 @@ function saveEmps(){
   if(drop.some(e=>(DB.expPay||[]).some(x=>x.payee===e.id))){alert('An employee with payments cannot be removed.');return}
   DB.settings.employees=keep; save(); vRent(); toast('Employees saved');
 }
+function epUnlink(x){ DB.daybook=DB.daybook.filter(d=>d.epId!==x.id&&!(x.capId&&d.capId===x.capId)); if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId); delete x.capId }
+function epLink(rec,toDay){
+  const t0=rec.created||Date.now(), kind=rec.payee==='landlord'?'rent':'salary', who=epName(rec.payee), a=num(rec.amount);
+  const label=`${rec.type} – ${who} (${mLabel(rec.forMonth)})${rec.ref?' · '+rec.ref:''}`;
+  if(rec.by){
+    const cid=uid(), nm=pName(rec.by); rec.capId=cid;
+    DB.capital.push({id:cid,created:t0,date:rec.date,partnerId:rec.by,type:'exp',amount:a,mode:rec.mode,note:label});
+    if(toDay){
+      DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'in',mode:rec.mode,amount:a,particulars:`Capital – ${nm} (paid ${kind} personally)`,capId:cid});
+      DB.daybook.push({id:uid(),created:t0+1,date:rec.date,type:'out',mode:rec.mode,amount:a,particulars:`${label} (paid by ${nm})`,capId:cid,epId:rec.id,epKind:kind});
+    }
+  } else if(toDay) DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'out',mode:rec.mode,amount:a,particulars:label,epId:rec.id,epKind:kind});
+}
 function addExpPay(e){
   e.preventDefault(); const d=formData(e.target), a=num(d.amount); if(a<=0) return;
-  const id=uid(), t0=Date.now(), kind=d.payee==='landlord'?'rent':'salary', who=epName(d.payee), ref=d.ref?' · '+d.ref:'';
-  const label=`${d.type} – ${who} (${mLabel(d.forMonth)})${ref}`;
-  const rec={id,created:t0,date:d.date,payee:d.payee,type:d.type,forMonth:d.forMonth,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,note:d.note};
-  if(d.by){
-    const cid=uid(), nm=pName(d.by); rec.capId=cid;
-    DB.capital.push({id:cid,created:t0,date:d.date,partnerId:d.by,type:'exp',amount:a,mode:d.mode,note:label});
-    if(d.toDay){
-      DB.daybook.push({id:uid(),created:t0,date:d.date,type:'in',mode:d.mode,amount:a,particulars:`Capital – ${nm} (paid ${kind} personally)`,capId:cid});
-      DB.daybook.push({id:uid(),created:t0+1,date:d.date,type:'out',mode:d.mode,amount:a,particulars:`${label} (paid by ${nm})`,capId:cid,epId:id,epKind:kind});
-    }
-  } else if(d.toDay) DB.daybook.push({id:uid(),created:t0,date:d.date,type:'out',mode:d.mode,amount:a,particulars:label,epId:id,epKind:kind});
-  (DB.expPay=DB.expPay||[]).push(rec); save(); toast('Payment saved'); vRent();
+  const rec={id:uid(),created:Date.now(),date:d.date,payee:d.payee,type:d.type,forMonth:d.forMonth,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,note:d.note};
+  epLink(rec,!!d.toDay); (DB.expPay=DB.expPay||[]).push(rec); save(); toast('Payment saved'); vRent();
+}
+function editExpPay(id){
+  const x=DB.expPay.find(r=>r.id===id); if(!x) return; const E=emps(), inDay=DB.daybook.some(d=>d.epId===id);
+  const types=x.payee==='landlord'?['Rent']:['Salary','Advance','Bonus'];
+  openDlg('Edit payment',`<form id="fepe" class="grid">
+    <label>Pay to<select name="payee" onchange="const t=this.form.type;t.innerHTML=this.value==='landlord'?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'">
+      <option value="landlord" ${x.payee==='landlord'?'selected':''}>Shop owner (rent)</option>${E.map(e=>`<option value="${e.id}" ${x.payee===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+    <label>Type<select name="type">${opts(types,x.type)}</select></label>
+    <label>For month<input type="month" name="forMonth" value="${esc(x.forMonth)}" required></label>
+    <label>Payment date<input type="date" name="date" value="${esc(x.date)}" required></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" value="${num(x.amount)}" required></label>
+    <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],x.mode)}</select></label>
+    <label>Paid by<select name="by"><option value="">Business account</option>${DB.partners.map(p=>`<option value="${p.id}" ${x.by===p.id?'selected':''}>${esc(p.name)} (own pocket)</option>`).join('')}</select></label>
+    <label>UTR / Cheque no<input name="ref" value="${esc(x.ref)}"></label>
+    <label class="span2">Note<input name="note" value="${esc(x.note)}"></label>
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" ${inDay?'checked':''} style="width:auto"> Also in Day Book</label>
+  </form>`,`<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveExpPayEdit('${id}')">Save changes</button>`);
+}
+function saveExpPayEdit(id){
+  const f=$('#fepe'); if(!f.reportValidity()) return; const d=formData(f), a=num(d.amount); if(a<=0){alert('Enter an amount.');return}
+  const x=DB.expPay.find(r=>r.id===id); epUnlink(x);
+  Object.assign(x,{date:d.date,payee:d.payee,type:d.type,forMonth:d.forMonth,amount:a,mode:d.mode,by:d.by||'',ref:d.ref,note:d.note});
+  epLink(x,!!d.toDay); save(); dlg.close(); vRent(); toast('Payment updated');
 }
 function delExpPay(id){
   if(!confirm('Delete this payment? Its Day Book and partner capital entries will also be removed.')) return;
