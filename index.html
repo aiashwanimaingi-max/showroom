@@ -210,7 +210,7 @@ function vDash(){
 }
 
 /* ---------- stock ---------- */
-let stockQ='', stockF='in';
+let stockQ='', stockF='in', stSel=new Set();
 function stockSummary(){
   const inS=DB.stock.filter(s=>s.status!=='sold');
   if(!inS.length) return '<div class="empty">No vehicles in stock yet.</div>';
@@ -241,7 +241,7 @@ function vStock(){
     <select id="sf" style="width:auto" onchange="stockF=this.value;stockList()"><option value="in">In stock</option><option value="sold">Sold</option><option value="all">All</option></select>
     <input id="sq" placeholder="Search chassis / engine / model…" style="max-width:260px" value="${esc(stockQ)}" oninput="stockQ=this.value;stockList()">
     <button class="btn plain sm" onclick="csv('stock')">Export Excel (CSV)</button>
-    ${impBtn('stock')}
+    ${impBtn('stock')}${(n=>n?`<button class="btn sm" onclick="dupReview()">🧹 डबल गाड़ियाँ हटाएँ (${n})</button>`:'')(dupPlan().remove.length)}
   </div><div id="stockList"></div></div>
   <div class="card"><h2>Stock summary</h2>${stockSummary()}</div>`;
   $('#sf').value=stockF; stockList();
@@ -250,11 +250,22 @@ function stockList(){
   const q=stockQ.toLowerCase();
   const rows=DB.stock.filter(s=>(stockF==='all'||(stockF==='sold')===(s.status==='sold'))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created);
-  $('#stockList').innerHTML=rows.length?`<div class="tablewrap"><table><tr><th>#</th><th>Date</th><th>Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
-  ${rows.map((s,i)=>`<tr><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${esc(s.challan)}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
+  const ids=new Set(DB.stock.map(s=>s.id)); [...stSel].forEach(id=>{if(!ids.has(id))stSel.delete(id)});
+  const allOn=rows.length&&rows.every(s=>stSel.has(s.id));
+  $('#stockList').innerHTML=(stSel.size?`<div class="warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>${stSel.size} गाड़ियाँ चुनी हैं</b><button class="btn sm" onclick="stDelete()">🗑 चुनी हुई गाड़ियाँ हटाएँ</button><button class="btn plain sm" onclick="stSel.clear();stockList()">चुनाव हटाएँ</button></div>`:'')+
+  (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="सब चुनें" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
+  ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ भरें</a>`}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
   <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':'<span class="pill in">In stock</span>'}</td>
   <td>${s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
-  :'<div class="empty">No vehicles found.</div>';
+  :'<div class="empty">No vehicles found.</div>');
+}
+function stockRows(){const q=stockQ.toLowerCase();return DB.stock.filter(s=>(stockF==='all'||(stockF==='sold')===(s.status==='sold'))&&(!q||[s.chassis,s.engine,s.model,s.colour,s.key,s.challan].join(' ').toLowerCase().includes(q)))}
+function stDelete(){
+  const sel=DB.stock.filter(s=>stSel.has(s.id));
+  const sold=sel.filter(s=>s.status==='sold'&&s.saleId&&DB.sales.some(z=>z.id===s.saleId)), del=sel.filter(s=>!sold.includes(s));
+  if(!del.length){alert('चुनी हुई सभी गाड़ियाँ बिक चुकी हैं। बिकी गाड़ी हटाने के लिए पहले Sales में उसकी सेल Cancel करें।');return}
+  if(!confirm(`${del.length} गाड़ियाँ स्टॉक से हमेशा के लिए हटेंगी (सभी डिवाइस से)।${sold.length?`\n${sold.length} बिकी हुई गाड़ियाँ नहीं हटेंगी।`:''}\n\nपक्का हटाएँ?`)) return;
+  const ids=new Set(del.map(s=>s.id)); DB.stock=DB.stock.filter(s=>!ids.has(s.id)); stSel.clear(); save(); render(); toast(`${ids.size} गाड़ियाँ हटा दीं`);
 }
 function addStock(e){
   e.preventDefault(); const f=e.target, d=formData(f);
@@ -267,6 +278,41 @@ function addStock(e){
   save(); toast('Vehicle added to stock');
   const keep={challan:d.challan,model:d.model,colour:d.colour,date:d.date};
   vStock(); const nf=$('#fStock'); for(const k in keep) nf[k].value=keep[k]; nf.engine.focus();
+}
+function dupPlan(){
+  const key=s=>up(s.chassis)||(up(s.engine)?'E:'+up(s.engine):''), groups={};
+  DB.stock.forEach(s=>{const k=key(s); if(k)(groups[k]=groups[k]||[]).push(s)});
+  // also join rows that share an engine no but differ / miss chassis
+  const byEng={}; DB.stock.forEach(s=>{const e=up(s.engine); if(e)(byEng[e]=byEng[e]||[]).push(s)});
+  const seen=new Set(), sets=[];
+  for(const g of [...Object.values(groups),...Object.values(byEng)]){ if(g.length<2) continue;
+    const ids=g.map(x=>x.id).sort().join(); if(seen.has(ids)) continue; seen.add(ids); sets.push(g) }
+  const remove=[], keep=[], stuck=[], gone=new Set();
+  const good=c=>c&&!/[,;&]/.test(c);
+  for(const g0 of sets){ const g=g0.filter(x=>!gone.has(x.id)); if(g.length<2) continue;
+    const used=x=>x.status==='sold'&&x.saleId&&DB.sales.some(z=>z.id===x.saleId);
+    const rank=x=>(used(x)?0:10)+(good(x.challan)?0:2)+(x.status==='sold'?0:1);
+    g.sort((a,b)=>rank(a)-rank(b)||(a.created||0)-(b.created||0));
+    const k=g[0]; keep.push(k);
+    g.slice(1).forEach(x=>{ if(used(x)) stuck.push(x); else {remove.push({x,k}); gone.add(x.id)} });
+  }
+  return {remove,keep,stuck};
+}
+function dupReview(){
+  const P=dupPlan();
+  if(!P.remove.length){toast('कोई डबल गाड़ी नहीं मिली');return}
+  openDlg(`${P.remove.length} डबल गाड़ियाँ मिलीं`,`<p style="margin-top:0">एक ही Chassis / Engine नंबर वाली गाड़ी एक से ज़्यादा बार चढ़ी है। हर गाड़ी की <b>एक</b> एंट्री रहेगी (जिसकी सेल हुई है या जिसमें सही चालान नं. है), बाकी हटेंगी:</p>
+  <div class="tablewrap imp"><table><tr><th>हटेगी</th><th>Model</th><th>Engine</th><th>Chassis</th><th>Challan</th><th>Date</th><th>रहेगी (Challan)</th></tr>
+  ${P.remove.map(({x,k})=>`<tr><td>❌</td><td>${esc(x.model)}</td><td class="mono">${esc(x.engine)}</td><td class="mono">${esc(x.chassis)}</td><td style="white-space:normal;max-width:180px">${esc(x.challan)||'—'}</td><td>${fd(x.date)}</td><td>✅ ${esc(k.challan)||'—'} · ${fd(k.date)}</td></tr>`).join('')}</table></div>
+  ${P.stuck.length?`<p class="warn">${P.stuck.length} गाड़ियाँ दो बार बिकी दिख रही हैं — इन्हें नहीं छुआ गया, Sales में देख लें।</p>`:''}
+  <p class="note">पहले <b>Backup now</b> ले लें। हटाई गई एंट्री सभी डिवाइस से हट जाएगी।</p>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="dupApply()">${P.remove.length} डबल एंट्री हटाएँ</button>`);
+}
+function dupApply(){
+  const P=dupPlan(), ids=new Set(P.remove.map(r=>r.x.id));
+  // keep a better challan/date/key/cost from a removed copy if the kept one lacks it
+  P.remove.forEach(({x,k})=>{ for(const f of ['challan','key','cost','colour']) if(!txt(k[f])&&txt(x[f])&&!(f==='challan'&&/[,;&]/.test(x[f]))) k[f]=x[f] });
+  DB.stock=DB.stock.filter(s=>!ids.has(s.id)); save(); dlg.close(); render(); toast(`${ids.size} डबल एंट्री हटा दीं`);
 }
 function editStock(id){
   const s=DB.stock.find(x=>x.id===id);
@@ -990,8 +1036,8 @@ function setKey(v){v=txt(v);const oa=aiProv()==='openai';
   ls(oa?OAK:AIK,v);toast(v?'Key saved':'Key removed');render()}
 const CH_SCHEMA={type:'object',additionalProperties:false,required:['challan_no','date','supplier','vehicles'],properties:{
   challan_no:{type:'string'},date:{type:'string',description:'YYYY-MM-DD, or empty'},supplier:{type:'string'},
-  vehicles:{type:'array',items:{type:'object',additionalProperties:false,required:['model','colour','engine','chassis','key','price'],properties:{
-    model:{type:'string'},colour:{type:'string'},engine:{type:'string'},chassis:{type:'string'},key:{type:'string'},price:{type:'number',description:'0 if not shown'}}}}}};
+  vehicles:{type:'array',items:{type:'object',additionalProperties:false,required:['challan_no','date','model','colour','engine','chassis','key','price'],properties:{
+    challan_no:{type:'string'},date:{type:'string',description:'YYYY-MM-DD, or empty'},model:{type:'string'},colour:{type:'string'},engine:{type:'string'},chassis:{type:'string'},key:{type:'string'},price:{type:'number',description:'0 if not shown'}}}}}};
 function shrinkImage(file){return new Promise((ok,no)=>{const img=new Image(),u=URL.createObjectURL(file);
   img.onload=()=>{const s=Math.min(1,2000/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
     c.width=Math.round(img.naturalWidth*s);c.height=Math.round(img.naturalHeight*s);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
@@ -1016,7 +1062,10 @@ Extract every vehicle listed. For each vehicle give model, colour, engine number
   Models: ${DB.settings.models.join(', ')}
   Colours: ${DB.settings.colours.join(', ')}
 - price: the per-vehicle amount including taxes if shown, else the per-vehicle amount shown, else 0.
-- date: the challan / invoice date as YYYY-MM-DD (Indian dates are day-month-year). challan_no: the challan or invoice number. supplier: the issuer's name.
+- date: the challan / invoice date as YYYY-MM-DD (Indian dates are day-month-year). challan_no: the challan / invoice / delivery note number. supplier: the issuer's name.
+- The pages may belong to SEVERAL different challans. For EVERY vehicle also fill its own challan_no and date, taken from the challan page it is listed on (the header of that page, or of the earlier page of the same challan). Top-level challan_no and date: those of the first challan.
+- challan_no is always ONE number only. Never join several numbers with commas. If you cannot tell which challan a vehicle belongs to, leave its challan_no empty.
+- If the same vehicle (same chassis or engine number) appears on more than one page, list it only once.
 - Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
     const data=aiProv()==='openai'?await readOpenAI(key,parts,prompt):await readClaude(key,parts,prompt);
     if(!data.vehicles?.length) throw new Error('इस फोटो में कोई गाड़ी नहीं मिली। साफ़ और सीधी फोटो लेकर फिर कोशिश करें।');
@@ -1064,38 +1113,52 @@ async function readClaude(key,parts,prompt,schema=CH_SCHEMA){
 }
 function reviewChallan(d){
   const sc=new Set(DB.stock.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.stock.map(s=>s.engine).filter(Boolean));
+  const bc=new Set(), be=new Set();
   const inp=(n,v,w,extra='')=>`<input name="${n}" value="${esc(v)}" style="min-width:${w}px" ${extra}>`;
-  openDlg(`चालान से ${d.vehicles.length} गाड़ियाँ मिलीं — जाँच कर Save करें`,`
-  <div class="row"><label class="grow">Date<input type="date" id="chD" value="${esc(toISO(d.date)||today())}"></label>
-    <label class="grow">Challan No<input id="chN" value="${esc(d.challan_no)}"></label></div>
-  ${d.supplier?`<p class="note">Supplier: ${esc(d.supplier)}</p>`:''}
-  <div class="tablewrap imp" style="margin-top:10px"><table id="chT"><tr><th></th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Price</th><th></th></tr>
-  ${d.vehicles.map(v=>{const ch=up(v.chassis),en=up(v.engine),dup=(ch&&sc.has(ch))||(en&&se.has(en));
-    return `<tr><td><input type="checkbox" ${dup?'':'checked'} style="width:auto"></td><td>${inp('model',v.model,150,'list="dlModels"')}</td><td>${inp('colour',v.colour,100,'list="dlCols"')}</td>
+  const one=x=>{x=txt(x);return /[,;&]|\band\b|\d\s+\d/i.test(x)?'':x};
+  const topD=toISO(d.date)||'', topN=one(d.challan_no);
+  let nDup=0, nTwice=0; const anyPer=d.vehicles.some(v=>one(v.challan_no));
+  const rows=d.vehicles.map(v=>{const ch=up(v.chassis),en=up(v.engine);
+    const dup=(ch&&sc.has(ch))||(en&&se.has(en)), twice=!dup&&((ch&&bc.has(ch))||(en&&be.has(en)));
+    if(ch)bc.add(ch); if(en)be.add(en); if(dup)nDup++; if(twice)nTwice++;
+    const cn=one(v.challan_no)||(anyPer?'':topN), cd=toISO(v.date)||(anyPer?'':topD);
+    return `<tr><td><input type="checkbox" ${dup||twice?'':'checked'} style="width:auto"></td>
+    <td>${inp('challan',cn,90,'placeholder="चालान नं."'+(cn?'':' style="min-width:90px;border-color:var(--amber)"'))}</td><td><input type="date" name="date" value="${esc(cd)}"></td>
+    <td>${inp('model',v.model,150,'list="dlModels"')}</td><td>${inp('colour',v.colour,100,'list="dlCols"')}</td>
     <td>${inp('engine',en,140,'class="mono"')}</td><td>${inp('chassis',ch,180,'class="mono"')}</td><td>${inp('key',up(v.key),70,'class="mono"')}</td><td>${inp('cost',num(v.price)||'',90,'inputmode="decimal"')}</td>
-    <td>${dup?'<span class="pill due">पहले से स्टॉक में</span>':''}</td></tr>`}).join('')}</table></div>
+    <td>${dup?'<span class="pill due">पहले से स्टॉक में</span>':twice?'<span class="pill due">फोटो में दो बार</span>':''}</td></tr>`}).join('');
+  openDlg(`चालान से ${d.vehicles.length} गाड़ियाँ मिलीं — जाँच कर Save करें`,`
+  ${nDup||nTwice?`<p class="warn" style="margin-top:0">${nDup?`<b>${nDup}</b> गाड़ी पहले से स्टॉक में है। `:''}${nTwice?`<b>${nTwice}</b> गाड़ी फोटो में दो बार आई है। `:''}इनका ✓ हटा दिया गया है, ये दोबारा नहीं चढ़ेंगी।</p>`:''}
+  <div class="row"><label class="grow">खाली चालान नं. वाली गाड़ियों के लिए<input id="chN" value="${esc(topN)}" placeholder="चालान नं."></label>
+    <label class="grow">खाली तारीख़ वाली गाड़ियों के लिए<input type="date" id="chD" value="${esc(topD||today())}"></label></div>
+  ${d.supplier?`<p class="note">Supplier: ${esc(d.supplier)}</p>`:''}
+  <div class="tablewrap imp" style="margin-top:10px"><table id="chT"><tr><th></th><th>Challan</th><th>Date</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Price</th><th></th></tr>
+  ${rows}</table></div>
   ${dl('dlModels',DB.settings.models)}${dl('dlCols',DB.settings.colours)}
-  <p class="note">⚠ AI से पढ़े नंबर एक बार चालान से ज़रूर मिला लें — खासकर Engine और Chassis No। जो गाड़ी नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
+  <p class="note">⚠ AI से पढ़े नंबर एक बार चालान से ज़रूर मिला लें — खासकर Engine और Chassis No। हर गाड़ी का चालान नं. और तारीख़ अलग-अलग बदल सकते हैं। जो गाड़ी नहीं चढ़ानी, उसका ✓ हटा दें।</p>`,
   `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveChallan()">Save to stock</button>`);
+  dlg.style.maxWidth='1100px'; dlg.addEventListener('close',()=>dlg.style.maxWidth='',{once:true});
 }
 function saveChallan(){
-  const date=$('#chD').value||today(), challan=txt($('#chN').value), out=[], bad=[];
+  const defD=$('#chD').value||today(), defN=txt($('#chN').value), out=[], bad=[], skipped=[];
+  const sc=new Set(DB.stock.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.stock.map(s=>s.engine).filter(Boolean));
   [...document.querySelectorAll('#chT tr')].slice(1).forEach((tr,i)=>{
     if(!tr.querySelector('input[type=checkbox]').checked) return;
     const g=n=>txt(tr.querySelector(`[name=${n}]`).value);
-    const s={date,challan,model:g('model'),colour:g('colour'),engine:up(g('engine')),chassis:up(g('chassis')),key:up(g('key')),cost:g('cost')?String(num(g('cost'))):''};
-    if(!s.model||!(s.chassis||s.engine)) bad.push(i+1); else out.push(s);
+    const s={date:g('date')||defD,challan:g('challan')||defN,model:g('model'),colour:g('colour'),engine:up(g('engine')),chassis:up(g('chassis')),key:up(g('key')),cost:g('cost')?String(num(g('cost'))):''};
+    if(!s.model||!(s.chassis||s.engine)){bad.push(i+1);return}
+    if((s.chassis&&sc.has(s.chassis))||(s.engine&&se.has(s.engine))){skipped.push(s.chassis||s.engine);return}
+    if(s.chassis)sc.add(s.chassis); if(s.engine)se.add(s.engine); out.push(s);
   });
   if(bad.length){alert(`लाइन ${bad.join(', ')} में Model या Chassis/Engine No खाली है। भरें या ✓ हटा दें।`);return}
-  if(!out.length){alert('कोई गाड़ी चुनी नहीं गई।');return}
+  if(!out.length){alert(skipped.length?`चुनी हुई सभी गाड़ियाँ (${skipped.length}) पहले से स्टॉक में हैं — कुछ नहीं जोड़ा।`:'कोई गाड़ी चुनी नहीं गई।');return}
   const t0=Date.now();
   out.forEach((s,i)=>{DB.stock.push({id:uid(),created:t0+i,status:'in',...s});
     if(s.model&&!DB.settings.models.includes(s.model))DB.settings.models.push(s.model);
     if(s.colour&&!DB.settings.colours.includes(s.colour))DB.settings.colours.push(s.colour)});
-  save(); dlg.close(); toast(`${out.length} गाड़ियाँ स्टॉक में जुड़ गईं`); go('stock');
+  save(); dlg.close(); toast(`${out.length} गाड़ियाँ स्टॉक में जुड़ गईं`+(skipped.length?` · ${skipped.length} पहले से थीं, छोड़ दीं`:'')); go('stock');
 }
 
-try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 /* ---------- cloud sync (Firebase) ---------- */
 const SHOP='chhachhrauli', FBV='12.19.0', CPK=KEY+'_cloudproj', PRE=KEY+'_precloud';
 const COLS=['stock','sales','daybook','enquiries','partners','capital'];
