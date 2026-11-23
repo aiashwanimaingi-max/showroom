@@ -135,7 +135,7 @@ const DEFAULTS={
     models:['Activa STD','Activa DLX','Activa 125 Drum','Activa 125 Disc','Shine 100 DX','CB Shine 125 Drum','CB Shine 125 Disc','SP 125 Disc','CB Hornet 125','Dio','Unicorn'],
     colours:['White','Black','Grey','Matt Grey','Blue','PS Blue','Black Red','Red','Yellow']
   },
-  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[], dealerPay:[], expPay:[]
+  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[], dealerPay:[], expPay:[], expenses:[]
 };
 let DB;
 try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
@@ -190,7 +190,7 @@ const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
 
 /* ---------- navigation ---------- */
-const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['dealer','Dealer Payments'],['rent','Rent & Salary'],['partners','Partners'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['day','Day Book'],['dealer','Dealer Payments'],['rent','Rent & Salary'],['exp','Expenses'],['partners','Partners'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
 let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
 function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
 function render(){
@@ -199,7 +199,7 @@ function render(){
   $('#hName').textContent=DB.settings.name;
   $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,dealer:vDealer,rent:vRent,partners:vPartners,enq:vEnq,tally:vTally,set:vSet})[tab]();
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,dealer:vDealer,rent:vRent,exp:vExp,partners:vPartners,enq:vEnq,tally:vTally,set:vSet})[tab]();
 }
 
 /* ---------- dashboard ---------- */
@@ -665,7 +665,7 @@ function dayList(){
     <div class="stat red"><div class="k">Closing cash in hand</div><div class="v">${rs(ob.cash+cin-cout)}</div></div></div>
   ${rows.length?`<div class="tablewrap"><table><tr><th>Date</th><th>Particulars</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr>
   ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td style="white-space:normal">${esc(d.particulars)}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
-  <td>${d.saleId||d.capId||d.dpId||d.epId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
+  <td>${d.saleId||d.capId||d.dpId||d.epId||d.exId?'<span class="muted" style="font-size:12px">auto</span>':`<button class="btn plain sm" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dayList()}">Delete</button>`}</td></tr>`).join('')}
   <tr class="tot"><td colspan="3">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
 }
 function addDay(e){
@@ -778,8 +778,9 @@ function csv(which){
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn'],
     dealerPay:['date','amount','mode','paidBy','ref','challans','note'],
-    expPay:['date','payee','type','month','amount','mode','paidBy','ref','note']}[which];
-  const rows=(DB[which]||[]).map(r=>which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+    expPay:['date','payee','type','month','amount','mode','paidBy','ref','note'],
+    expenses:['date','cat','usedFor','amount','vendor','bill','mode','paidBy','note']}[which];
+  const rows=(DB[which]||[]).map(r=>which==='expenses'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='expPay'?{...r,payee:epName(r.payee),month:mLabel(r.forMonth),paidBy:r.by?pName(r.by):'Business account'}:which==='dealerPay'?{...r,paidBy:r.by?pName(r.by):'Business account'}:which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,purchaseChallan:(DB.stock.find(x=>x.id===r.stockId)||{}).challan||'',received:saleReceived(r),due:Math.round(saleDue(r)),financeRecdAmt:r.financeReceived?finRecd(r):'',financeShortExcess:r.financeReceived?Math.round(finDiff(r)):''}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -996,6 +997,79 @@ function delExpPay(id){
   save(); vRent(); toast('Deleted');
 }
 
+/* ---------- expenses (spare parts / workshop / misc) ---------- */
+let exF='', exM='';
+const exCats=()=>DB.settings.expCats||(DB.settings.expCats=['Spare parts','Workshop','Miscellaneous']);
+const exRows=()=>(DB.expenses||[]).filter(x=>(!exF||x.cat===exF)&&(!exM||(x.date||'').startsWith(exM)));
+function exForm(x={}){
+  return `<label>Date<input type="date" name="date" value="${esc(x.date||today())}" required></label>
+    <label>Category<select name="cat">${opts(exCats(),x.cat||exCats()[0])}</select></label>
+    <label class="span2">Used for (किस चीज़ के लिए)<input name="usedFor" value="${esc(x.usedFor)}" list="dlUsed" placeholder="e.g. Service of HR02AB1234, battery, oil, tea, electricity…" required></label>
+    <label>Amount ₹<input name="amount" inputmode="decimal" value="${num(x.amount)||''}" required></label>
+    <label>Shop / vendor<input name="vendor" value="${esc(x.vendor)}" list="dlVend"></label>
+    <label>Bill no<input name="bill" value="${esc(x.bill)}"></label>
+    <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],x.mode||'Cash')}</select></label>
+    <label>Paid by<select name="by"><option value="">Business account</option>${DB.partners.map(p=>`<option value="${p.id}" ${x.by===p.id?'selected':''}>${esc(p.name)} (own pocket)</option>`).join('')}</select></label>
+    <label class="span2">Note<input name="note" value="${esc(x.note)}"></label>
+    ${dl('dlUsed',[...new Set((DB.expenses||[]).map(e=>e.usedFor).filter(Boolean))].slice(-80))}${dl('dlVend',[...new Set((DB.expenses||[]).map(e=>e.vendor).filter(Boolean))])}`;
+}
+function vExp(){
+  const C=exCats(), cm=curMonth(), all=DB.expenses||[];
+  const sumBy=(cat,m)=>all.filter(x=>x.cat===cat&&(!m||(x.date||'').startsWith(m))).reduce((a,x)=>a+num(x.amount),0);
+  const first=all.reduce((m,x)=>x.date&&x.date.slice(0,7)<m?x.date.slice(0,7):m,cm);
+  const months=monthsBack(Math.min(12,Math.max(1,(+cm.slice(0,4)-+first.slice(0,4))*12+(+cm.slice(5,7)-+first.slice(5,7))+1)));
+  $('#app').innerHTML=`
+  <div class="stats">${C.map(c=>`<div class="stat"><div class="k">${esc(c)} – ${mLabel(cm)}</div><div class="v">${rs(sumBy(c,cm))}</div><div class="sub2">All time ${rs(sumBy(c))}</div></div>`).join('')}
+    <div class="stat"><div class="k">Total – ${mLabel(cm)}</div><div class="v" style="color:var(--red)">${rs(C.reduce((a,c)=>a+sumBy(c,cm),0))}</div></div></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">New expense</h2><button class="btn plain sm" onclick="addExCat()">+ New category</button></div>
+  <form id="fex" class="grid" onsubmit="addExpense(event)">${exForm()}
+    <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Also add to Day Book</label>
+    <div style="align-self:end"><button class="btn">Save expense</button></div></form></div>
+  <div class="card"><h2>Month-wise</h2><div class="tablewrap"><table class="nice"><thead><tr><th>Month</th>${C.map(c=>`<th class="num">${esc(c)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>
+    ${months.map(m=>`<tr class="click" onclick="exM='${m}';vExp()"><td><b>${mLabel(m)}</b></td>${C.map(c=>`<td class="num">${sumBy(c,m)?rs(sumBy(c,m)):'<span class="muted">—</span>'}</td>`).join('')}<td class="num"><b>${rs(C.reduce((a,c)=>a+sumBy(c,m),0))}</b></td></tr>`).join('')}</tbody></table></div>
+    <p class="note">Click a month to see its expenses below.</p></div>
+  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Expense register</h2>
+    <select style="width:auto" onchange="exF=this.value;vExp()"><option value="">All categories</option>${C.map(c=>`<option ${exF===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+    <select style="width:auto" onchange="exM=this.value;vExp()"><option value="">All months</option>${months.map(m=>`<option value="${m}" ${exM===m?'selected':''}>${mLabel(m)}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('expenses')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('exp')">📄 PDF</button></div>
+  ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Category</th><th>Used for</th><th class="num">Amount</th><th>Shop / vendor</th><th>Bill no</th><th>Mode</th><th>Paid by</th><th></th></tr></thead><tbody>
+    ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><span class="pill ${/spare/i.test(x.cat)?'open':/workshop/i.test(x.cat)?'due':'lost'}">${esc(x.cat)}</span></td><td class="wrap"><b>${esc(x.usedFor)}</b>${x.note?`<div class="sub2">${esc(x.note)}</div>`:''}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.vendor)}</td><td>${esc(x.bill)}</td><td>${esc(x.mode)}</td>
+    <td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td style="white-space:nowrap"><button class="btn plain sm" onclick="editExpense('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delExpense('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr class="tot"><td colspan="3">Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="5"></td></tr></tfoot></table></div>`:'<div class="empty">No expenses.</div>')(exRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>`;
+}
+function addExCat(){const n=txt(prompt('New category name (e.g. Electricity, Fuel, Advertising):')||''); if(!n) return; if(!exCats().includes(n)){exCats().push(n);save()} vExp()}
+function exUnlink(x){ DB.daybook=DB.daybook.filter(d=>d.exId!==x.id&&!(x.capId&&d.capId===x.capId)); if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId); delete x.capId }
+function exLink(rec,toDay){
+  const t0=rec.created||Date.now(), a=num(rec.amount), label=`${rec.cat} – ${rec.usedFor}${rec.vendor?' · '+rec.vendor:''}${rec.bill?' · Bill '+rec.bill:''}`;
+  if(rec.by){
+    const cid=uid(), nm=pName(rec.by); rec.capId=cid;
+    DB.capital.push({id:cid,created:t0,date:rec.date,partnerId:rec.by,type:'exp',amount:a,mode:rec.mode,note:label});
+    if(toDay){
+      DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'in',mode:rec.mode,amount:a,particulars:`Capital – ${nm} (expense paid personally)`,capId:cid});
+      DB.daybook.push({id:uid(),created:t0+1,date:rec.date,type:'out',mode:rec.mode,amount:a,particulars:`${label} (paid by ${nm})`,capId:cid,exId:rec.id,exCat:rec.cat});
+    }
+  } else if(toDay) DB.daybook.push({id:uid(),created:t0,date:rec.date,type:'out',mode:rec.mode,amount:a,particulars:label,exId:rec.id,exCat:rec.cat});
+}
+const exFrom=d=>({date:d.date,cat:d.cat,usedFor:d.usedFor,amount:num(d.amount),vendor:d.vendor,bill:d.bill,mode:d.mode,by:d.by||'',note:d.note});
+function addExpense(e){
+  e.preventDefault(); const d=formData(e.target); if(num(d.amount)<=0) return;
+  const rec={id:uid(),created:Date.now(),...exFrom(d)}; exLink(rec,!!d.toDay); (DB.expenses=DB.expenses||[]).push(rec);
+  save(); toast('Expense saved'); const keep={date:d.date,cat:d.cat}; vExp(); const f=$('#fex'); for(const k in keep) f[k].value=keep[k]; f.usedFor.focus();
+}
+function editExpense(id){
+  const x=DB.expenses.find(r=>r.id===id); if(!x) return; const inDay=DB.daybook.some(d=>d.exId===id);
+  openDlg('Edit expense',`<form id="fexe" class="grid">${exForm(x)}<label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" ${inDay?'checked':''} style="width:auto"> Also in Day Book</label></form>`,
+  `<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveExpenseEdit('${id}')">Save changes</button>`);
+}
+function saveExpenseEdit(id){
+  const f=$('#fexe'); if(!f.reportValidity()) return; const d=formData(f); if(num(d.amount)<=0){alert('Enter an amount.');return}
+  const x=DB.expenses.find(r=>r.id===id); exUnlink(x); Object.assign(x,exFrom(d)); exLink(x,!!d.toDay); save(); dlg.close(); vExp(); toast('Expense updated');
+}
+function delExpense(id){
+  if(!confirm('Delete this expense? Its Day Book and partner capital entries will also be removed.')) return;
+  const x=DB.expenses.find(r=>r.id===id); if(!x) return; exUnlink(x); DB.expenses=DB.expenses.filter(r=>r.id!==id); save(); vExp(); toast('Deleted');
+}
+
 /* ---------- PDF export ---------- */
 function loadPDF(){return window.html2pdf?Promise.resolve():new Promise((ok,no)=>{const s=document.createElement('script');
   s.src=window.__H2P||'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
@@ -1033,6 +1107,12 @@ function pdfData(which){
     return {title:'Enquiry Register',sub:enqF==='All'?'All enquiries':enqF,
       head:['Date','Name','Mobile','Model wanted','Old vehicle','Follow-up','Status','Notes'],
       rows:rows.map(e=>[fd(e.date),e.name,e.phone,e.model,e.exchange,fd(e.followUp),e.status,e.notes]),foot:[['Total: '+rows.length]]};
+  }
+  if(which==='exp'){
+    const rows=exRows().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
+    return {title:'Expenses',sub:(exF||'All categories')+(exM?' · '+mLabel(exM):''),num:[3],head:['Date','Category','Used for','Amount','Shop / vendor','Bill no','Mode','Paid by','Note'],
+      rows:rows.map(x=>[fd(x.date),x.cat,x.usedFor,rs(x.amount),x.vendor,x.bill,x.mode,x.by?pName(x.by):'Business account',x.note]),
+      foot:[['','','Total',rs(rows.reduce((a,x)=>a+num(x.amount),0)),'','','','','']]};
   }
   if(which==='rent'){
     const rows=epRows().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.created-b.created);
@@ -1161,7 +1241,7 @@ function addCap(e){
 }
 function delCap(id){
   if(!confirm('Delete this entry? It will also be removed from the Day Book.')) return;
-  DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); DB.dealerPay=(DB.dealerPay||[]).filter(x=>x.capId!==id); DB.expPay=(DB.expPay||[]).filter(x=>x.capId!==id); save(); vPartners();
+  DB.capital=DB.capital.filter(c=>c.id!==id); DB.daybook=DB.daybook.filter(d=>d.capId!==id); DB.dealerPay=(DB.dealerPay||[]).filter(x=>x.capId!==id); DB.expPay=(DB.expPay||[]).filter(x=>x.capId!==id); DB.expenses=(DB.expenses||[]).filter(x=>x.capId!==id); save(); vPartners();
 }
 
 /* ---------- bill photo → sale / day book (same AI as challan) ---------- */
@@ -1476,7 +1556,7 @@ function applyImport(){
 
 /* ---------- Tally export (XML) ---------- */
 const TALLY_DEF={company:'',sales:'Sales',purchase:'Purchase',cash:'Cash',bank:'Bank',supplier:'Honda Motorcycle & Scooter India',
-  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',rentL:'Rent',salaryL:'Salary & Wages',lastExport:''};
+  gst:0,cgst:'CGST',sgst:'SGST',exchange:'Exchange Vehicles',expense:'Showroom Expenses',income:'Miscellaneous Receipts',debtors:'Sundry Debtors',rentL:'Rent',salaryL:'Salary & Wages',spareL:'Spare Parts Expenses',workshopL:'Workshop Expenses',miscL:'Miscellaneous Expenses',lastExport:''};
 const TL=()=>Object.assign({},TALLY_DEF,DB.settings.tally||{});
 let tFrom='', tTo='';
 function vTally(){
@@ -1500,7 +1580,7 @@ function vTally(){
   <div class="card"><h2>Tally ledger names</h2><form id="ftl" class="grid">
     ${f('company','Tally company name (blank = open company)')}${f('sales','Sales ledger')}${f('purchase','Purchase ledger')}
     ${f('cash','Cash ledger')}${f('bank','Bank ledger (for UPI / cheque / bank / finance)')}${f('supplier','Supplier (Honda / distributor) ledger')}
-    ${f('debtors','Group for customer ledgers')}${f('rentL','Rent ledger')}${f('salaryL','Salary ledger')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
+    ${f('debtors','Group for customer ledgers')}${f('rentL','Rent ledger')}${f('salaryL','Salary ledger')}${f('spareL','Spare parts ledger')}${f('workshopL','Workshop ledger')}${f('miscL','Miscellaneous ledger')}${f('exchange','Exchange (old vehicle) ledger')}${f('expense','Expenses ledger (Day Book payments)')}${f('income','Other receipts ledger (Day Book receipts)')}
     ${f('gst','GST rate % in prices (0 = no GST split)','inputmode="decimal"')}${f('cgst','CGST ledger')}${f('sgst','SGST ledger')}
   </form><p class="note">If GST rate is filled (e.g. 18 or 28), vehicle prices are treated as GST-inclusive and split into Sales + CGST + SGST. Leave 0 if you enter GST separately in Tally.</p>
   <div style="margin-top:10px"><button class="btn" onclick="saveTally()">Save ledger names</button></div></div>`;
@@ -1538,6 +1618,7 @@ function tallyVouchers(from,to){
   }
   for(const d of DB.daybook) if(!d.saleId&&ins(d.date)&&num(d.amount)>0){
     const a=num(d.amount), cap=d.capId&&DB.capital.find(c=>c.id===d.capId), capL=cap&&`${pName(cap.partnerId)} Capital A/c`;
+    if(d.exId&&d.type==='out'){const c=d.exCat||'';V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[/spare/i.test(c)?T.spareL:/workshop/i.test(c)?T.workshopL:/misc/i.test(c)?T.miscL:T.expense,a],[modeL(d.mode),-a]]});continue}
     if(d.epId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[d.epKind==='rent'?T.rentL:T.salaryL,a],[modeL(d.mode),-a]]});continue}
     if(d.dpId&&d.type==='out'){V.push({type:'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.supplier,a],[modeL(d.mode),-a]]});continue}
     if(cap&&d.type==='in'){V.push({type:'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[modeL(d.mode),a],[capL,-a]]});continue}
@@ -1708,7 +1789,7 @@ function saveChallan(){
 
 /* ---------- cloud sync (Firebase) ---------- */
 const SHOP='chhachhrauli', FBV='12.19.0', CPK=KEY+'_cloudproj', PRE=KEY+'_precloud';
-const COLS=['stock','sales','daybook','enquiries','partners','capital','dealerPay','expPay'];
+const COLS=['stock','sales','daybook','enquiries','partners','capital','dealerPay','expPay','expenses'];
 const jparse=j=>{try{return JSON.parse(j)}catch(e){return null}};
 const localHas=()=>COLS.some(c=>(DB[c]||[]).length);
 function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
