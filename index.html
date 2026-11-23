@@ -871,6 +871,8 @@ For each sale:
 - purchase_challan_no: the supplier's challan number with which this vehicle was PURCHASED by the showroom. On handwritten pages it is written as "Challan No: ...." (e.g. "Challan No: 7316"). Empty if not shown. Never put the circled number here.
 - key_no: key number if written (e.g. "Key No: PN90").
 - A date written in the margin or top corner of a handwritten page (e.g. 22-11-26) is the sale date.
+- phone: the first mobile number. notes: put any second mobile number and the battery number here, e.g. "Mob 2: 7015712076 · Battery: 50611320467598".
+- Example of a handwritten page: circled "47" at top → sale_challan_no "47"; "Challan No: 6411" → purchase_challan_no "6411"; "Name: Sani W/o Moseen" → customer_name "Sani", relation "W/o", relative_name "Moseen".
 - customer_name; relation (S/o, W/o, D/o or C/o as written); relative_name (father / husband name); phone (10-digit mobile); address.
 - model, colour, engine number and chassis (frame / VIN) number. Copy engine and chassis exactly, in capitals with no spaces; do not confuse 0/O, 1/I, 5/S, 8/B.
   If the model or colour matches one of these names used by the dealership, use that exact name: Models: ${DB.settings.models.join(', ')}. Colours: ${DB.settings.colours.join(', ')}.
