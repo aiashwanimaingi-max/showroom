@@ -60,6 +60,16 @@ th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white
 th{background:#fafaf9;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 tr:hover td{background:#fcfcfb}
+table.nice th{background:#fbf3f3;color:#7a2a2a;font-size:11.5px;padding:10px 12px;border-bottom:2px solid #f0dcdc}
+table.nice td{padding:11px 12px;vertical-align:top}
+table.nice tbody tr:nth-child(even) td{background:#fcfcfb}
+table.nice tbody tr:hover td{background:#fff8f0}
+table.nice td.wrap{white-space:normal;min-width:150px;max-width:230px}
+table.nice tfoot td{border-top:2px solid #e3e3e1;padding:12px}
+.sub2{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400}
+.amt{font-weight:700;font-variant-numeric:tabular-nums}.amt.neg{color:#c00}.amt.pos{color:var(--green)}.amt.ok{color:var(--green)}
+a.fill{color:var(--amber);font-weight:600;text-decoration:none;border-bottom:1px dashed}
+.stat .sub2{margin-top:4px}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
 .pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
 .pill.in{background:var(--green-soft);color:var(--green)}
@@ -435,21 +445,46 @@ function financeUndo(id){
   const s=DB.sales.find(x=>x.id===id); s.financeReceived=false; delete s.financeRecdAmt; delete s.financeRecdDate;
   DB.daybook=DB.daybook.filter(x=>!(x.fin&&x.saleId===id)); save(); render(); viewSale(id);
 }
-function salesTable(rows){
-  return rows.length?`<div class="tablewrap"><table><tr><th>Inv</th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Model</th><th>Chassis</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Received</th><th class="num">Due</th><th></th></tr>
-  ${rows.map(s=>{const due=saleDue(s);return `<tr><td>${s.inv}</td><td>${esc(s.schallan)||'<span class="muted">—</span>'}</td><td>${fd(s.date)}</td><td><b>${esc(s.name)}</b><div class="muted" style="font-size:12px">${esc(s.rel)} ${esc(s.relName)}</div></td><td>${esc(s.phone)}</td><td>${esc(s.model)} <span class="muted">${esc(s.colour)}</span></td><td class="mono">${esc(s.chassis)}</td>
-  <td class="num">${rs(s.total)}</td><td class="num">${finCell(s)}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
-  <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td><td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">No sales yet.</div>';
+function salesTable(rows,summary){
+  if(!rows.length) return '<div class="empty">No sales yet.</div>';
+  const sum=f=>rows.reduce((a,s)=>a+f(s),0);
+  const diffCell=s=>{ if(!num(s.finance)) return '<span class="muted">—</span>'; if(!s.financeReceived) return '<span class="muted">—</span>';
+    const d=finDiff(s); return Math.abs(d)<0.5?'<span class="amt ok">✓ पूरा</span>':d<0?`<span class="amt neg">− ${rs(-d)}</span><div class="sub2">कम आया</div>`:`<span class="amt pos">+ ${rs(d)}</span><div class="sub2">ज़्यादा आया</div>`};
+  const finCellN=s=>num(s.finance)?`<b>${rs(s.finance)}</b><div class="sub2">${esc(s.financer)||''}</div>`:(s.financer?`<a href="#" class="fill" onclick="setFinance('${s.id}');return false">+ राशि भरें</a><div class="sub2">${esc(s.financer)}</div>`:'<span class="muted">—</span>');
+  const recCell=s=>!num(s.finance)?'<span class="muted">—</span>':s.financeReceived?`<b>${rs(finRecd(s))}</b><div class="sub2">${fd(s.financeRecdDate||'')}</div>`:`<button class="btn ghost sm" onclick="financeRecv('${s.id}')">आया — भरें</button>`;
+  const tD=sum(s=>finDiff(s));
+  const cards=summary?`<div class="stats" style="margin-bottom:14px">
+    <div class="stat"><div class="k">कुल सेल</div><div class="v">${rows.length}</div><div class="sub2">${rs(sum(s=>num(s.total)))}</div></div>
+    <div class="stat"><div class="k">Finance (बिल)</div><div class="v">${rs(sum(s=>num(s.finance)))}</div></div>
+    <div class="stat"><div class="k">Finance आया</div><div class="v" style="color:var(--green)">${rs(sum(s=>finRecd(s)))}</div></div>
+    <div class="stat"><div class="k">Finance pending</div><div class="v" style="color:var(--amber)">${rs(sum(s=>num(s.finance)&&!s.financeReceived?num(s.finance):0))}</div></div>
+    <div class="stat"><div class="k">Finance कम / ज़्यादा</div><div class="v" style="color:${tD<-0.5?'var(--red)':tD>0.5?'var(--green)':'inherit'}">${Math.abs(tD)<0.5?'₹0':(tD<0?'− ':'+ ')+rs(Math.abs(tD))}</div></div>
+    <div class="stat"><div class="k">ग्राहकों का बाकी</div><div class="v" style="color:var(--red)">${rs(sum(s=>Math.max(0,saleDue(s))))}</div></div></div>`:'';
+  return cards+`<div class="tablewrap"><table class="nice"><thead><tr><th>Bill</th><th>Date</th><th>Customer</th><th>Vehicle</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Finance आया</th><th class="num">कम / ज़्यादा</th><th class="num">ग्राहक से मिला</th><th class="num">बाकी</th><th></th></tr></thead><tbody>
+  ${rows.map(s=>{const due=saleDue(s);return `<tr>
+    <td><b>${esc(s.schallan)||'<span class="muted">—</span>'}</b><div class="sub2">Rcpt #${s.inv}</div></td>
+    <td>${fd(s.date)}</td>
+    <td class="wrap"><b>${esc(s.name)}</b><div class="sub2">${esc(s.rel||'')} ${esc(s.relName||'')}${s.phone?' · '+esc(s.phone):''}</div></td>
+    <td class="wrap">${esc(s.model)} <span class="muted">${esc(s.colour||'')}</span><div class="sub2 mono">${esc(s.chassis)}</div></td>
+    <td class="num"><b>${rs(s.total)}</b></td>
+    <td class="num">${finCellN(s)}</td>
+    <td class="num">${recCell(s)}</td>
+    <td class="num">${diffCell(s)}</td>
+    <td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
+    <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td>
+    <td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="4">कुल (${rows.length})</td><td class="num">${rs(sum(s=>num(s.total)))}</td><td class="num">${rs(sum(s=>num(s.finance)))}</td><td class="num">${rs(sum(s=>finRecd(s)))}</td>
+    <td class="num">${Math.abs(tD)<0.5?'—':`<span class="amt ${tD<0?'neg':'pos'}">${tD<0?'− ':'+ '}${rs(Math.abs(tD))}</span>`}</td><td class="num">${rs(sum(s=>saleReceived(s)+num(s.exchangeValue)))}</td><td class="num">${rs(sum(s=>Math.max(0,saleDue(s))))}</td><td></td></tr></tfoot></table></div>`;
 }
 function vSales(){
-  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">Sale register</h2>
+  $('#app').innerHTML=`<div class="card"><div class="row" style="margin-bottom:14px;row-gap:10px"><h2 class="grow" style="margin:0;min-width:160px">Sale register</h2>
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
   <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','बिलों की फोटो से सेल (कई एक साथ)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
   salesList();
 }
 function salesList(){
   const q=salesQ.toLowerCase();
-  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv));
+  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv),true);
 }
 function viewSale(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return; const due=saleDue(s);
@@ -662,11 +697,13 @@ function pdfData(which){
   }
   if(which==='sales'){
     const q=salesQ.toLowerCase(), rows=DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||a.inv-b.inv);
-    const T=k=>rows.reduce((a,s)=>a+k(s),0);
-    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[9,10,11,12],
-      head:['Inv','Sale Challan','Date','Customer','Mobile','Model','Colour','Chassis','Financer','Total','Finance','Received','Due'],
-      rows:rows.map(s=>[s.inv,s.schallan,fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,s.model,s.colour,s.chassis,s.financer,rs(s.total),s.finance?rs(s.finance)+(s.financeReceived?` (आया ${rs(finRecd(s))}${Math.abs(finDiff(s))>=0.5?(finDiff(s)<0?', '+rs(-finDiff(s))+' कम':', '+rs(finDiff(s))+' ज़्यादा'):''})`:' pending'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
-      foot:[['','','','Total ('+rows.length+' sales)','','','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
+    const T=k=>rows.reduce((a,s)=>a+k(s),0), dd=v=>Math.abs(v)<0.5?'':(v<0?'− ':'+ ')+rs(Math.abs(v));
+    return {title:'Sale Register',sub:salesQ?`search “${salesQ}”`:'All sales',num:[6,7,8,9,10,11],
+      head:['Bill','Date','Customer','Mobile','Vehicle','Chassis','Total','Finance','Finance आया','कम / ज़्यादा','ग्राहक से मिला','बाकी'],
+      rows:rows.map(s=>[s.schallan||('#'+s.inv),fd(s.date),`${s.name} ${s.rel||''} ${s.relName||''}`.trim(),s.phone,`${s.model||''} ${s.colour||''}`,s.chassis,rs(s.total),
+        num(s.finance)?rs(s.finance)+(s.financer?' '+s.financer:''):(s.financer||''),num(s.finance)?(s.financeReceived?rs(finRecd(s)):'pending'):'',
+        s.financeReceived&&num(s.finance)?(dd(finDiff(s))||'✓ पूरा'):'',rs(saleReceived(s)+num(s.exchangeValue)),saleDue(s)>0.5?rs(saleDue(s)):'Paid']),
+      foot:[['','','Total ('+rows.length+' sales)','','','',rs(T(s=>num(s.total))),rs(T(s=>num(s.finance))),rs(T(s=>finRecd(s))),dd(T(s=>finDiff(s))),rs(T(s=>saleReceived(s)+num(s.exchangeValue))),rs(T(s=>Math.max(0,saleDue(s))))]]};
   }
   if(which==='daybook'){
     const rows=DB.daybook.filter(d=>d.date>=dayFrom&&d.date<=dayTo).sort((a,b)=>a.date.localeCompare(b.date)||a.created-b.created);
