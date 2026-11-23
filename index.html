@@ -227,7 +227,7 @@ function vStock(){
     <label class="btn">📷 चालान की फोटो से भरें<input type="file" accept="image/*,.pdf,application/pdf" multiple class="hide" onchange="aiChallan([...this.files]);this.value=''"></label></div>
   <form id="fStock" class="grid" onsubmit="addStock(event)">
     <label>Date<input type="date" name="date" value="${today()}" required></label>
-    <label>Challan No<input name="challan" required></label>
+    <label>Purchase Challan No<input name="challan" required></label>
     <label>Model<input name="model" list="dlModels" required></label>
     <label>Colour<input name="colour" list="dlCols"></label>
     <label>Engine No<input name="engine" class="mono" required></label>
@@ -253,8 +253,8 @@ function stockList(){
   const ids=new Set(DB.stock.map(s=>s.id)); [...stSel].forEach(id=>{if(!ids.has(id))stSel.delete(id)});
   const allOn=rows.length&&rows.every(s=>stSel.has(s.id));
   $('#stockList').innerHTML=(stSel.size?`<div class="warn" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b>${stSel.size} गाड़ियाँ चुनी हैं</b><button class="btn sm" onclick="stDelete()">🗑 चुनी हुई गाड़ियाँ हटाएँ</button><button class="btn plain sm" onclick="stSel.clear();stockList()">चुनाव हटाएँ</button></div>`:'')+
-  (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="सब चुनें" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
-  ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ भरें</a>`}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
+  (rows.length?`<div class="tablewrap"><table><tr><th><input type="checkbox" style="width:auto" title="सब चुनें" ${allOn?'checked':''} onchange="stockRows().forEach(s=>this.checked?stSel.add(s.id):stSel.delete(s.id));stockList()"></th><th>#</th><th>Date</th><th>Purchase Challan</th><th>Sale Challan</th><th>Model</th><th>Colour</th><th>Engine No</th><th>Chassis No</th><th>Key</th><th>Status</th><th></th></tr>
+  ${rows.map((s,i)=>`<tr${stSel.has(s.id)?' style="background:#fff4e0"':''}><td><input type="checkbox" style="width:auto" ${stSel.has(s.id)?'checked':''} onchange="this.checked?stSel.add('${s.id}'):stSel.delete('${s.id}');stockList()"></td><td>${rows.length-i}</td><td>${fd(s.date)}</td><td>${s.challan?esc(s.challan):`<a href="#" onclick="editStock('${s.id}');return false" style="color:var(--amber)">+ भरें</a>`}</td><td>${(sl=>sl?(sl.schallan?esc(sl.schallan):`<a href="#" onclick="setSChallan('${sl.id}');return false" style="color:var(--amber)">+ भरें</a>`):'<span class="muted">—</span>')(s.saleId&&DB.sales.find(z=>z.id===s.saleId))}</td><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td class="mono">${esc(s.engine)}</td><td class="mono">${esc(s.chassis)}</td><td class="mono">${esc(s.key)}</td>
   <td>${s.status==='sold'?'<span class="pill sold">Sold</span>':'<span class="pill in">In stock</span>'}</td>
   <td>${s.status!=='sold'?`<button class="btn sm" onclick="newSale('${s.id}')">Sell</button> <button class="btn plain sm" onclick="editStock('${s.id}')">Edit</button>`:s.saleId?`<button class="btn plain sm" onclick="viewSale('${s.saleId}')">View sale</button>`:''}</td></tr>`).join('')}</table></div>`
   :'<div class="empty">No vehicles found.</div>');
@@ -326,7 +326,7 @@ function dupApply(){
 function editStock(id){
   const s=DB.stock.find(x=>x.id===id);
   openDlg('Edit vehicle',`<form id="fe" class="grid">
-    <label>Date<input type="date" name="date" value="${esc(s.date)}"></label><label>Challan No<input name="challan" value="${esc(s.challan)}"></label>
+    <label>Date<input type="date" name="date" value="${esc(s.date)}"></label><label>Purchase Challan No<input name="challan" value="${esc(s.challan)}"></label>
     <label>Model<input name="model" list="dlModels" value="${esc(s.model)}"></label><label>Colour<input name="colour" list="dlCols" value="${esc(s.colour)}"></label>
     <label>Engine No<input name="engine" class="mono" value="${esc(s.engine)}"></label><label>Chassis No<input name="chassis" class="mono" value="${esc(s.chassis)}"></label>
     <label>Key No<input name="key" class="mono" value="${esc(s.key)}"></label><label>Purchase price<input name="cost" value="${esc(s.cost)}"></label></form>`,
@@ -343,6 +343,7 @@ function newSale(stockId,enqId){
   openDlg('New sale',`<form id="fs" class="grid">
     <label class="span2">Vehicle (from stock)<select name="stockId" required>${avail.map(s=>`<option value="${s.id}" ${s.id===stockId?'selected':''}>${esc(s.model)} · ${esc(s.colour)} · Ch ${esc(s.chassis)}</option>`).join('')}</select></label>
     <label>Date<input type="date" name="date" value="${today()}" required></label>
+    <label>Sale Challan / Bill No<input name="schallan"></label>
     <label>Customer name<input name="name" value="${esc(e?.name)}" required></label>
     <label>Relation<select name="rel"><option>S/o</option><option>W/o</option><option>D/o</option><option>C/o</option></select></label>
     <label>Father / husband name<input name="relName"></label>
@@ -367,7 +368,7 @@ function saveSale(enqId){
   const f=$('#fs'); if(!f.reportValidity()) return; const d=formData(f);
   const st=DB.stock.find(s=>s.id===d.stockId);
   const id=uid(), inv=Math.max(num(DB.settings.nextInv)||1,1+Math.max(0,...DB.sales.map(x=>num(x.inv)))); DB.settings.nextInv=inv+1;
-  const sale={id,inv,created:Date.now(),date:d.date,stockId:st.id,model:st.model,colour:st.colour,chassis:st.chassis,engine:st.engine,key:st.key,
+  const sale={id,inv,schallan:d.schallan,created:Date.now(),date:d.date,stockId:st.id,model:st.model,colour:st.colour,chassis:st.chassis,engine:st.engine,key:st.key,
     name:d.name,rel:d.rel,relName:d.relName,phone:d.phone,address:d.address,price:num(d.price),extra:num(d.extra),total:num(d.price)+num(d.extra),
     finance:num(d.finance),financer:d.financer,financeReceived:false,exchange:d.exchange,exchangeValue:num(d.exchangeValue),notes:d.notes,payments:[]};
   DB.sales.push(sale); st.status='sold'; st.saleId=id;
@@ -395,8 +396,8 @@ function financeRecv(id){
   save(); render(); if(dlg.open) viewSale(id);
 }
 function salesTable(rows){
-  return rows.length?`<div class="tablewrap"><table><tr><th>Inv</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Model</th><th>Chassis</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Received</th><th class="num">Due</th><th></th></tr>
-  ${rows.map(s=>{const due=saleDue(s);return `<tr><td>${s.inv}</td><td>${fd(s.date)}</td><td><b>${esc(s.name)}</b><div class="muted" style="font-size:12px">${esc(s.rel)} ${esc(s.relName)}</div></td><td>${esc(s.phone)}</td><td>${esc(s.model)} <span class="muted">${esc(s.colour)}</span></td><td class="mono">${esc(s.chassis)}</td>
+  return rows.length?`<div class="tablewrap"><table><tr><th>Inv</th><th>Sale Challan</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Model</th><th>Chassis</th><th class="num">Total</th><th class="num">Finance</th><th class="num">Received</th><th class="num">Due</th><th></th></tr>
+  ${rows.map(s=>{const due=saleDue(s);return `<tr><td>${s.inv}</td><td>${esc(s.schallan)||'<span class="muted">—</span>'}</td><td>${fd(s.date)}</td><td><b>${esc(s.name)}</b><div class="muted" style="font-size:12px">${esc(s.rel)} ${esc(s.relName)}</div></td><td>${esc(s.phone)}</td><td>${esc(s.model)} <span class="muted">${esc(s.colour)}</span></td><td class="mono">${esc(s.chassis)}</td>
   <td class="num">${rs(s.total)}</td><td class="num">${s.finance?rs(s.finance)+'<br>'+(s.financeReceived?'<span class="pill in">recd</span>':'<span class="pill due">pending</span>'):'—'}</td><td class="num">${rs(saleReceived(s)+num(s.exchangeValue))}</td>
   <td class="num">${due>0.5?`<span class="pill due">${rs(due)}</span>`:'<span class="pill in">Paid</span>'}</td><td><button class="btn plain sm" onclick="viewSale('${s.id}')">Open</button></td></tr>`}).join('')}</table></div>`:'<div class="empty">No sales yet.</div>';
 }
@@ -408,12 +409,12 @@ function vSales(){
 }
 function salesList(){
   const q=salesQ.toLowerCase();
-  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv));
+  $('#salesList').innerHTML=salesTable(DB.sales.filter(s=>!q||[s.name,s.phone,s.chassis,s.engine,s.model,s.inv,s.address,s.schallan].join(' ').toLowerCase().includes(q)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.inv-a.inv));
 }
 function viewSale(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return; const due=saleDue(s);
   openDlg(`Sale #${s.inv} – ${s.name}`,`
-  <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
+  <table><tr><td class="muted">Date</td><td>${fd(s.date)}</td></tr><tr><td class="muted">Sale Challan</td><td>${esc(s.schallan)||'—'} <button class="btn plain sm" onclick="setSChallan('${s.id}')">${s.schallan?'बदलें':'+ भरें'}</button></td></tr><tr><td class="muted">Purchase Challan</td><td>${esc((DB.stock.find(x=>x.id===s.stockId)||{}).challan)||'—'}</td></tr><tr><td class="muted">Customer</td><td><b>${esc(s.name)}</b> ${esc(s.rel)} ${esc(s.relName)}<br>${esc(s.address)}<br>${esc(s.phone)}</td></tr>
   <tr><td class="muted">Vehicle</td><td>${esc(s.model)} · ${esc(s.colour)}<br><span class="mono">Ch: ${esc(s.chassis)}<br>Eng: ${esc(s.engine)} · Key: ${esc(s.key)}</span></td></tr>
   <tr><td class="muted">Price + extra</td><td>${rs(s.price)} + ${rs(s.extra)} = <b>${rs(s.total)}</b></td></tr>
   ${s.finance?`<tr><td class="muted">Finance</td><td>${rs(s.finance)} · ${esc(s.financer)} ${s.financeReceived?'<span class="pill in">received</span>':`<span class="pill due">pending</span> <button class="btn sm" onclick="financeRecv('${s.id}')">Mark received</button>`}</td></tr>`:''}
@@ -425,6 +426,11 @@ function viewSale(id){
    ${due>0.5?`<button class="btn ghost" onclick="receivePay('${s.id}')">Receive payment</button>`:''}
    <button class="btn" onclick="printSale('${s.id}')">🖨 Print receipt</button>`);
 }
+function setSChallan(id){
+  const s=DB.sales.find(x=>x.id===id); if(!s) return;
+  const v=prompt(`Sale Challan / Bill No — ${s.name} (${s.model})`,s.schallan||''); if(v===null) return;
+  s.schallan=txt(v); save(); const open=dlg.open; render(); if(open) viewSale(id); toast('Sale challan saved');
+}
 function delSale(id){
   if(!confirm('Cancel this sale? The vehicle goes back to stock and its Day Book receipts are removed.')) return;
   const s=DB.sales.find(x=>x.id===id); const st=DB.stock.find(x=>x.id===s.stockId); if(st){st.status='in';delete st.saleId}
@@ -433,7 +439,7 @@ function delSale(id){
 function printSale(id){
   const s=DB.sales.find(x=>x.id===id), S=DB.settings;
   $('#print').innerHTML=`<div class="rc"><div class="hd"><div><h3>${esc(S.name)}</h3><div>${esc(S.address)}</div><div>Ph: ${esc(S.phones)}${S.gstin?' · GSTIN: '+esc(S.gstin):''}</div></div>
-  <div style="text-align:right"><b>SALE RECEIPT</b><br>No. ${s.inv}<br>Date: ${fd(s.date)}</div></div>
+  <div style="text-align:right"><b>SALE RECEIPT</b><br>No. ${s.inv}<br>${s.schallan?'Challan: '+esc(s.schallan)+'<br>':''}Date: ${fd(s.date)}</div></div>
   <p><b>Customer:</b> ${esc(s.name)} ${esc(s.rel)} ${esc(s.relName)}<br><b>Address:</b> ${esc(s.address)}<br><b>Mobile:</b> ${esc(s.phone)}</p>
   <table style="width:100%"><tr><th>Model</th><th>Colour</th><th>Chassis No</th><th>Engine No</th><th>Key</th></tr><tr><td>${esc(s.model)}</td><td>${esc(s.colour)}</td><td>${esc(s.chassis)}</td><td>${esc(s.engine)}</td><td>${esc(s.key)}</td></tr></table>
   <table style="width:60%;margin:14px 0 0 auto"><tr><td>Vehicle price</td><td class="num">${rs(s.price)}</td></tr>${s.extra?`<tr><td>Accessories / extra</td><td class="num">${rs(s.extra)}</td></tr>`:''}
@@ -589,11 +595,11 @@ function restoreJSON(file){
   r.readAsText(file);
 }
 function csv(which){
-  const cols={stock:['date','challan','model','colour','engine','chassis','key','cost','status'],
-    sales:['inv','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','exchange','exchangeValue','received','due','notes'],
+  const cols={stock:['date','challan','saleChallan','model','colour','engine','chassis','key','cost','status'],
+    sales:['inv','schallan','date','name','rel','relName','phone','address','model','colour','chassis','engine','key','price','extra','total','finance','financer','financeReceived','exchange','exchangeValue','received','due','notes'],
     daybook:['date','type','particulars','mode','amount'],enquiries:['date','name','phone','model','exchange','followUp','status','notes'],
     capital:['date','partner','type','mode','note','invested','withdrawn']}[which];
-  const rows=DB[which].map(r=>which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r))}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
+  const rows=DB[which].map(r=>which==='stock'?{...r,saleChallan:(DB.sales.find(z=>z.id===r.saleId)||{}).schallan||''}:which==='sales'?{...r,received:saleReceived(r),due:Math.round(saleDue(r))}:which==='daybook'?{...r,type:r.type==='in'?'Receipt':'Payment'}:which==='capital'?{...r,partner:pName(r.partnerId),type:CAP_T[r.type],invested:r.type!=='out'?r.amount:'',withdrawn:r.type==='out'?r.amount:''}:r);
   const q=v=>{v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
   // Leading tab keeps long chassis/engine numbers from turning into scientific notation in Excel
   const t=v=>/^\d{11,}$/.test(String(v))?'\t'+v:v;
@@ -695,7 +701,7 @@ const aiRun=(key,parts,prompt,schema,name)=>aiProv()==='openai'?readOpenAI(key,p
 function aiFail(e){openDlg('फोटो नहीं पढ़ी जा सकी',`<p style="margin-top:0">${esc(e.message==='IMG'?'यह फोटो खुल नहीं रही। JPG / PNG फोटो या PDF डालें (iPhone की HEIC फोटो हो तो JPG में बदलें)।':e.message)}</p>`,'<button class="btn" onclick="dlg.close()">ठीक है</button>')}
 const objSchema=props=>({type:'object',additionalProperties:false,required:Object.keys(props),properties:props});
 const S_STR={type:'string'}, S_NUM={type:'number'};
-const SALE_SCHEMA=objSchema({date:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
+const SALE_SCHEMA=objSchema({date:S_STR,sale_challan_no:S_STR,customer_name:S_STR,relation:{type:'string',enum:['S/o','W/o','D/o','C/o','']},relative_name:S_STR,phone:S_STR,address:S_STR,
   model:S_STR,colour:S_STR,engine:S_STR,chassis:S_STR,price:S_NUM,accessories:S_NUM,finance_amount:S_NUM,financer:S_STR,exchange_vehicle:S_STR,exchange_value:S_NUM,
   paid_amount:S_NUM,payment_mode:{type:'string',enum:['Cash','Cheque','UPI','Bank']},payment_ref:S_STR,notes:S_STR});
 const PAY_SCHEMA=objSchema({entries:{type:'array',items:objSchema({date:S_STR,direction:{type:'string',enum:['in','out']},particulars:S_STR,amount:S_NUM,
@@ -711,6 +717,7 @@ async function aiSale(files){
 - price: vehicle price / on-road price. accessories: accessories or extra charges shown separately, else 0.
 - finance_amount and financer (bank / finance company) if financed, else 0 and "". exchange_vehicle and exchange_value if an old vehicle was taken in exchange.
 - paid_amount: money the customer paid now (cash / down payment / advance); payment_mode; payment_ref (cheque no / UTR).
+- sale_challan_no: the showroom's own sale challan / delivery challan / bill / invoice number printed on this document (ONE number only).
 - date as YYYY-MM-DD (Indian dates are day-month-year).
 - Leave a field empty ("" or 0) if it is not present or not readable. Never invent a value.`;
     fillSale(await aiRun(a.key,a.parts,prompt,SALE_SCHEMA,'sale'));
@@ -735,7 +742,7 @@ function addStockFromBill(){
 function fillSaleForm(stockId){
   const d=window.__bill; newSale(stockId); const f=$('#fs'); if(!f) return;
   const set=(n,v)=>{if(f[n]&&v) f[n].value=v};
-  set('date',toISO(d.date)); set('name',txt(d.customer_name)); set('rel',d.relation); set('relName',txt(d.relative_name)); set('phone',txt(d.phone)); set('address',txt(d.address));
+  set('date',toISO(d.date)); set('schallan',txt(d.sale_challan_no)); set('name',txt(d.customer_name)); set('rel',d.relation); set('relName',txt(d.relative_name)); set('phone',txt(d.phone)); set('address',txt(d.address));
   set('price',num(d.price)); set('extra',num(d.accessories)); set('finance',num(d.finance_amount)); set('financer',txt(d.financer));
   set('exchange',txt(d.exchange_vehicle)); set('exchangeValue',num(d.exchange_value)); set('paid',num(d.paid_amount)); set('mode',d.payment_mode); set('ref',txt(d.payment_ref)); set('notes',txt(d.notes));
   saleCalc();
@@ -787,7 +794,7 @@ const STOCK_F={date:['date','purchasedate','inwarddate','challandate','receivedd
   model:['model','modelname','vehicle','vehiclemodel','variant'],colour:['colour','color','colourname','colorname'],engine:['engine','engineno','enginenumber','engno'],
   chassis:['chassis','chassisno','chassisnumber','frameno','vin','chno'],key:['key','keyno','keynumber'],
   cost:['cost','purchaseprice','purchaserate','rate','price','amount','dealerprice','landingcost'],status:['status']};
-const SALES_F={inv:['inv','invno','invoice','invoiceno','receiptno','billno'],date:['date','saledate','invoicedate','billdate','deliverydate'],
+const SALES_F={inv:['inv','invno','receiptno'],schallan:['salechallan','salechallanno','challan','challanno','deliverychallan','deliverychallanno','dcno','invoice','invoiceno','billno','salebillno'],date:['date','saledate','invoicedate','billdate','deliverydate'],
   name:['name','customer','customername','buyer','buyername','custname'],rel:['rel','relation'],
   relName:['relname','father','fathername','husband','husbandname','fatherhusbandname','fatherhusband','so','swo','co','fathersname'],
   phone:['phone','mobile','mobileno','phoneno','contact','contactno','mob','mobilenumber'],address:['address','addr','village','city'],
@@ -806,8 +813,8 @@ function impBtn(which,cls='btn plain sm',label='⬆ Import from Excel'){
 function impTemplate(which){
   const t=which==='stock'
    ?['Date,Challan No,Model,Colour,Engine No,Chassis No,Key No,Purchase Price','21-11-2026,CH1234,Activa 125 Disc,Matt Grey,JF89E1234567,ME4JF891234567890,K123,82000']
-   :['Invoice No,Date,Customer Name,Relation,Father/Husband Name,Mobile,Address,Model,Colour,Chassis No,Engine No,Key No,Vehicle Price,Accessories,Finance Amount,Financer,Finance Received,Exchange Vehicle,Exchange Value,Amount Received,Payment Mode,Notes',
-     ',21-11-2026,Ramesh Kumar,S/o,Suresh Kumar,9876543210,Chhachhrauli,Activa 125 Disc,Matt Grey,ME4JF891234567890,JF89E1234567,K123,95000,1500,60000,HDFC,No,,0,36500,Cash,'];
+   :['Receipt No,Sale Challan No,Date,Customer Name,Relation,Father/Husband Name,Mobile,Address,Model,Colour,Chassis No,Engine No,Key No,Vehicle Price,Accessories,Finance Amount,Financer,Finance Received,Exchange Vehicle,Exchange Value,Amount Received,Payment Mode,Notes',
+     ',SC101,21-11-2026,Ramesh Kumar,S/o,Suresh Kumar,9876543210,Chhachhrauli,Activa 125 Disc,Matt Grey,ME4JF891234567890,JF89E1234567,K123,95000,1500,60000,HDFC,No,,0,36500,Cash,'];
   download(`${which}-import-template.csv`,'﻿'+t.join('\n'),'text/csv');
 }
 function parseCSV(text){
@@ -870,7 +877,7 @@ function planSales(rows){
   const sc=new Set(DB.sales.map(s=>s.chassis).filter(Boolean)), se=new Set(DB.sales.map(s=>s.engine).filter(Boolean));
   for(const {o,line} of h.recs){
     const relT=txt(o.rel).toLowerCase(), modeT=txt(o.mode).toLowerCase();
-    const r={inv:parseInt(num(o.inv))||null,date:toISO(o.date)||today(),name:txt(o.name),rel:/w/.test(relT)?'W/o':/d/.test(relT)?'D/o':/c/.test(relT)?'C/o':'S/o',
+    const r={inv:parseInt(num(o.inv))||null,schallan:txt(o.schallan),date:toISO(o.date)||today(),name:txt(o.name),rel:/w/.test(relT)?'W/o':/d/.test(relT)?'D/o':/c/.test(relT)?'C/o':'S/o',
       relName:txt(o.relName),phone:txt(o.phone),address:txt(o.address),model:txt(o.model),colour:txt(o.colour),chassis:up(o.chassis),engine:up(o.engine),key:up(o.key),
       price:num(o.price),extra:num(o.extra),finance:num(o.finance),financer:txt(o.financer),financeReceived:/^(y|yes|true|1|recd|received|done|paid)/i.test(txt(o.financeReceived)),
       exchange:txt(o.exchange),exchangeValue:num(o.exchangeValue),received:num(o.received),
@@ -899,7 +906,7 @@ async function importFile(which,file){
   const P=which==='stock'?planStock(rows):planSales(rows);
   if(!P){alert(`Could not find the heading row.\n\nThe first sheet needs headings like ${which==='stock'?'"Model", "Engine No", "Chassis No"':'"Customer Name", "Chassis No", "Model"'}. Download the template from Settings & Backup to see the expected headings.`);return}
   IMP=P; const isS=which==='sales';
-  const cols=isS?[['date','Date'],['name','Customer'],['model','Model'],['chassis','Chassis'],['price','Price'],['finance','Finance'],['received','Received']]:[['date','Date'],['challan','Challan'],['model','Model'],['colour','Colour'],['engine','Engine'],['chassis','Chassis']];
+  const cols=isS?[['schallan','Sale Challan'],['date','Date'],['name','Customer'],['model','Model'],['chassis','Chassis'],['price','Price'],['finance','Finance'],['received','Received']]:[['date','Date'],['challan','Challan'],['model','Model'],['colour','Colour'],['engine','Engine'],['chassis','Chassis']];
   const newStock=isS?P.add.filter(r=>!r._stock).length:0;
   const list=(t,a)=>a.length?`<details><summary>${t} (${a.length})</summary><ul>${a.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`:'';
   openDlg(`Import ${isS?'sales':'stock / purchases'} – ${file.name}`,`
@@ -923,7 +930,7 @@ function applyImport(){
       let inv=r.inv&&!used.has(r.inv)?r.inv:null;
       if(!inv){while(used.has(S.nextInv))S.nextInv++;inv=S.nextInv++} used.add(inv);
       const id=uid();
-      const sale={id,inv,created:t0+i,date:r.date,stockId:st.id,model:r.model||st.model,colour:r.colour||st.colour,chassis:r.chassis||st.chassis,engine:r.engine||st.engine,key:r.key||st.key,
+      const sale={id,inv,schallan:r.schallan,created:t0+i,date:r.date,stockId:st.id,model:r.model||st.model,colour:r.colour||st.colour,chassis:r.chassis||st.chassis,engine:r.engine||st.engine,key:r.key||st.key,
         name:r.name,rel:r.rel,relName:r.relName,phone:r.phone,address:r.address,price:r.price,extra:r.extra,total:r.price+r.extra,
         finance:r.finance,financer:r.financer,financeReceived:r.financeReceived,exchange:r.exchange,exchangeValue:r.exchangeValue,notes:r.notes,payments:[],imported:true};
       DB.sales.push(sale); st.status='sold'; st.saleId=id; learn(sale);
@@ -981,7 +988,7 @@ function tallyVouchers(from,to){
     if(ins(s.date)&&num(s.total)>0){
       const tot=r2(num(s.total)), g=num(T.gst), L=[[P,tot]];
       if(g>0){const base=r2(tot/(1+g/100)),tax=r2(tot-base),c=r2(tax/2);L.push([T.sales,-base],[T.cgst,-c],[T.sgst,-r2(tax-c)])} else L.push([T.sales,-tot]);
-      V.push({type:'Sales',date:s.date,no:s.inv,id:'s'+s.id,party:P,nar:`${s.model} ${s.colour} · Ch ${s.chassis} · Eng ${s.engine}${s.financer?' · Finance '+s.financer:''}`,L});used=true;
+      V.push({type:'Sales',date:s.date,no:s.inv,ref:s.schallan,id:'s'+s.id,party:P,nar:`${s.model} ${s.colour} · Ch ${s.chassis} · Eng ${s.engine}${s.financer?' · Finance '+s.financer:''}`,L});used=true;
       if(num(s.exchangeValue)>0) V.push({type:'Journal',date:s.date,id:'x'+s.id,nar:`Exchange ${s.exchange} – Sale #${s.inv}`,L:[[T.exchange,num(s.exchangeValue)],[P,-num(s.exchangeValue)]]});
     }
     for(const p of s.payments||[]) if(ins(p.date)&&num(p.amount)>0){
