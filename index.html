@@ -879,8 +879,10 @@ const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec
 const mLabel=m=>m?MN[+m.slice(5,7)-1]+' '+m.slice(0,4):'';
 const curMonth=()=>today().slice(0,7);
 const emps=()=>{const S=DB.settings; if(!S.employees){S.employees=[{id:'e1',name:'Raman',salary:0},{id:'e2',name:'Sahil',salary:0}]} return S.employees};
-const landlord=()=>DB.settings.landlord||(DB.settings.landlord={name:'',rent:0});
-const epName=id=>id==='landlord'?'Shop owner'+(landlord().name?' ('+landlord().name+')':''):(emps().find(e=>e.id===id)||{}).name||'?';
+const owners=()=>{const S=DB.settings; if(!S.owners){const L=S.landlord||{}; S.owners=[{id:'landlord',name:L.name||'Shubham',rent:num(L.rent)},{id:'o2',name:'Ruchi',rent:0}]} return S.owners};
+const isOwner=id=>owners().some(o=>o.id===id);
+const epName=id=>{const o=owners().find(x=>x.id===id); if(o) return o.name+' (shop owner)'; return (emps().find(e=>e.id===id)||{}).name||'?'};
+const typeOpts=(payee,sel)=>opts(isOwner(payee)?['Rent']:['Salary','Advance','Bonus'],sel);
 const epRows=()=>(DB.expPay||[]).filter(x=>!epF||x.payee===epF);
 function monthsBack(n){const out=[];let d=new Date(curMonth()+'-01');for(let i=0;i<n;i++){out.push(d.toISOString().slice(0,7));d.setMonth(d.getMonth()-1)}return out}
 function payeeMonths(pid,due){
@@ -896,17 +898,18 @@ function monthTable(rows,label){
   ${rows.map(r=>`<tr><td><b>${mLabel(r.m)}</b></td><td class="num">${r.due?rs(r.due):'—'}</td><td class="num">${r.paid?rs(r.paid):'—'}${r.adv?`<div class="sub2">incl. advance ${rs(r.adv)}</div>`:''}${r.bonus?`<div class="sub2">incl. bonus ${rs(r.bonus)}</div>`:''}</td><td class="wrap">${r.dates||'<span class="muted">—</span>'}</td><td>${st(r)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function vRent(){
-  const L=landlord(), E=emps(), cm=curMonth();
+  const O=owners(), E=emps(), cm=curMonth();
   const pend=(pid,due)=>due?Math.max(0,due-(DB.expPay||[]).filter(x=>x.payee===pid&&x.forMonth===cm).reduce((a,x)=>a+num(x.amount),0)):0;
+  const card=(x,lab)=>`<div class="stat"><div class="k">${esc(x.name)} – ${lab} ${mLabel(cm)}</div><div class="v" style="color:${pend(x.id,num(x.due))?'var(--red)':'var(--green)'}">${num(x.due)?(pend(x.id,num(x.due))?rs(pend(x.id,num(x.due)))+' due':'Paid'):'—'}</div></div>`;
+  const ownerOpts=O.map(o=>`<option value="${o.id}">${esc(o.name)} (shop owner – rent)</option>`).join(''), empOpts=E.map(e=>`<option value="${e.id}">${esc(e.name)} (employee)</option>`).join('');
+  const typeSwitch=`const t=this.form.type;t.innerHTML=[${O.map(o=>`'${o.id}'`).join(',')}].includes(this.value)?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'`;
+  const editor=(id,list,label,ph)=>`<div id="${id}">${list.map(x=>`<div class="row ed" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${x.id}"><input value="${esc(x.name)}" placeholder="Name" style="flex:2;min-width:0"><input value="${num(x[label])||''}" placeholder="${ph}" inputmode="decimal" style="width:150px"></div>`).join('')}</div>
+    <button class="btn plain sm" onclick="$('#${id}').insertAdjacentHTML('beforeend','<div class=&quot;row ed&quot; style=&quot;margin-bottom:6px;flex-wrap:nowrap&quot;><input type=&quot;hidden&quot; value=&quot;&quot;><input placeholder=&quot;Name&quot; style=&quot;flex:2;min-width:0&quot;><input placeholder=&quot;${ph}&quot; inputmode=&quot;decimal&quot; style=&quot;width:150px&quot;></div>')">+ Add</button>`;
   $('#app').innerHTML=`
-  <div class="stats">
-    <div class="stat"><div class="k">Rent – ${mLabel(cm)}</div><div class="v" style="color:${pend('landlord',num(L.rent))?'var(--red)':'var(--green)'}">${num(L.rent)?(pend('landlord',num(L.rent))?rs(pend('landlord',num(L.rent)))+' due':'Paid'):'—'}</div></div>
-    ${E.map(e=>`<div class="stat"><div class="k">${esc(e.name)} – ${mLabel(cm)}</div><div class="v" style="color:${pend(e.id,num(e.salary))?'var(--red)':'var(--green)'}">${num(e.salary)?(pend(e.id,num(e.salary))?rs(pend(e.id,num(e.salary)))+' due':'Paid'):'—'}</div></div>`).join('')}
-  </div>
+  <div class="stats">${O.map(o=>card({...o,due:o.rent},'rent')).join('')}${E.map(e=>card({...e,due:e.salary},'salary')).join('')}</div>
   <div class="card"><h2>New payment</h2>
   <form id="fep" class="grid" onsubmit="addExpPay(event)">
-    <label>Pay to<select name="payee" onchange="const t=this.form.type;t.innerHTML=this.value==='landlord'?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'">
-      <option value="landlord">Shop owner (rent)${L.name?' – '+esc(L.name):''}</option>${E.map(e=>`<option value="${e.id}">${esc(e.name)} (employee)</option>`).join('')}</select></label>
+    <label>Pay to<select name="payee" onchange="${typeSwitch}">${ownerOpts}${empOpts}</select></label>
     <label>Type<select name="type"><option>Rent</option></select></label>
     <label>For month<input type="month" name="forMonth" value="${cm}" required></label>
     <label>Payment date<input type="date" name="date" value="${today()}" required></label>
@@ -918,32 +921,35 @@ function vRent(){
     <label class="span2" style="flex-direction:row;align-items:center;gap:8px;color:var(--ink);font-size:14px"><input type="checkbox" name="toDay" checked style="width:auto"> Also add to Day Book</label>
     <div style="align-self:end"><button class="btn">Save payment</button></div>
   </form></div>
-  <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">🏠 Shop rent</h2>
-    <label style="flex-direction:row;align-items:center;gap:6px">Owner <input value="${esc(L.name)}" placeholder="Owner name" style="width:180px" onchange="landlord().name=txt(this.value);save();toast('Saved')"></label>
-    <label style="flex-direction:row;align-items:center;gap:6px">Monthly rent ₹ <input value="${num(L.rent)||''}" inputmode="decimal" style="width:110px" onchange="landlord().rent=num(this.value);save();vRent()"></label></div>
-  ${monthTable(payeeMonths('landlord',num(L.rent)),'Rent')}</div>
-  ${E.map(e=>`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">👤 ${esc(e.name)}</h2>
-    <label style="flex-direction:row;align-items:center;gap:6px">Monthly salary ₹ <input value="${num(e.salary)||''}" inputmode="decimal" style="width:110px" onchange="emps().find(x=>x.id==='${e.id}').salary=num(this.value);save();vRent()"></label></div>
+  ${O.map(o=>`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">🏠 ${esc(o.name)} <span class="note" style="font-weight:400">· shop owner – rent account</span></h2>
+    <label style="flex-direction:row;align-items:center;gap:6px">Monthly rent ₹ <input value="${num(o.rent)||''}" inputmode="decimal" style="width:120px" onchange="owners().find(x=>x.id==='${o.id}').rent=num(this.value);save();vRent()"></label></div>
+    ${monthTable(payeeMonths(o.id,num(o.rent)),'Rent')}
+    <p class="note" style="margin-top:8px">Total paid to ${esc(o.name)}: <b>${rs((DB.expPay||[]).filter(x=>x.payee===o.id).reduce((a,x)=>a+num(x.amount),0))}</b></p></div>`).join('')}
+  ${E.map(e=>`<div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">👤 ${esc(e.name)} <span class="note" style="font-weight:400">· employee</span></h2>
+    <label style="flex-direction:row;align-items:center;gap:6px">Monthly salary ₹ <input value="${num(e.salary)||''}" inputmode="decimal" style="width:120px" onchange="emps().find(x=>x.id==='${e.id}').salary=num(this.value);save();vRent()"></label></div>
     ${monthTable(payeeMonths(e.id,num(e.salary)),'Salary')}</div>`).join('')}
   <div class="card"><div class="row" style="margin-bottom:12px"><h2 class="grow" style="margin:0">All payments</h2>
-    <select style="width:auto" onchange="epF=this.value;vRent()"><option value="">All</option><option value="landlord" ${epF==='landlord'?'selected':''}>Shop owner (rent)</option>${E.map(e=>`<option value="${e.id}" ${epF===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select>
+    <select style="width:auto" onchange="epF=this.value;vRent()"><option value="">All</option>${[...O,...E].map(x=>`<option value="${x.id}" ${epF===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
     <button class="btn plain sm" onclick="csv('expPay')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('rent')">📄 PDF</button></div>
   ${(r=>r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Paid to</th><th>Type</th><th>For month</th><th class="num">Amount</th><th>Mode</th><th>Paid by</th><th>Ref / Note</th><th></th></tr></thead><tbody>
   ${r.map(x=>`<tr><td>${fd(x.date)}</td><td><b>${esc(epName(x.payee))}</b></td><td>${esc(x.type)}</td><td>${mLabel(x.forMonth)}</td><td class="num"><b>${rs(x.amount)}</b></td><td>${esc(x.mode)}</td><td>${x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">own pocket</div>`:'Business account'}</td><td class="wrap">${esc([x.ref,x.note].filter(Boolean).join(' · '))}</td><td style="white-space:nowrap"><button class="btn plain sm" onclick="editExpPay('${x.id}')">Edit</button> <button class="btn plain sm" onclick="delExpPay('${x.id}')">Delete</button></td></tr>`).join('')}</tbody>
   <tfoot><tr class="tot"><td colspan="4">Total (${r.length})</td><td class="num">${rs(r.reduce((a,x)=>a+num(x.amount),0))}</td><td colspan="4"></td></tr></tfoot></table></div>`:'<div class="empty">No payments yet.</div>')(epRows().sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created-a.created))}</div>
-  <div class="card"><h2>Employees</h2><div id="empRows">${E.map(e=>`<div class="row emp" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${e.id}"><input value="${esc(e.name)}" placeholder="Name" style="flex:2;min-width:0"><input value="${num(e.salary)||''}" placeholder="Monthly salary" inputmode="decimal" style="width:140px"></div>`).join('')}</div>
-  <button class="btn plain sm" onclick="$('#empRows').insertAdjacentHTML('beforeend','<div class=&quot;row emp&quot; style=&quot;margin-bottom:6px;flex-wrap:nowrap&quot;><input type=&quot;hidden&quot; value=&quot;&quot;><input placeholder=&quot;Name&quot; style=&quot;flex:2;min-width:0&quot;><input placeholder=&quot;Monthly salary&quot; inputmode=&quot;decimal&quot; style=&quot;width:140px&quot;></div>')">+ Add employee</button>
-  <button class="btn sm" onclick="saveEmps()">Save employees</button><p class="note">To remove an employee, clear the name and Save (only if they have no payments).</p></div>`;
+  <div class="card"><h2>Shop owners & employees</h2>
+    <div class="row" style="gap:24px;align-items:flex-start"><div class="grow"><h3 style="font-size:14px;margin:0 0 6px">Shop owners (monthly rent)</h3>${editor('ownRows',O,'rent','Monthly rent')}</div>
+    <div class="grow"><h3 style="font-size:14px;margin:0 0 6px">Employees (monthly salary)</h3>${editor('empRows',E,'salary','Monthly salary')}</div></div>
+    <div style="margin-top:10px"><button class="btn sm" onclick="saveEmps()">Save</button></div>
+    <p class="note">To remove someone, clear the name and Save (only if they have no payments).</p></div>`;
 }
 function saveEmps(){
-  const rows=[...document.querySelectorAll('#empRows .emp')].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:txt(i[1].value),salary:num(i[2].value)}});
-  const keep=rows.filter(e=>e.name), drop=emps().filter(e=>!keep.some(k=>k.id===e.id));
-  if(drop.some(e=>(DB.expPay||[]).some(x=>x.payee===e.id))){alert('An employee with payments cannot be removed.');return}
-  DB.settings.employees=keep; save(); vRent(); toast('Employees saved');
+  const read=id=>[...document.querySelectorAll(`#${id} .ed`)].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:txt(i[1].value),val:num(i[2].value)}});
+  const O=read('ownRows').filter(x=>x.name).map(x=>({id:x.id,name:x.name,rent:x.val})), E=read('empRows').filter(x=>x.name).map(x=>({id:x.id,name:x.name,salary:x.val}));
+  const dropped=[...owners().filter(o=>!O.some(k=>k.id===o.id)),...emps().filter(e=>!E.some(k=>k.id===e.id))];
+  if(dropped.some(x=>(DB.expPay||[]).some(p=>p.payee===x.id))){alert('Someone with payments cannot be removed.');return}
+  DB.settings.owners=O; DB.settings.employees=E; save(); vRent(); toast('Saved');
 }
 function epUnlink(x){ DB.daybook=DB.daybook.filter(d=>d.epId!==x.id&&!(x.capId&&d.capId===x.capId)); if(x.capId) DB.capital=DB.capital.filter(c=>c.id!==x.capId); delete x.capId }
 function epLink(rec,toDay){
-  const t0=rec.created||Date.now(), kind=rec.payee==='landlord'?'rent':'salary', who=epName(rec.payee), a=num(rec.amount);
+  const t0=rec.created||Date.now(), kind=isOwner(rec.payee)?'rent':'salary', who=epName(rec.payee), a=num(rec.amount);
   const label=`${rec.type} – ${who} (${mLabel(rec.forMonth)})${rec.ref?' · '+rec.ref:''}`;
   if(rec.by){
     const cid=uid(), nm=pName(rec.by); rec.capId=cid;
@@ -961,11 +967,11 @@ function addExpPay(e){
 }
 function editExpPay(id){
   const x=DB.expPay.find(r=>r.id===id); if(!x) return; const E=emps(), inDay=DB.daybook.some(d=>d.epId===id);
-  const types=x.payee==='landlord'?['Rent']:['Salary','Advance','Bonus'];
+  const O=owners();
   openDlg('Edit payment',`<form id="fepe" class="grid">
-    <label>Pay to<select name="payee" onchange="const t=this.form.type;t.innerHTML=this.value==='landlord'?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'">
-      <option value="landlord" ${x.payee==='landlord'?'selected':''}>Shop owner (rent)</option>${E.map(e=>`<option value="${e.id}" ${x.payee===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
-    <label>Type<select name="type">${opts(types,x.type)}</select></label>
+    <label>Pay to<select name="payee" onchange="const t=this.form.type;t.innerHTML=[${O.map(o=>`'${o.id}'`).join(',')}].includes(this.value)?'<option>Rent</option>':'<option>Salary</option><option>Advance</option><option>Bonus</option>'">
+      ${O.map(o=>`<option value="${o.id}" ${x.payee===o.id?'selected':''}>${esc(o.name)} (shop owner)</option>`).join('')}${E.map(e=>`<option value="${e.id}" ${x.payee===e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</select></label>
+    <label>Type<select name="type">${typeOpts(x.payee,x.type)}</select></label>
     <label>For month<input type="month" name="forMonth" value="${esc(x.forMonth)}" required></label>
     <label>Payment date<input type="date" name="date" value="${esc(x.date)}" required></label>
     <label>Amount ₹<input name="amount" inputmode="decimal" value="${num(x.amount)}" required></label>
