@@ -136,7 +136,7 @@ const DEFAULTS={
     models:['Activa STD','Activa DLX','Activa 125 Drum','Activa 125 Disc','Shine 100 DX','CB Shine 125 Drum','CB Shine 125 Disc','SP 125 Disc','CB Hornet 125','Dio','Unicorn'],
     colours:['White','Black','Grey','Matt Grey','Blue','PS Blue','Black Red','Red','Yellow']
   },
-  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[], dealerPay:[], expPay:[], expenses:[]
+  stock:[], sales:[], daybook:[], enquiries:[], partners:[], capital:[], dealerPay:[], expPay:[], expenses:[], oldveh:[]
 };
 let DB;
 try{ DB=JSON.parse(localStorage.getItem(KEY))||null }catch(e){ DB=null }
@@ -191,19 +191,20 @@ const saleReceived=s=>(s.payments||[]).reduce((a,p)=>a+num(p.amount),0);
 function openDlg(title,body,foot){$('#dlgT').textContent=title;$('#dlgB').innerHTML=body;$('#dlgF').innerHTML=foot||'';dlg.showModal()}
 
 /* ---------- navigation ---------- */
-const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['dues','Customer Dues'],['day','Day Book'],['cash','Cash Book'],['ledger','Ledgers'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
+const TABS=[['dash','Dashboard'],['stock','Stock'],['sales','Sales'],['dues','Customer Dues'],['old','Old Vehicles'],['day','Day Book'],['cash','Cash Book'],['ledger','Ledgers'],['acc','Accounts'],['enq','Enquiries'],['tally','Tally'],['set','Settings & Backup']];
 let tab='dash'; try{tab=localStorage.getItem(KEY+'_tab')||'dash'}catch(e){}
 if(['dealer','rent','exp','partners'].includes(tab)){accT=tab;tab='acc'}
 function go(t){tab=t;try{localStorage.setItem(KEY+'_tab',t)}catch(e){};render()}
 function render(){
   if(CLOUD&&!cloudReady&&!READONLY) return;
   if(DB.sales.some(x=>x.financeBy)||DB.daybook.some(d=>d.fin&&d.by)){DB.sales.forEach(x=>delete x.financeBy);DB.daybook.forEach(d=>{if(d.fin) delete d.by});save()}
+  if(oldSync()) save();
   if(migrateDB()){ save(); setTimeout(()=>toast('All entries now live in the Day Book'),300) }
   appDirty=false; $('#syncbar').classList.add('hide'); setSync();
   $('#hName').textContent=DB.settings.name;
   $('#hAddr').textContent=DB.settings.address+'  ·  '+DB.settings.phones;
   $('#nav').innerHTML=TABS.map(([k,v])=>`<button class="${k===tab?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
-  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,dues:vDues,cash:vCash,ledger:vLedger,enq:vEnq,tally:vTally,set:vSet})[tab]();
+  ({dash:vDash,stock:vStock,sales:vSales,day:vDay,acc:vAcc,dues:vDues,old:vOld,cash:vCash,ledger:vLedger,enq:vEnq,tally:vTally,set:vSet})[tab]();
 }
 
 /* ---------- dashboard ---------- */
@@ -766,7 +767,7 @@ function dayList(){
   ${rows.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Date</th><th>Head</th><th>Remarks</th><th>Mode</th><th class="num">Receipt</th><th class="num">Payment</th><th></th></tr></thead><tbody>
   ${rows.map(d=>`<tr><td>${fd(d.date)}</td><td>${headOf(d)?`<span class="pill ${d.type==='in'?'in':'lost'}">${esc(headOf(d))}</span>`:'<span class="muted">—</span>'}</td>
   <td class="wrap" style="max-width:380px">${esc(d.particulars)}${byPill(d)}${dayDesc(d)?`<div class="sub2">${esc(dayDesc(d))}</div>`:''}</td><td>${esc(d.mode)}</td><td class="num">${d.type==='in'?rs(d.amount):''}</td><td class="num">${d.type==='out'?rs(d.amount):''}</td>
-  <td style="white-space:nowrap">${d.saleId?'<span class="muted" style="font-size:12px">from Sales</span>':`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button> <button class="btn plain sm" onclick="delDay('${d.id}')">Delete</button>`}</td></tr>`).join('')}</tbody>
+  <td style="white-space:nowrap">${d.oldId?`<button class="btn plain sm" onclick="go('old')">Old Vehicles</button>`:d.saleId?'<span class="muted" style="font-size:12px">from Sales</span>':`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button> <button class="btn plain sm" onclick="delDay('${d.id}')">Delete</button>`}</td></tr>`).join('')}</tbody>
   <tfoot><tr class="tot"><td colspan="4">Total</td><td class="num">${rs(tin)}</td><td class="num">${rs(tout)}</td><td></td></tr></tfoot></table></div>`:'<div class="empty">No entries for these dates.</div>'}`;
 }
 function addDay(e){
@@ -778,7 +779,7 @@ function addDay(e){
 }
 const dayRefresh=()=>tab==='day'?dayList():render();
 function editDay(id){
-  const x=DB.daybook.find(d=>d.id===id); if(!x||x.saleId) return;
+  const x=DB.daybook.find(d=>d.id===id); if(!x||x.saleId||x.oldId) return;
   openDlg('Edit Day Book entry',`<form id="fde" class="grid">${dayForm(x)}</form>${dl('dlVend',[...new Set(DB.daybook.map(d=>d.vendor).filter(Boolean))])}`,
   `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="delDay('${id}')">Delete</button><button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="saveDayEdit('${id}')">Save changes</button>`);
 }
@@ -925,6 +926,149 @@ function dupReviewAll(){
 }
 function dupOk(i){ const g=dupScan()[i]; if(!g) return; g.items.forEach(x=>x.dupOk=1); save(); dupReviewAll(); render() }
 
+/* ---------- old vehicles (exchange / bought directly) ---------- */
+let ovF='all', ovQ='';
+const ovCost=o=>num(o.cost)+num(o.repair);
+const ovProfit=o=>o.status==='sold'?num(o.soldPrice)-ovCost(o):0;
+const ovRecd=o=>DB.daybook.filter(d=>d.oldId===o.id&&d.type==='in').reduce((a,d)=>a+num(d.amount),0);
+const ovDue=o=>o.status==='sold'?Math.max(0,num(o.soldPrice)-ovRecd(o)):0;
+// Every sale with an exchange value has an old-vehicle record; keep it in step with the sale.
+function oldSync(){
+  let ch=false; DB.oldveh=DB.oldveh||[];
+  for(const s of DB.sales){ if(!(num(s.exchangeValue)>0)) continue;
+    let o=DB.oldveh.find(x=>x.srcSaleId===s.id);
+    if(!o){ o={id:uid(),created:Date.now(),srcSaleId:s.id,status:'in',model:s.exchange||'',regNo:''}; DB.oldveh.push(o); ch=true }
+    const want={date:s.date,cost:num(s.exchangeValue),fromName:s.name,fromPhone:s.phone,fromAddr:s.address};
+    for(const k in want) if(o[k]!==want[k]){o[k]=want[k];ch=true}
+    if(!o.model&&s.exchange){o.model=s.exchange;ch=true}
+  }
+  const gone=DB.oldveh.filter(o=>o.srcSaleId&&o.status!=='sold'&&!DB.sales.some(s=>s.id===o.srcSaleId&&num(s.exchangeValue)>0));
+  if(gone.length){DB.oldveh=DB.oldveh.filter(o=>!gone.includes(o));ch=true}
+  return ch;
+}
+function vOld(){
+  const A=DB.oldveh||[], inS=A.filter(o=>o.status!=='sold'), sold=A.filter(o=>o.status==='sold');
+  $('#app').innerHTML=`<div class="stats">
+    <div class="stat red"><div class="k">Old vehicles in hand</div><div class="v">${inS.length}</div><div class="sub2">Cost ${rs(inS.reduce((a,o)=>a+ovCost(o),0))}</div></div>
+    <div class="stat"><div class="k">Sold</div><div class="v">${sold.length}</div><div class="sub2">For ${rs(sold.reduce((a,o)=>a+num(o.soldPrice),0))}</div></div>
+    <div class="stat"><div class="k">Profit / loss on sold</div><div class="v" style="color:${sold.reduce((a,o)=>a+ovProfit(o),0)<0?'var(--red)':'var(--green)'}">${rs(sold.reduce((a,o)=>a+ovProfit(o),0))}</div></div>
+    <div class="stat"><div class="k">Due from buyers</div><div class="v" style="color:var(--red)">${rs(sold.reduce((a,o)=>a+ovDue(o),0))}</div></div></div>
+  <div class="card"><div class="row" style="margin-bottom:12px;row-gap:10px"><h2 class="grow" style="margin:0">Old vehicle register</h2>
+    <input placeholder="Search number / model / name…" style="max-width:240px" value="${esc(ovQ)}" oninput="ovQ=this.value;oldList()">
+    <select style="width:auto" onchange="ovF=this.value;oldList()">${[['all','All'],['in','In hand'],['sold','Sold']].map(([k,v])=>`<option value="${k}" ${ovF===k?'selected':''}>${v}</option>`).join('')}</select>
+    <button class="btn plain sm" onclick="csv('oldveh')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('oldveh')">📄 PDF</button>
+    <button class="btn sm" onclick="oldEdit()">+ Old vehicle bought directly</button></div>
+    <div id="oldList"></div>
+    <p class="note">Vehicles taken in exchange come here automatically from Sales (Exchange value). Fill the registration number etc. with “Edit”. When you sell it, use “Sell” – the money goes into the Day Book.</p></div>`;
+  oldList();
+}
+function oldList(){
+  const q=ovQ.toLowerCase();
+  const r=(DB.oldveh||[]).filter(o=>(ovF==='all'||(ovF==='sold'?o.status==='sold':o.status!=='sold'))&&(!q||[o.regNo,o.model,o.chassis,o.fromName,o.buyer,o.buyerPhone,o.fromPhone].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  $('#oldList').innerHTML=r.length?`<div class="tablewrap"><table class="nice"><thead><tr><th>Vehicle</th><th>Taken from</th><th>Date in</th><th class="num">Cost</th><th>Status</th><th>Sold to</th><th class="num">Sold for</th><th class="num">Profit / loss</th><th></th></tr></thead><tbody>
+  ${r.map(o=>{const s=o.srcSaleId&&DB.sales.find(x=>x.id===o.srcSaleId), p=ovProfit(o), due=ovDue(o);
+    return `<tr><td class="wrap"><b>${esc(o.regNo)||'<span class="muted">No. not filled</span>'}</b><div class="sub2">${esc(o.model)}${o.year?' · '+esc(o.year):''}${o.colour?' · '+esc(o.colour):''}</div></td>
+    <td class="wrap">${esc(o.fromName)}${o.fromPhone?`<div class="sub2">${esc(o.fromPhone)}</div>`:''}<div class="sub2">${s?`Exchange · <a href="#" onclick="viewSale('${s.id}');return false">Sale #${s.inv}</a>`:'Bought directly'}</div></td>
+    <td>${fd(o.date)}<div class="sub2">${o.status!=='sold'?daysAgo(o.date)+' days':''}</div></td>
+    <td class="num"><b>${rs(ovCost(o))}</b>${num(o.repair)?`<div class="sub2">incl. repair ${rs(o.repair)}</div>`:''}</td>
+    <td>${o.status==='sold'?'<span class="pill sold">Sold</span>':'<span class="pill in">In hand</span>'}</td>
+    <td class="wrap">${o.status==='sold'?`${esc(o.buyer)}<div class="sub2">${fd(o.soldDate)}${o.buyerPhone?' · '+esc(o.buyerPhone):''}</div>`:'<span class="muted">—</span>'}</td>
+    <td class="num">${o.status==='sold'?`<b>${rs(o.soldPrice)}</b>${due?`<div><span class="pill due">${rs(due)} due</span></div>`:''}`:'—'}</td>
+    <td class="num">${o.status==='sold'?`<b style="color:${p<0?'var(--red)':'var(--green)'}">${p<0?'− ':'+ '}${rs(Math.abs(p))}</b>`:'—'}</td>
+    <td><div style="display:flex;flex-wrap:wrap;gap:4px;width:170px">${o.status==='sold'?`<button class="btn plain sm" onclick="oldSell('${o.id}')">Sale details</button>${due?`<button class="btn sm" onclick="oldRecv('${o.id}')">Receive</button>`:''}`:`<button class="btn sm" onclick="oldSell('${o.id}')">Sell</button>`}
+      <button class="btn plain sm" onclick="oldEdit('${o.id}')">Edit</button><button class="btn plain sm" onclick="oldVoucher('${o.id}')">🖨 Voucher</button></div></td></tr>`}).join('')}</tbody>
+  <tfoot><tr class="tot"><td colspan="3">Total (${r.length})</td><td class="num">${rs(r.reduce((a,o)=>a+ovCost(o),0))}</td><td colspan="2"></td><td class="num">${rs(r.reduce((a,o)=>a+(o.status==='sold'?num(o.soldPrice):0),0))}</td><td class="num">${rs(r.reduce((a,o)=>a+ovProfit(o),0))}</td><td></td></tr></tfoot></table></div>`
+  :'<div class="empty">No old vehicles. Vehicles taken in exchange during a sale appear here automatically.</div>';
+}
+const ovDay=(o,kind)=>DB.daybook.find(d=>d.oldId===o.id&&d.ovKind===kind);
+function oldEdit(id){
+  const o=id?DB.oldveh.find(x=>x.id===id):{date:today()}, linked=!!o.srcSaleId, pd=id&&ovDay(o,'buy');
+  openDlg(id?'Old vehicle – '+(o.regNo||o.model||''):'Old vehicle bought directly',`<form id="fov" class="grid">
+    <label>Registration no<input name="regNo" value="${esc(o.regNo)}" placeholder="e.g. HR02 AB 1234" style="text-transform:uppercase"></label>
+    <label>Make / model<input name="model" value="${esc(o.model)}" placeholder="e.g. Hero Splendor"></label>
+    <label>Year (model)<input name="year" value="${esc(o.year)}" inputmode="numeric"></label>
+    <label>Colour<input name="colour" value="${esc(o.colour)}"></label>
+    <label>Chassis no<input name="chassis" class="mono" value="${esc(o.chassis)}"></label>
+    <label>Engine no<input name="engine" class="mono" value="${esc(o.engine)}"></label>
+    <label>Taken from (name)<input name="fromName" value="${esc(o.fromName)}" ${linked?'disabled':''}></label>
+    <label>Mobile<input name="fromPhone" value="${esc(o.fromPhone)}" ${linked?'disabled':''}></label>
+    <label>Date taken<input type="date" name="date" value="${esc(o.date||today())}" ${linked?'disabled':''}></label>
+    <label>Cost (price we gave) ₹<input name="cost" inputmode="decimal" value="${num(o.cost)||''}" ${linked?'disabled':''}></label>
+    ${linked?'':`<label>Paid by<select name="mode">${opts(['Cash','Bank','UPI','Cheque'],pd?.mode||'Cash')}</select></label>${DB.partners.length?recvBy(pd?.by||'','by','Paid by (who)'):''}`}
+    <label>Repair / other cost ₹<input name="repair" inputmode="decimal" value="${num(o.repair)||''}" placeholder="for profit calculation"></label>
+    <label class="span2">Note (RC, NOC, papers…)<input name="note" value="${esc(o.note)}"></label></form>
+    ${linked?'<p class="note">This vehicle came in exchange. Name, date and cost come from the sale – change them in the sale (Edit → Exchange value).</p>':'<p class="note">The amount paid is added to the Day Book as “Old vehicle purchase”. Repair cost is only for profit calculation – enter the actual repair payment in the Day Book (Workshop Expenses).</p>'}`,
+  `${id&&!linked&&o.status!=='sold'?`<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="oldDel('${id}')">Delete</button>`:''}<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="oldSave('${id||''}')">Save</button>`);
+}
+function oldSave(id){
+  const d=formData($('#fov')); let o=id&&DB.oldveh.find(x=>x.id===id);
+  if(!o){ if(num(d.cost)<=0&&!confirm('No cost entered. Save anyway?')) return; o={id:uid(),created:Date.now(),status:'in'}; DB.oldveh.push(o) }
+  const reg=txt(d.regNo).toUpperCase(), dupv=reg&&DB.oldveh.find(x=>x.id!==o.id&&txt(x.regNo).toUpperCase()===reg&&x.status!=='sold');
+  if(dupv&&!confirm(`⚠ Possible DOUBLE ENTRY\n\n${reg} is already in the old vehicle register (${dupv.model}). Save anyway?`)) return;
+  Object.assign(o,{regNo:reg,model:d.model,year:d.year,colour:d.colour,chassis:txt(d.chassis).toUpperCase(),engine:txt(d.engine).toUpperCase(),repair:num(d.repair),note:d.note});
+  if(!o.srcSaleId){
+    Object.assign(o,{fromName:d.fromName,fromPhone:d.fromPhone,date:d.date||today(),cost:num(d.cost)});
+    let e=ovDay(o,'buy');
+    if(num(o.cost)>0){ if(!e){e={id:uid(),created:Date.now(),type:'out',oldId:o.id,ovKind:'buy'};DB.daybook.push(e)}
+      Object.assign(e,{date:o.date,head:'Old vehicle purchase',amount:num(o.cost),mode:d.mode||'Cash',particulars:`${o.model} ${o.regNo} from ${o.fromName||''}`.trim()}); if(d.by) e.by=d.by; else delete e.by }
+    else if(e) DB.daybook=DB.daybook.filter(x=>x!==e);
+  }
+  save(); dlg.close(); render(); toast('Saved');
+}
+function oldDel(id){ if(!confirm('Delete this old vehicle and its Day Book entries?')) return; DB.oldveh=DB.oldveh.filter(o=>o.id!==id); DB.daybook=DB.daybook.filter(d=>d.oldId!==id); save(); dlg.close(); render() }
+function oldSell(id){
+  const o=DB.oldveh.find(x=>x.id===id); if(!o) return; const e=ovDay(o,'sale');
+  openDlg('Sell old vehicle – '+(o.regNo||o.model),`<p class="muted" style="margin-top:0">${esc(o.model)} · cost ${rs(ovCost(o))}</p><form id="fos" class="grid">
+    <label>Sale date<input type="date" name="soldDate" value="${esc(o.soldDate||today())}"></label>
+    <label>Sold for ₹<input name="soldPrice" inputmode="decimal" value="${num(o.soldPrice)||''}" required oninput="const p=num(this.value)-${ovCost(o)};$('#ovp').innerHTML=this.value?(p<0?'<b style=&quot;color:var(--red)&quot;>Loss '+rs(-p)+'</b>':'<b style=&quot;color:var(--green)&quot;>Profit '+rs(p)+'</b>'):''"></label>
+    <label>Buyer name<input name="buyer" value="${esc(o.buyer)}" required></label>
+    <label>Father / husband name<input name="buyerRel" value="${esc(o.buyerRel)}"></label>
+    <label>Buyer mobile<input name="buyerPhone" value="${esc(o.buyerPhone)}" inputmode="tel"></label>
+    <label class="span2">Buyer address<input name="buyerAddr" value="${esc(o.buyerAddr)}"></label>
+    <label>Money received now ₹<input name="recd" inputmode="decimal" value="${e?num(e.amount):''}"></label>
+    <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],e?.mode||'Cash')}</select></label>
+    ${DB.partners.length?recvBy(e?.by||''):''}
+    <label class="span2">Note<input name="soldNote" value="${esc(o.soldNote)}"></label></form><p id="ovp" style="margin:8px 0 0"></p>`,
+  `${o.status==='sold'?`<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="oldUnsell('${id}')">Undo sale</button>`:''}<button class="btn plain" onclick="dlg.close()">Cancel</button><button class="btn" onclick="oldSellSave('${id}')">Save</button>`);
+  $('#fos [name=soldPrice]').dispatchEvent(new Event('input'));
+}
+function oldSellSave(id){
+  const f=$('#fos'); if(!f.reportValidity()) return; const d=formData(f), o=DB.oldveh.find(x=>x.id===id);
+  Object.assign(o,{status:'sold',soldDate:d.soldDate||today(),soldPrice:num(d.soldPrice),buyer:d.buyer,buyerRel:d.buyerRel,buyerPhone:d.buyerPhone,buyerAddr:d.buyerAddr,soldNote:d.soldNote});
+  let e=ovDay(o,'sale');
+  if(num(d.recd)>0){ if(!e){e={id:uid(),created:Date.now(),type:'in',oldId:o.id,ovKind:'sale'};DB.daybook.push(e)}
+    Object.assign(e,{date:o.soldDate,head:'Old vehicle sale',amount:num(d.recd),mode:d.mode,particulars:`${o.model} ${o.regNo||''} to ${o.buyer}`}); if(d.by) e.by=d.by; else delete e.by }
+  else if(e) DB.daybook=DB.daybook.filter(x=>x!==e);
+  save(); dlg.close(); render(); toast(`Sold · ${ovProfit(o)<0?'loss':'profit'} ${rs(Math.abs(ovProfit(o)))}`);
+}
+function oldRecv(id){
+  const o=DB.oldveh.find(x=>x.id===id);
+  openDlg('Receive – '+o.buyer,`<p class="muted" style="margin-top:0">Due: <b>${rs(ovDue(o))}</b></p><form id="for" class="grid"><label>Date<input type="date" name="date" value="${today()}"></label><label>Amount<input name="amount" inputmode="decimal" value="${Math.round(ovDue(o))}"></label>
+    <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],'Cash')}</select></label>${DB.partners.length?recvBy(''):''}</form>`,
+  `<button class="btn" onclick="const d=formData($('#for'));if(num(d.amount)<=0)return;const o=DB.oldveh.find(x=>x.id==='${id}');DB.daybook.push({id:uid(),created:Date.now(),type:'in',oldId:o.id,ovKind:'recv',date:d.date||today(),head:'Old vehicle sale',amount:num(d.amount),mode:d.mode,particulars:(o.model+' '+(o.regNo||'')+' – balance from '+o.buyer),...(d.by?{by:d.by}:{})});save();dlg.close();render();toast('Received')">Save</button>`);
+}
+function oldUnsell(id){ if(!confirm('Undo this sale? The money entries for it will be removed from the Day Book.')) return; const o=DB.oldveh.find(x=>x.id===id);
+  ['soldDate','soldPrice','buyer','buyerRel','buyerPhone','buyerAddr','soldNote'].forEach(k=>delete o[k]); o.status='in'; DB.daybook=DB.daybook.filter(d=>!(d.oldId===id&&d.type==='in')); save(); dlg.close(); render() }
+function oldVoucher(id){
+  const o=DB.oldveh.find(x=>x.id===id), S=DB.settings, s=o.srcSaleId&&DB.sales.find(x=>x.id===o.srcSaleId), sold=o.status==='sold';
+  const veh=`<table style="width:100%"><tr><th>Reg. No</th><th>Make / model</th><th>Year</th><th>Colour</th><th>Chassis No</th><th>Engine No</th></tr><tr><td>${esc(o.regNo)}</td><td>${esc(o.model)}</td><td>${esc(o.year)}</td><td>${esc(o.colour)}</td><td>${esc(o.chassis)}</td><td>${esc(o.engine)}</td></tr></table>`;
+  const head=(t,no,dt)=>`<div class="hd"><div><h3>${esc(S.name)}</h3><div>${esc(S.address)}</div><div>Ph: ${esc(S.phones)}</div></div><div style="text-align:right"><b>${t}</b><br>${no}<br>Date: ${fd(dt)}</div></div>`;
+  const buy=`<div class="rc">${head('OLD VEHICLE PURCHASE VOUCHER',s?'Exchange against Sale #'+s.inv:'',o.date)}
+    <p><b>Received vehicle from:</b> ${esc(o.fromName)}<br><b>Mobile:</b> ${esc(o.fromPhone)}${o.fromAddr?`<br><b>Address:</b> ${esc(o.fromAddr)}`:''}</p>${veh}
+    <table style="width:60%;margin:14px 0 0 auto"><tr><td><b>Value of vehicle</b></td><td class="num"><b>${rs(o.cost)}</b></td></tr>${s?`<tr><td>Adjusted in new vehicle (${esc(s.model)})</td><td class="num">${rs(o.cost)}</td></tr>`:''}</table>
+    <p style="font-size:12px">I hand over the above vehicle with all papers. Any challan / dispute up to this date is my responsibility.</p>
+    <div class="sign"><div>Seller signature</div><div>For ${esc(S.name)}</div></div></div>`;
+  const sale=sold?`<div class="rc" style="margin-top:28px">${head('OLD VEHICLE SALE VOUCHER','',o.soldDate)}
+    <p><b>Sold to:</b> ${esc(o.buyer)}${o.buyerRel?' S/o / W/o '+esc(o.buyerRel):''}<br><b>Mobile:</b> ${esc(o.buyerPhone)}${o.buyerAddr?`<br><b>Address:</b> ${esc(o.buyerAddr)}`:''}</p>${veh}
+    <table style="width:60%;margin:14px 0 0 auto"><tr><td><b>Sale price</b></td><td class="num"><b>${rs(o.soldPrice)}</b></td></tr>
+    ${DB.daybook.filter(d=>d.oldId===o.id&&d.type==='in').map(d=>`<tr><td>Received ${fd(d.date)} (${esc(d.mode)})</td><td class="num">${rs(d.amount)}</td></tr>`).join('')}
+    <tr><td><b>Balance</b></td><td class="num"><b>${rs(ovDue(o))}</b></td></tr></table>
+    <p style="font-size:12px">Vehicle sold in as-is condition. Buyer is responsible for the vehicle from this date and will get the RC transferred.</p>
+    <div class="sign"><div>Buyer signature</div><div>For ${esc(S.name)}</div></div></div>`:'';
+  $('#print').innerHTML=buy+sale; window.print();
+}
+
 /* ---------- enquiries ---------- */
 let enqF='Open';
 const wa=p=>{const n=String(p||'').replace(/\D/g,'');return n.length>=10?`https://wa.me/91${n.slice(-10)}`:''};
@@ -1035,6 +1179,7 @@ function csv(which){
     dealer:[['date','amount','mode','paidBy','ref','challans','particulars'],()=>oldest(dpRows()).map(r=>({...r,paidBy:PB(r)}))],
     rent:[['date','paidTo','type','forMonth','amount','mode','paidBy','ref','particulars'],()=>oldest(epRows()).map(r=>({...r,paidTo:epName(r.payee),type:r.head===H.rent?'Rent':r.ptype||'Salary',forMonth:mLabel(r.forMonth),paidBy:PB(r)}))],
     exp:[['date','head','particulars','amount','vendor','bill','mode','paidBy'],()=>oldest(exRows()).map(r=>({...r,paidBy:PB(r)}))],
+    oldveh:[['regNo','model','year','colour','chassis','engine','fromName','fromPhone','date','cost','repair','status','soldDate','buyer','buyerPhone','soldPrice','received','due','profit','note'],()=>(DB.oldveh||[]).map(o=>({...o,received:ovRecd(o),due:ovDue(o),profit:o.status==='sold'?ovProfit(o):''}))],
     dues:[['name','relName','phone','address','model','colour','schallan','date','days','total','finance','exchangeValue','received','discount','due','lastPayment','promiseDate','promiseNote'],()=>duesRows().map(s=>({...s,days:daysAgo(s.date),received:saleReceived(s),due:Math.round(saleDue(s)),lastPayment:lastPay(s),promiseDate:s.dueFollow?.date||'',promiseNote:s.dueFollow?.note||''}))],
     ledger:[['date','head','remarks','mode','debit','credit','balance'],()=>{const D=ledData(ledOf(ledK),ledFrom,ledTo);return [{date:ledFrom,head:'Opening balance',balance:drcr(D.ob)},...D.rows.map(r=>({date:r.d.date,head:headOf(r.d),remarks:ledText(r.d),mode:r.d.mode,debit:r.dr||'',credit:r.cr||'',balance:drcr(r.bal)}))]}],
     cashbook:[['date','head','remarks','mode','receipt','payment','balance'],()=>{const D=ledData(ledOf(cbK),ledFrom,ledTo);return [{date:ledFrom,head:'Opening balance',balance:D.ob},...D.rows.map(r=>({date:r.d.date,head:headOf(r.d),remarks:ledText(r.d),mode:r.d.mode,receipt:r.dr||'',payment:r.cr||'',balance:r.bal}))]}],
@@ -1050,7 +1195,7 @@ function csv(which){
 /* ---------- accounts: reports built only from Day Book entries ---------- */
 let accT='dealer', dpF='', epF='', exF='', exM='', capF='';
 const byCell=x=>x.fin?`<b>Finance company</b><div class="sub2">direct to dealer</div>`:x.by?`<b>${esc(pName(x.by))}</b><div class="sub2">${x.type==='in'?'kept it':'own pocket'}</div>`:'Business';
-const editBtn=d=>d.saleId?`<button class="btn plain sm" onclick="viewSale('${d.saleId}')">Open sale</button>`:`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button>`;
+const editBtn=d=>d.oldId?`<button class="btn plain sm" onclick="go('old')">Old Vehicles</button>`:d.saleId?`<button class="btn plain sm" onclick="viewSale('${d.saleId}')">Open sale</button>`:`<button class="btn plain sm" onclick="editDay('${d.id}')">Edit</button>`;
 const newBtn=(k,type='out',label='+ New entry in Day Book')=>`<button class="btn sm" onclick="dayPreset={type:'${type}',head:H.${k}};go('day')">${label}</button>`;
 const recent=a=>a.sort((x,y)=>(y.date||'').localeCompare(x.date||'')||y.created-x.created);
 const oldest=a=>a.sort((x,y)=>(x.date||'').localeCompare(y.date||'')||x.created-y.created);
@@ -1344,6 +1489,12 @@ function pdfData(which){
     return {title:'Dealer Payments – '+(DB.settings.dealerName||'Dealer'),sub:(dpF?'Paid by '+(dpF==='biz'?'Business':pName(dpF)):'All payments')+` · Purchases ${rs(A.purchase)} · Paid ${rs(A.paid)} · Balance ${rs(A.purchase-A.paid)}`,num:[1],
       head:['Date','Amount','Mode','Paid by','UTR / Cheque','Against challan','Remarks'],
       rows:rows.map(x=>[fd(x.date),rs(x.amount),x.mode,PB(x),x.ref,x.challans,x.particulars]),foot:[['Total',rs(T),'','','','','']]};
+  }
+  if(which==='oldveh'){
+    const r=(DB.oldveh||[]).filter(o=>ovF==='all'||(ovF==='sold'?o.status==='sold':o.status!=='sold')).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    return {title:'Old Vehicle Register',sub:ovF==='all'?'All':ovF==='sold'?'Sold':'In hand',num:[4,7,8],head:['Reg. No','Model','Taken from','Date in','Cost','Status','Sold to','Sold for','Profit / loss'],
+      rows:r.map(o=>[o.regNo,`${o.model||''} ${o.year||''}`,o.fromName,fd(o.date),rs(ovCost(o)),o.status==='sold'?'Sold '+fd(o.soldDate):'In hand',o.buyer||'',o.status==='sold'?rs(o.soldPrice):'',o.status==='sold'?rs(ovProfit(o)):'']),
+      foot:[['Total','','','',rs(r.reduce((a,o)=>a+ovCost(o),0)),'','',rs(r.reduce((a,o)=>a+num(o.soldPrice||0),0)),rs(r.reduce((a,o)=>a+ovProfit(o),0))]]};
   }
   if(which==='dues'){
     const r=duesRows();
@@ -1802,7 +1953,16 @@ function tallyVouchers(from,to){
   }
   const HL={[H.dealer]:T.supplier,[H.spareSup]:T.spareSup,[H.rent]:T.rentL,[H.sal]:T.salaryL,[H.spare]:T.spareL,[H.work]:T.workshopL,[H.misc]:T.miscL,[H.show]:T.expense,[H.mrec]:T.income};
   const capL=id=>`${pName(id)} Capital A/c`;
-  for(const d of DB.daybook) if(!d.saleId&&!d.old&&ins(d.date)&&num(d.amount)>0){
+  for(const o of DB.oldveh||[]) if(o.status==='sold'&&ins(o.soldDate)&&num(o.soldPrice)>0){
+    const buyer=`${o.buyer||'Old vehicle buyer'}${o.buyerPhone?' ('+o.buyerPhone+')':''}`, pr=r2(num(o.soldPrice)-num(o.cost)); parties.add(buyer);
+    V.push({type:'Sales',date:o.soldDate,id:'ov'+o.id,party:buyer,nar:`Old vehicle ${o.model} ${o.regNo||''} sold`,L:[[buyer,num(o.soldPrice)],[T.exchange,-num(o.cost)],...(Math.abs(pr)>0.004?[['Profit on Old Vehicles',-pr]]:[])]});
+  }
+  for(const d of DB.daybook) if(d.oldId&&!d.old&&ins(d.date)&&num(d.amount)>0){
+    const a=num(d.amount), o=(DB.oldveh||[]).find(x=>x.id===d.oldId)||{}, own=d.by?`${pName(d.by)} Capital A/c`:modeL(d.mode);
+    if(d.type==='out') V.push({type:d.by?'Journal':'Payment',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[T.exchange,a],[own,-a]]});
+    else {const buyer=`${o.buyer||'Old vehicle buyer'}${o.buyerPhone?' ('+o.buyerPhone+')':''}`; V.push({type:d.by?'Journal':'Receipt',date:d.date,id:'d'+d.id,nar:d.particulars,L:[[own,a],[buyer,-a]]})}
+  }
+  for(const d of DB.daybook) if(!d.saleId&&!d.oldId&&!d.old&&ins(d.date)&&num(d.amount)>0){
     const a=num(d.amount), base={date:d.date,id:'d'+d.id,nar:[d.particulars,dayDesc(d)].filter(Boolean).join(' · ')||d.head||''};
     if((d.head===H.capIn||d.head===H.hand)&&d.pid){V.push({...base,type:'Receipt',L:[[modeL(d.mode),a],[capL(d.pid),-a]]});continue}
     if(d.head===H.capOut&&d.pid){V.push({...base,type:'Payment',L:[[capL(d.pid),a],[modeL(d.mode),-a]]});continue}
@@ -1823,7 +1983,7 @@ function tallyExport(){
   const {V,parties,T}=tallyVouchers(tFrom,tTo); if(!V.length){alert('No entries in these dates.');return}
   const x=esc, amt=n=>(Math.round(n*100)/100).toFixed(2);
   const led=(n,p)=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><LEDGER NAME="${x(n)}"><NAME.LIST><NAME>${x(n)}</NAME></NAME.LIST><PARENT>${x(p)}</PARENT><ISBILLWISEON>No</ISBILLWISEON></LEDGER></TALLYMESSAGE>`;
-  const masters=[...parties.map(p=>led(p,T.debtors)),led(T.exchange,'Current Assets'),led(T.expense,'Indirect Expenses'),led(T.income,'Indirect Incomes'),led('Discount Allowed','Indirect Expenses'),...[T.rentL,T.salaryL,T.spareL,T.workshopL,T.miscL].map(n=>led(n,'Indirect Expenses')),led(T.spareSup,'Sundry Creditors'),...['Service / workshop income','Other income'].map(n=>led(n,'Indirect Incomes')),...DB.partners.map(p=>led(`${p.name} Capital A/c`,'Capital Account'))];
+  const masters=[...parties.map(p=>led(p,T.debtors)),led(T.exchange,'Current Assets'),led(T.expense,'Indirect Expenses'),led(T.income,'Indirect Incomes'),led('Discount Allowed','Indirect Expenses'),led('Profit on Old Vehicles','Indirect Incomes'),...[T.rentL,T.salaryL,T.spareL,T.workshopL,T.miscL].map(n=>led(n,'Indirect Expenses')),led(T.spareSup,'Sundry Creditors'),...['Service / workshop income','Other income'].map(n=>led(n,'Indirect Incomes')),...DB.partners.map(p=>led(`${p.name} Capital A/c`,'Capital Account'))];
   const vch=V.map(v=>`<TALLYMESSAGE xmlns:UDF="TallyUDF"><VOUCHER REMOTEID="hsc-${x(v.id)}" VCHTYPE="${v.type}" ACTION="Create" OBJVIEW="Accounting Voucher View">
 <DATE>${v.date.replace(/-/g,'')}</DATE><EFFECTIVEDATE>${v.date.replace(/-/g,'')}</EFFECTIVEDATE><VOUCHERTYPENAME>${v.type}</VOUCHERTYPENAME>${v.no?`<VOUCHERNUMBER>${x(v.no)}</VOUCHERNUMBER>`:''}${v.ref?`<REFERENCE>${x(v.ref)}</REFERENCE>`:''}${v.party?`<PARTYLEDGERNAME>${x(v.party)}</PARTYLEDGERNAME>`:''}
 <PERSISTEDVIEW>Accounting Voucher View</PERSISTEDVIEW><ISINVOICE>No</ISINVOICE><NARRATION>${x(v.nar)}</NARRATION>
@@ -1973,7 +2133,7 @@ function saveChallan(){
 
 /* ---------- cloud sync (Firebase) ---------- */
 const SHOP='chhachhrauli', FBV='12.19.0', CPK=KEY+'_cloudproj', PRE=KEY+'_precloud';
-const COLS=['stock','sales','daybook','enquiries','partners','capital','dealerPay','expPay','expenses'];
+const COLS=['stock','sales','daybook','enquiries','partners','capital','dealerPay','expPay','expenses','oldveh'];
 const jparse=j=>{try{return JSON.parse(j)}catch(e){return null}};
 const localHas=()=>COLS.some(c=>(DB[c]||[]).length);
 function cacheLocal(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
