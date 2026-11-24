@@ -165,6 +165,7 @@ const FB_CONFIG={apiKey:"AIzaSyBwEfdGtbhXbaiqVv34K1olQDwWSvD301E",authDomain:"ho
 const FBK=KEY+'_fbcfg';
 function fbCfg(){if(FB_CONFIG)return FB_CONFIG;try{return JSON.parse(localStorage.getItem(FBK))||null}catch(e){return null}}
 const CLOUD=!!fbCfg();
+let STAFF=false,FINQ=[],staffQ='';
 let FB=null,cloudReady=false,READONLY=false,SYNCED={},UNSUB=[],appDirty=false,cloudEmail='',pendingN=0,SYNC_ST='';
 function save(){
   if(READONLY){ try{DB=JSON.parse(localStorage.getItem(KEY))||DB}catch(e){} toast('📴 No internet — this entry was not saved'); setTimeout(render,0); return }
@@ -199,6 +200,7 @@ function render(){
   if(CLOUD&&!cloudReady&&!READONLY) return;
   if(DB.sales.some(x=>x.financeBy)||DB.daybook.some(d=>d.fin&&d.by)){DB.sales.forEach(x=>delete x.financeBy);DB.daybook.forEach(d=>{if(d.fin) delete d.by});save()}
   if(oldSync()) save();
+  if(finApply()) save();
   if(migrateDB()){ save(); setTimeout(()=>toast('All entries now live in the Day Book'),300) }
   appDirty=false; $('#syncbar').classList.add('hide'); setSync();
   $('#hName').textContent=DB.settings.name;
@@ -395,7 +397,13 @@ function editStock(id){
     <label>Engine No<input name="engine" class="mono" value="${esc(s.engine)}"></label><label>Chassis No<input name="chassis" class="mono" value="${esc(s.chassis)}"></label>
     <label>Key No<input name="key" class="mono" value="${esc(s.key)}"></label><label>Purchase price<input name="cost" inputmode="decimal" value="${esc(s.cost)}"></label></form>`,
   `<button class="btn plain" style="margin-right:auto;color:var(--red)" onclick="if(confirm('Delete this vehicle from stock?')){DB.stock=DB.stock.filter(x=>x.id!=='${id}');save();dlg.close();render()}">Delete</button>
-   <button class="btn" onclick="const d=formData($('#fe'));if(d.cost)d.cost=String(num(d.cost));d.chassis=up(d.chassis);d.engine=up(d.engine);d.key=up(d.key);Object.assign(DB.stock.find(x=>x.id==='${id}'),d);save();dlg.close();render();toast('Saved')">Save</button>`);
+   <button class="btn" onclick="saveStockEdit('${id}')">Save</button>`);
+}
+function saveStockEdit(id){
+  const d=formData($('#fe')); if(d.cost)d.cost=String(num(d.cost)); d.chassis=up(d.chassis); d.engine=up(d.engine); d.key=up(d.key);
+  const c=DB.stock.find(x=>x.id!==id&&x.status!=='returned'&&((d.chassis&&x.chassis===d.chassis)||(d.engine&&x.engine===d.engine)));
+  if(c&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nAnother vehicle already has this ${c.chassis===d.chassis?'chassis':'engine'} number (${c.model}, challan ${c.challan||'—'}).\n\nSave anyway?`)) return;
+  Object.assign(DB.stock.find(x=>x.id===id),d); save(); dlg.close(); render(); toast('Saved');
 }
 
 /* ---------- sales ---------- */
@@ -426,6 +434,8 @@ function setFinBy(id,by){
   save(); toast(`Finance money of ${s.name} → ${mwName(by)}`); tab==='sales'?salesList():render();
 }
 const mwText=s=>Object.entries(moneyWith(s)).filter(([,v])=>v>0.5).map(([k,v])=>`${mwName(k)} ${rs(v)}`).join(' · ');
+const schSame=(v,skipId)=>{v=txt(v).toUpperCase();return v?DB.sales.find(x=>x.id!==skipId&&txt(x.schallan).toUpperCase()===v):null};
+const schOk=(v,skipId)=>{const sc=schSame(v,skipId);return !sc||confirm(`⚠ Possible DOUBLE ENTRY\n\nSale challan ${v} is already used for ${sc.name} (${sc.model}, ${fd(sc.date)}).\n\nSave anyway?`)};
 function newSale(stockId,enqId){
   const avail=DB.stock.filter(isIn);
   if(!avail.length){alert('No vehicle in stock. Add the vehicle in the Stock tab first.');go('stock');return}
@@ -573,7 +583,7 @@ function vSales(){
   <input placeholder="Search name / mobile / chassis…" style="max-width:260px" value="${esc(salesQ)}" oninput="salesQ=this.value;salesList()">
   ${DB.partners.length?`<select style="width:auto" onchange="salesW=this.value;salesList()"><option value="">Money with: all</option><option value="biz" ${salesW==='biz'?'selected':''}>Money with: Business</option>${DB.partners.map(p=>`<option value="${p.id}" ${salesW===p.id?'selected':''}>Money with: ${esc(p.name)}</option>`).join('')}</select>`:''}
   <button class="btn plain sm" onclick="csv('sales')">Export Excel (CSV)</button><button class="btn plain sm" onclick="pdfExport('sales')">📄 PDF</button>${impBtn('sales')}${photoBtn('aiSale','Sales from bill photos (many at once)')}<button class="btn" onclick="newSale()">+ New sale</button></div><div id="salesList"></div></div>`;
-  salesList(); const b=dupBanner(); if(b) $('#app').insertAdjacentHTML('afterbegin',b);
+  salesList(); const b=dupBanner()+finBanner(); if(b) $('#app').insertAdjacentHTML('afterbegin',b);
 }
 function salesList(){
   const q=salesQ.toLowerCase();
@@ -635,6 +645,7 @@ function saveEditSale(id){
   const ch=up(d.chassis), en=up(d.engine);
   const clash=DB.stock.find(x=>x.id!==s.stockId&&((ch&&x.chassis===ch)||(en&&x.engine===en)));
   if(clash&&!confirm(`Another vehicle in stock already has this ${clash.chassis===ch?'chassis':'engine'} number (${clash.model}). Save anyway?`)) return;
+  if(!schOk(d.schallan,id)) return;
   Object.assign(s,{schallan:d.schallan,date:d.date||s.date,name:d.name,rel:d.rel,relName:d.relName,phone:d.phone,address:d.address,model:d.model,colour:d.colour,chassis:ch,engine:en,key:up(d.key),
     price:num(d.price),extra:num(d.extra),total:num(d.price)+num(d.extra),finance:num(d.finance),financer:d.financer,exchange:d.exchange,exchangeReg:txt(d.exchangeReg).toUpperCase(),exchangeValue:num(d.exchangeValue),notes:d.notes});
   if(st) Object.assign(st,{challan:d.pchallan,model:d.model,colour:d.colour,chassis:ch,engine:en,key:up(d.key)});
@@ -657,6 +668,7 @@ function saveEditSale(id){
 function setSChallan(id){
   const s=DB.sales.find(x=>x.id===id); if(!s) return;
   const v=prompt(`Sale Challan / Bill No — ${s.name} (${s.model})`,s.schallan||''); if(v===null) return;
+  if(!schOk(v,id)) return;
   s.schallan=txt(v); save(); const open=dlg.open; render(); if(open) viewSale(id); toast('Sale challan saved');
 }
 function delSale(id){
@@ -909,22 +921,28 @@ function dupScan(){
   DB.daybook.filter(d=>!d.dupOk&&num(d.amount)>0).forEach(d=>(byK[dupKey(d)]=byK[dupKey(d)]||[]).push(d));
   for(const k in byK) if(byK[k].length>1) G.push({kind:'day',items:byK[k]});
   const grp=(f,label)=>{const m={}; DB.sales.forEach(s=>{const v=txt(f(s)).toUpperCase(); if(v&&!s.dupOk) (m[v]=m[v]||[]).push(s)}); for(const v in m) if(m[v].length>1) G.push({kind:'sale',label:label+' '+v,items:m[v]})};
-  grp(s=>s.chassis,'Same chassis'); grp(s=>s.schallan,'Same sale challan');
-  const sm={}; DB.stock.filter(s=>!s.dupOk&&s.status!=='returned').forEach(s=>{const v=txt(s.chassis).toUpperCase(); if(v)(sm[v]=sm[v]||[]).push(s)});
-  for(const v in sm) if(sm[v].length>1) G.push({kind:'stock',label:'Same chassis in stock '+v,items:sm[v]});
+  grp(s=>s.chassis,'Same chassis'); grp(s=>s.engine,'Same engine no'); grp(s=>s.schallan,'Same sale challan');
+  const seen=new Set(G.filter(g=>g.kind==='sale').map(g=>g.items.map(x=>x.id).sort().join()));
+  for(let i=G.length-1;i>=0;i--){const g=G[i]; if(g.kind!=='sale'||!g.label.startsWith('Same engine')) continue; const k=g.items.map(x=>x.id).sort().join(); if(G.some((h,j)=>j!==i&&h.kind==='sale'&&!h.label.startsWith('Same engine')&&h.items.map(x=>x.id).sort().join()===k)) G.splice(i,1)}
+  const grpL=(list,f,kind,label)=>{const m={}; list.filter(x=>!x.dupOk).forEach(x=>{const v=txt(f(x)).toUpperCase(); if(v)(m[v]=m[v]||[]).push(x)}); for(const v in m) if(m[v].length>1) G.push({kind,label:label+' '+v,items:m[v]})};
+  const stk=DB.stock.filter(s=>s.status!=='returned');
+  grpL(stk,s=>s.chassis,'stock','Same chassis in stock');
+  grpL(stk.filter(s=>!stk.some(t=>t!==s&&s.chassis&&t.chassis===s.chassis)),s=>s.engine,'stock','Same engine no in stock');
+  grpL(DB.oldveh.filter(o=>o.status!=='sold'),o=>o.regNo,'old','Same old vehicle number');
+  grpL(DB.enquiries.filter(e=>e.status==='Open'),e=>String(e.phone||'').replace(/\D/g,'').slice(-10).padStart(10,'#').includes('#')?'':String(e.phone).replace(/\D/g,'').slice(-10),'enq','Same mobile in open enquiries');
   return G;
 }
-const dupBanner=()=>{const n=dupScan().length; return n?`<div class="warn" style="cursor:pointer" onclick="dupReviewAll()">⚠ <b>${n} possible double ${n>1?'entries':'entry'}</b> found (same date, amount and head / same chassis). <u>Click to check</u></div>`:''};
+const dupBanner=()=>{const n=dupScan().length; return n?`<div class="warn" style="cursor:pointer" onclick="dupReviewAll()">⚠ <b>${n} possible double ${n>1?'entries':'entry'}</b> found (same date, amount and head / same chassis, engine, challan, vehicle no. or mobile). <u>Click to check</u></div>`:''};
 function dupReviewAll(){
   const G=dupScan();
   if(!G.length){toast('No double entries found ✓');return}
   const row=(g,i)=>g.kind==='day'?`<div class="card" style="margin:0 0 10px;padding:12px"><b>${fd(g.items[0].date)} · ${esc(headOf(g.items[0])||(g.items[0].type==='in'?'Receipt':'Payment'))} · ${rs(g.items[0].amount)}</b> <span class="muted">(${g.items.length} times)</span>
       <table style="margin-top:6px">${g.items.map(d=>`<tr><td style="white-space:normal">${esc(d.particulars)} ${byPill(d)}${dayDesc(d)?`<div class="sub2">${esc(dayDesc(d))}</div>`:''}</td><td>${esc(d.mode)}</td><td style="white-space:nowrap">${d.saleId?`<button class="btn plain sm" onclick="viewSale('${d.saleId}')">Open sale</button>`:`<button class="btn plain sm" style="color:var(--red)" onclick="if(confirm('Delete this entry?')){DB.daybook=DB.daybook.filter(x=>x.id!=='${d.id}');save();dupReviewAll();render()}">Delete</button>`}</td></tr>`).join('')}</table>
       <button class="btn plain sm" style="margin-top:6px" onclick="dupOk(${i})">These are different – not a double entry</button></div>`
-    :`<div class="card" style="margin:0 0 10px;padding:12px"><b>${esc(g.label)}</b> <span class="muted">(${g.items.length} ${g.kind==='sale'?'sales':'vehicles'})</span>
-      <table style="margin-top:6px">${g.items.map(x=>g.kind==='sale'?`<tr><td>${fd(x.date)}</td><td><b>${esc(x.name)}</b> · ${esc(x.model)} · #${x.inv}</td><td>${rs(x.total)}</td><td><button class="btn plain sm" onclick="viewSale('${x.id}')">Open</button></td></tr>`
+    :`<div class="card" style="margin:0 0 10px;padding:12px"><b>${esc(g.label)}</b> <span class="muted">(${g.items.length} ${g.kind==='sale'?'sales':g.kind==='enq'?'enquiries':'vehicles'})</span>
+      <table style="margin-top:6px">${g.items.map(x=>g.kind==='old'?`<tr><td>${fd(x.date)}</td><td>${esc(x.model)} · ${esc(x.regNo)}</td><td>${esc(x.fromName||'')}</td></tr>`:g.kind==='enq'?`<tr><td>${fd(x.date)}</td><td><b>${esc(x.name)}</b> · ${esc(x.phone)}</td><td>${esc(x.model)}</td><td><button class="btn plain sm" onclick="editEnq('${x.id}')">Open</button></td></tr>`:g.kind==='sale'?`<tr><td>${fd(x.date)}</td><td><b>${esc(x.name)}</b> · ${esc(x.model)} · #${x.inv}</td><td>${rs(x.total)}</td><td><button class="btn plain sm" onclick="viewSale('${x.id}')">Open</button></td></tr>`
         :`<tr><td>${fd(x.date)}</td><td>${esc(x.model)} ${esc(x.colour)} · Challan ${esc(x.challan)}</td><td>${x.status==='sold'?'Sold':'In stock'}</td></tr>`).join('')}</table>
-      ${g.kind==='stock'?'<p class="note" style="margin:6px 0 0">Use Stock → “Remove duplicates” to remove the extra one.</p>':''}
+      ${g.kind==='stock'?'<p class="note" style="margin:6px 0 0">Use Stock → “Remove duplicates” to remove the extra one.</p>':''}${g.kind==='old'?'<p class="note" style="margin:6px 0 0">Open Old Vehicles and delete the extra one.</p>':''}${g.kind==='enq'?'<p class="note" style="margin:6px 0 0">Open Enquiries and delete the extra one.</p>':''}
       <button class="btn plain sm" style="margin-top:6px" onclick="dupOk(${i})">Not a double entry</button></div>`;
   openDlg(`⚠ ${G.length} possible double ${G.length>1?'entries':'entry'}`,`<p class="muted" style="margin-top:0">These look the same. Delete the extra one, or mark them as different if both are correct.</p>${G.map(row).join('')}`,'<button class="btn" onclick="dlg.close()">Done</button>');
 }
@@ -1053,7 +1071,7 @@ function oldRecv(id){
   const o=DB.oldveh.find(x=>x.id===id);
   openDlg('Receive – '+o.buyer,`<p class="muted" style="margin-top:0">Due: <b>${rs(ovDue(o))}</b></p><form id="for" class="grid"><label>Date<input type="date" name="date" value="${today()}"></label><label>Amount<input name="amount" inputmode="decimal" value="${Math.round(ovDue(o))}"></label>
     <label>Mode<select name="mode">${opts(['Cash','UPI','Bank','Cheque'],'Cash')}</select></label>${DB.partners.length?recvBy(''):''}</form>`,
-  `<button class="btn" onclick="const d=formData($('#for'));if(num(d.amount)<=0)return;const o=DB.oldveh.find(x=>x.id==='${id}');DB.daybook.push({id:uid(),created:Date.now(),type:'in',oldId:o.id,ovKind:'recv',date:d.date||today(),head:'Old vehicle sale',amount:num(d.amount),mode:d.mode,particulars:(o.model+' '+(o.regNo||'')+' – balance from '+o.buyer),...(d.by?{by:d.by}:{})});save();dlg.close();render();toast('Received')">Save</button>`);
+  `<button class="btn" onclick="const d=formData($('#for'));if(num(d.amount)<=0)return;const o=DB.oldveh.find(x=>x.id==='${id}');if(!dupConfirm(DB.daybook.filter(x=>x.oldId===o.id&&x.type==='in'&&x.date===(d.date||today())&&Math.round(num(x.amount))===Math.round(num(d.amount))),'A receipt of the same amount on the same date for this vehicle'))return;DB.daybook.push({id:uid(),created:Date.now(),type:'in',oldId:o.id,ovKind:'recv',date:d.date||today(),head:'Old vehicle sale',amount:num(d.amount),mode:d.mode,particulars:(o.model+' '+(o.regNo||'')+' – balance from '+o.buyer),...(d.by?{by:d.by}:{})});save();dlg.close();render();toast('Received')">Save</button>`);
 }
 function oldUnsell(id){ if(!confirm('Undo this sale? The money entries for it will be removed from the Day Book.')) return; const o=DB.oldveh.find(x=>x.id===id);
   ['soldDate','soldPrice','buyer','buyerRel','buyerPhone','buyerAddr','soldNote'].forEach(k=>delete o[k]); o.status='in'; DB.daybook=DB.daybook.filter(d=>!(d.oldId===id&&d.type==='in')); save(); dlg.close(); render() }
@@ -1106,6 +1124,8 @@ function vEnq(){
 }
 function saveEnq(id){
   const f=$('#fen'); if(!f.reportValidity()) return; const d=formData(f);
+  const ph=String(d.phone||'').replace(/\D/g,'').slice(-10), de=ph.length===10&&DB.enquiries.find(x=>x.id!==id&&x.status==='Open'&&String(x.phone||'').replace(/\D/g,'').slice(-10)===ph);
+  if(de&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nAn open enquiry for mobile ${d.phone} already exists (${de.name}, ${fd(de.date)}).\n\nSave anyway?`)) return;
   if(id) Object.assign(DB.enquiries.find(x=>x.id===id),d); else DB.enquiries.push({id:uid(),created:Date.now(),...d});
   save(); if(dlg.open) dlg.close(); render(); toast('Enquiry saved');
 }
@@ -1317,6 +1337,8 @@ function accRent(){
 function saveEmps(){
   const read=id=>[...document.querySelectorAll(`#${id} .ed`)].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:txt(i[1].value),val:num(i[2].value)}});
   const O=read('ownRows').filter(x=>x.name).map(x=>({id:x.id,name:x.name,rent:x.val})), E=read('empRows').filter(x=>x.name).map(x=>({id:x.id,name:x.name,salary:x.val}));
+  const twice=a=>new Set(a.map(x=>x.name.toLowerCase())).size<a.length;
+  if(twice(O)||twice(E)){alert('The same name is entered twice. Remove the double entry.');return}
   const dropped=[...owners().filter(o=>!O.some(k=>k.id===o.id)),...emps().filter(e=>!E.some(k=>k.id===e.id))];
   if(dropped.some(x=>epAll().some(p=>p.payee===x.id))){alert('Someone with payments cannot be removed.');return}
   DB.settings.owners=O; DB.settings.employees=E; save(); vAcc(); toast('Saved');
@@ -1565,7 +1587,9 @@ const pName=id=>DB.partners.find(p=>p.id===id)?.name||'?';
 function ptRow(p){return `<div class="row pt" style="margin-bottom:6px;flex-wrap:nowrap"><input type="hidden" value="${esc(p.id||'')}"><input placeholder="Partner name" value="${esc(p.name)}" style="flex:3;min-width:0"><input placeholder="Share" inputmode="decimal" value="${esc(p.share??'')}" style="width:80px"><span>%</span></div>`}
 function savePartners(){
   const rows=[...document.querySelectorAll('#ptRows .pt')].map(r=>{const i=r.querySelectorAll('input');return {id:i[0].value||uid(),name:String(i[1].value).trim(),share:num(i[2].value)}});
-  const keep=rows.filter(p=>p.name), dropped=DB.partners.filter(p=>!keep.some(k=>k.id===p.id));
+  const keep=rows.filter(p=>p.name);
+  if(new Set(keep.map(p=>p.name.toLowerCase())).size<keep.length){alert('The same partner name is entered twice. Remove the double entry.');return}
+  const dropped=DB.partners.filter(p=>!keep.some(k=>k.id===p.id));
   if(dropped.some(p=>capAll().some(d=>capP(d)===p.id))){alert('A partner with entries cannot be removed. Delete their entries first.');return}
   if(keep.length&&Math.round(keep.reduce((a,p)=>a+p.share,0))!==100&&!confirm('Shares do not add up to 100%. Save anyway?')) return;
   DB.partners=keep; DB.settings.agreedCapital=num(formData($('#fpt')).agreed); save(); toast('Partners saved'); vAcc();
@@ -1665,8 +1689,12 @@ function saveSales(){
   });
   if(bad.length){alert(`Line ${bad.join(', ')}: customer name or Chassis/Engine no. is empty. Fill it in or untick it.`);return}
   if(!out.length){alert('No sale selected.');return}
+  const dupS=[], seenS=new Set();
+  for(const r of out){ const v=txt(r.schallan).toUpperCase(); if(v&&(schSame(v)||seenS.has(v))) dupS.push(r.schallan); if(v) seenS.add(v) }
+  if(dupS.length&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nSale challan ${dupS.join(', ')} is already used (or appears twice here).\n\nSave anyway?`)) return;
   let made=0;
   for(const r of out){
+    if(DB.sales.some(x=>(r.chassis&&x.chassis===r.chassis)||(r.engine&&x.engine===r.engine))){skipped.push(r.chassis||r.engine);continue}
     const avail=DB.stock.filter(s=>isIn(s)&&!used.has(s.id));
     let st=saleMatch(r.chassis,r.engine,avail);
     if(!st&&DB.stock.some(s=>s.status==='sold'&&((r.chassis&&s.chassis===r.chassis)||(r.engine&&s.engine===r.engine)))){skipped.push(r.chassis||r.engine);continue}
@@ -1735,6 +1763,8 @@ function savePhotoPay(){
     out.push(r);
   });
   if(!out.length){alert('No entry selected (or amount empty).');return}
+  const same=out.flatMap(r=>daySame(r)); if(!dupConfirm(same,'Entries like these')) return;
+  const keys=out.map(dupKey); if(new Set(keys).size<keys.length&&!confirm('⚠ Two of the selected entries are the same (date, amount, head). Save both?')) return;
   const t0=Date.now(); out.forEach((e,i)=>DB.daybook.push({id:uid(),created:t0+i,...e}));
   save(); dlg.close(); toast(`${out.length} entries added to Day Book`); render();
 }
@@ -1836,6 +1866,7 @@ function planSales(rows){
     if(!r.name){err.push(`Row ${line}: customer name is empty`);continue}
     if(!r.chassis&&!r.engine){err.push(`Row ${line}: no chassis / engine no`);continue}
     if((r.chassis&&sc.has(r.chassis))||(r.engine&&se.has(r.engine))){skip.push(`Row ${line}: sale of ${r.chassis||r.engine} already exists`);continue}
+    if(r.schallan&&schSame(r.schallan)){skip.push(`Row ${line}: sale challan ${r.schallan} is already used`);continue}
     const st=DB.stock.find(x=>(r.chassis&&x.chassis===r.chassis)||(r.engine&&x.engine===r.engine));
     if(st&&st.status==='sold'&&st.saleId){skip.push(`Row ${line}: ${r.chassis||r.engine} is already marked sold`);continue}
     if(!r.model&&!st){err.push(`Row ${line}: model is empty and vehicle not found in stock`);continue}
@@ -2196,6 +2227,10 @@ function cloudStart(){
     if(!cloudReady){ if(started) return; if(snap.metadata.fromCache&&snap.empty) return; init[c]=snap.docs.map(d=>d.data().j); begin(); return }
     remoteCol(c,snap);
   },cloudErr)));
+  UNSUB.push(F.onSnapshot(F.collection(db,'shops',SHOP,'finentries'),snap=>{
+    FINQ=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(cloudReady){ if(finApply()) save(); remoteChanged() }
+  },()=>{}));
   UNSUB.push(F.onSnapshot(F.doc(db,'shops',SHOP,'meta','settings'),{includeMetadataChanges:true},snap=>{
     if(!cloudReady){ if(started) return; if(snap.metadata.fromCache&&!snap.exists()) return; init._s=snap.exists()?snap.data().j:null; begin(); return }
     if(snap.exists()) remoteSettings(snap.data().j);
@@ -2260,7 +2295,9 @@ function cloudPush(){
   Promise.all(ps).then(()=>{pendingN--;setSync('ok')},e=>{pendingN--;setSync('err');cloudErr(e)});
 }
 function cloudErr(e){
+  if(STAFF) return;
   const c=(e&&e.code)||'';
+  if(/permission-denied/.test(c)&&!cloudReady&&!STAFF){ STAFF=true; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[]; staffStart(); return }
   if(/permission-denied/.test(c)){ cloudReady=false; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[];
     cloudScreen(`<h2>Access denied</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> does not have access to this showroom’s data. Add this email to the Firestore Rules in Firebase.</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`); return }
   toast('⚠ Sync error: '+(c||(e&&e.message)||e));
@@ -2273,14 +2310,22 @@ async function cloudLogout(force){
   try{await FB.F.terminate(FB.db);await FB.F.clearIndexedDbPersistence(FB.db)}catch(e){}
   location.reload();
 }
-function rulesText(s){
-  const em=[...new Set(String(s||'').split(/[,\s;]+/).map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)))];
+const emList=s=>[...new Set(String(s||'').split(/[,\s;]+/).map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x)))];
+function rulesText(s,st){
+  const em=emList(s), sf=emList(st).filter(x=>!em.includes(x)), L=a=>a.map(e=>`'${e}'`).join(', ');
   return `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /shops/${SHOP}/{document=**} {
       allow read, write: if request.auth != null
-        && request.auth.token.email.lower() in [${em.map(e=>`'${e}'`).join(', ')}];
+        && request.auth.token.email.lower() in [${L(em)}];
+    }
+    match /shops/${SHOP}/finentries/{id} {
+      allow read, delete: if request.auth != null
+        && request.auth.token.email.lower() in [${L(sf)}];
+      allow create, update: if request.auth != null
+        && request.auth.token.email.lower() in [${L(sf)}]
+        && request.resource.data.keys().hasOnly(['challan','amount','recd','recdAmt','recdDate','by','at','m']);
     }
   }
 }`}
@@ -2290,10 +2335,14 @@ function saveFbCfg(){const c=parseFbCfg($('#fbIn').value);
   if(!c){alert('Config is incomplete. Copy the whole “firebaseConfig = { … }” block from Firebase.');return}
   if(!confirm('Turn on cloud? You will need to log in after this.'))return;
   try{localStorage.setItem(FBK,JSON.stringify(c))}catch(e){} location.reload()}
-function rulesBox(v){return `<details style="margin-top:10px"><summary>Firebase Rules – which emails have access</summary>
-  <p class="note">Enter all login emails separated by commas, then paste the full text below into Firebase → Firestore → Rules and Publish.</p>
-  <input id="rulesEm" value="${esc(v)}" placeholder="aap@gmail.com, partner@gmail.com" oninput="$('#rulesOut').value=rulesText(this.value)">
-  <textarea id="rulesOut" readonly style="min-height:170px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:6px">${esc(rulesText(v))}</textarea></details>`}
+function rulesBox(v){const a=DB.settings.ruleAdmins||v, st=DB.settings.ruleStaff||'';
+  const upd=`$('#rulesOut').value=rulesText($('#rulesEm').value,$('#rulesSt').value)`, keep=`DB.settings.ruleAdmins=$('#rulesEm').value.trim();DB.settings.ruleStaff=$('#rulesSt').value.trim();save()`;
+  return `<details style="margin-top:10px"><summary>Firebase Rules – which emails have access</summary>
+  <p class="note">1) Create each login in Firebase → Authentication → Users → Add user. 2) Enter the emails below. <b>Put every owner’s email in the first box</b> — anyone left out loses access. 3) Paste the full text into Firebase → Firestore → Rules and Publish.</p>
+  <label>Full access (owners / partners)<input id="rulesEm" value="${esc(a)}" placeholder="aap@gmail.com, partner@gmail.com" oninput="${upd}" onchange="${keep}"></label>
+  <label style="margin-top:6px">Finance-only staff (can only enter finance amount / received against a sale challan)<input id="rulesSt" value="${esc(st)}" placeholder="employee@gmail.com" oninput="${upd}" onchange="${keep}"></label>
+  <textarea id="rulesOut" readonly style="min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:6px">${esc(rulesText(a,st))}</textarea>
+  <button class="btn plain sm" style="margin-top:6px" onclick="navigator.clipboard&&navigator.clipboard.writeText($('#rulesOut').value).then(()=>toast('Rules copied'))">Copy rules</button></details>`}
 function cloudCard(){
   if(!CLOUD) return `<div class="card"><h2>☁ Cloud sync – same data on laptop, iPad and phone</h2>
   <p style="margin-top:0">After creating a Firebase project, paste its config (firebaseConfig) here.</p>
@@ -2308,6 +2357,110 @@ function cloudCard(){
   ${pre?`<button class="btn plain" onclick="download('old-device-data-${today()}.json',localStorage.getItem(PRE),'application/json')">⬇ This device’s old (pre-cloud) data</button>`:''}</div>
   ${rulesBox(cloudEmail)}</div>`;
 }
+/* ---------- finance entries by staff (finance-only login) ---------- */
+const chKey=v=>txt(v).toUpperCase().replace(/[^A-Z0-9]/g,'');
+const finRef=id=>FB.F.doc(FB.db,'shops',SHOP,'finentries',id);
+// Admin side: copy each staff entry into the sale with the same Sale Challan No.
+function finApply(){
+  if(!CLOUD||!cloudReady||STAFF||!FINQ.length) return false; let ch=false;
+  for(const e of FINQ){
+    const k=chKey(e.challan); if(!k) continue;
+    const ss=DB.sales.filter(x=>chKey(x.schallan)===k);
+    const lbl=ss.length===1?`${ss[0].name} · ${ss[0].model}`:ss.length>1?'TWO SALES HAVE THIS CHALLAN – office will check':'';
+    if((e.m||'')!==lbl){ e.m=lbl; FB.F.updateDoc(finRef(e.id),{m:lbl}).catch(()=>{}) }
+    if(ss.length!==1) continue;
+    const s=ss[0], ver=[e.id,num(e.amount),e.recd?1:0,num(e.recdAmt),e.recdDate||''].join('|');
+    if(s.finSrc===ver) continue;
+    const wasMine=String(s.finSrc||'').startsWith(e.id+'|');
+    if(num(e.amount)>0) s.finance=num(e.amount);
+    const fid='fin_'+s.id; let de=DB.daybook.find(x=>x.fin&&x.saleId===s.id);
+    if(e.recd&&num(e.recdAmt)>0){
+      Object.assign(s,{financeReceived:true,financeRecdAmt:num(e.recdAmt),financeRecdDate:e.recdDate||today()}); delete s.financeBy;
+      if(!de){ de={id:fid,created:Date.now(),type:'in',saleId:s.id,fin:true,mode:'Bank'}; DB.daybook.push(de) }
+      Object.assign(de,{date:s.financeRecdDate,amount:num(e.recdAmt),particulars:`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}${s.financeRef?' · '+s.financeRef:''}`}); delete de.by;
+    } else if(wasMine&&s.financeReceived){
+      s.financeReceived=false; delete s.financeRecdAmt; delete s.financeRecdDate;
+      DB.daybook=DB.daybook.filter(x=>!(x.fin&&x.saleId===s.id));
+    }
+    s.finSrc=ver; ch=true;
+  }
+  return ch;
+}
+function finBanner(){
+  const bad=FINQ.filter(e=>{const k=chKey(e.challan);return k&&DB.sales.filter(x=>chKey(x.schallan)===k).length!==1});
+  return bad.length?`<div class="warn" style="cursor:pointer" onclick="finUnmatched()">⚠ <b>${bad.length} finance ${bad.length>1?'entries':'entry'} from staff</b> could not be matched to a sale (no sale — or two sales — with that Sale Challan No). <u>Click to see</u></div>`:''}
+function finUnmatched(){
+  const bad=FINQ.filter(e=>{const k=chKey(e.challan);return k&&DB.sales.filter(x=>chKey(x.schallan)===k).length!==1});
+  openDlg('Finance entries from staff – not matched',`<p class="muted" style="margin-top:0">Put the same Sale Challan No on the sale (Sales → open sale → Sale Challan). The finance will then be filled in automatically.</p>
+  <div class="tablewrap"><table><tr><th>Sale Challan</th><th>Finance</th><th>Received</th><th>Entered by</th></tr>${bad.map(e=>`<tr><td><b>${esc(e.challan)}</b></td><td>${rs(e.amount)}</td><td>${e.recd?rs(e.recdAmt)+' · '+fd(e.recdDate):'Pending'}</td><td>${esc(e.by||'')}</td></tr>`).join('')}</table></div>`,'<button class="btn" onclick="dlg.close()">OK</button>');
+}
+// Staff side
+function staffStart(){
+  cloudScreen('<div class="empty">⏳ Loading…</div>');
+  const {F,db}=FB; let first=true;
+  UNSUB.push(F.onSnapshot(F.collection(db,'shops',SHOP,'finentries'),{includeMetadataChanges:true},snap=>{
+    FINQ=snap.docs.map(d=>({id:d.id,...d.data(),_p:d.metadata.hasPendingWrites}));
+    const ae=document.activeElement; if(!first&&ae&&ae.closest&&ae.closest('#sform')){staffList();return}
+    first=false; staffView();
+  },e=>{ STAFF=false; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[];
+    cloudScreen(`<h2>Access denied</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> does not have access to this showroom’s data. Ask the owner to add this email in Settings → Firebase Rules.</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`) }));
+}
+function staffView(){
+  $('#nav').innerHTML=''; setSync();
+  $('#app').innerHTML=`<div class="card" style="max-width:720px;margin:16px auto">
+    <h2 style="margin-top:0">Finance entry</h2>
+    <form id="sform" class="grid" onsubmit="staffSave(event)">
+      <input type="hidden" name="eid">
+      <label>Sale Challan No<input name="challan" required autocapitalize="characters" oninput="staffHint()"></label>
+      <label>Finance amount ₹<input name="amount" inputmode="decimal" required></label>
+      <label>Finance received?<select name="recd" onchange="staffRecd()"><option value="">No – pending</option><option value="1">Yes – received</option></select></label>
+      <label class="srec">Amount received ₹<input name="recdAmt" inputmode="decimal"></label>
+      <label class="srec">Date received<input type="date" name="recdDate"></label>
+      <p id="shint" class="note span2" style="margin:0"></p>
+      <div class="row span2"><button class="btn">Save</button><button type="button" class="btn plain" onclick="staffView()">Clear</button></div>
+    </form></div>
+  <div class="card" style="max-width:720px;margin:16px auto"><div class="row"><h2 class="grow" style="margin:0">Entries</h2><input placeholder="Search challan" style="max-width:180px" value="${esc(staffQ)}" oninput="staffQ=this.value;staffList()"></div><div id="slist"></div></div>
+  <p class="note" style="text-align:center">${esc(cloudEmail)} · <a href="#" onclick="cloudLogout();return false">Logout</a></p>`;
+  staffRecd(); staffList();
+}
+function staffRecd(){const f=$('#sform'), y=f.recd.value==='1'; document.querySelectorAll('.srec').forEach(l=>l.style.display=y?'':'none');
+  if(y){ if(!f.recdAmt.value) f.recdAmt.value=f.amount.value; if(!f.recdDate.value) f.recdDate.value=today() } }
+function staffHint(){const f=$('#sform'), k=chKey(f.challan.value), e=k&&FINQ.find(x=>x.id==='c_'+k&&x.id!==f.eid.value);
+  $('#shint').innerHTML=e?`⚠ Challan ${esc(e.challan)} is already entered. <a href="#" onclick="staffEdit('${e.id}');return false">Open it to change</a> — do not enter it twice.`:''}
+function staffList(){
+  const q=chKey(staffQ), L=FINQ.filter(e=>!q||chKey(e.challan).includes(q)).sort((a,b)=>(b.at?.seconds||9e12)-(a.at?.seconds||9e12));
+  $('#slist').innerHTML=L.length?`<div class="tablewrap"><table><tr><th>Sale Challan</th><th>Finance</th><th>Status</th><th>Sale</th><th></th></tr>${L.map(e=>`<tr>
+    <td><b>${esc(e.challan)}</b></td><td>${rs(e.amount)}</td>
+    <td>${e.recd?`<span class="pill in">Recd ${rs(e.recdAmt)}</span> ${fd(e.recdDate)}`:'<span class="pill due">pending</span>'}${e._p?' <span class="muted">⏳</span>':''}</td>
+    <td style="white-space:normal">${e.m?esc(e.m):'<span class="muted">not matched yet</span>'}</td>
+    <td><button class="btn plain sm" onclick="staffEdit('${e.id}')">Edit</button></td></tr>`).join('')}</table></div>`:'<div class="empty">No entries yet.</div>';
+}
+function staffEdit(id){
+  const e=FINQ.find(x=>x.id===id); if(!e) return; const f=$('#sform');
+  f.eid.value=id; f.challan.value=e.challan; f.challan.readOnly=true; f.amount.value=num(e.amount)||''; f.recd.value=e.recd?'1':'';
+  f.recdAmt.value=num(e.recdAmt)||''; f.recdDate.value=e.recdDate||''; staffRecd();
+  $('#shint').innerHTML=`Changing challan <b>${esc(e.challan)}</b>. <a href="#" style="color:var(--red)" onclick="staffDel('${id}');return false">Delete this entry</a>`;
+  scrollTo({top:0,behavior:'smooth'});
+}
+async function staffDel(id){
+  if(!confirm('Delete this finance entry?')) return;
+  try{ FB.F.deleteDoc(finRef(id)).catch(e=>toast('⚠ '+(e.code||e.message))); staffView(); toast('Deleted') }catch(e){ toast('⚠ '+(e.code||e.message)) }
+}
+function staffSave(ev){
+  ev.preventDefault(); const f=ev.target, d=formData(f), k=chKey(d.challan), amt=num(d.amount);
+  if(!k){alert('Enter the Sale Challan No.');return}
+  if(amt<=0){alert('Enter the finance amount.');return}
+  const id='c_'+k, ex=FINQ.find(x=>x.id===id);
+  if(ex&&d.eid!==id){ alert(`Challan ${ex.challan} is already entered (finance ${rs(ex.amount)}). It will open now — change it there instead of entering it twice.`); staffEdit(id); return }
+  const recd=d.recd==='1', ra=num(d.recdAmt);
+  if(recd&&ra<=0){alert('Enter the amount received.');return}
+  if(recd&&!d.recdDate){alert('Enter the date received.');return}
+  if(recd&&d.recdDate>today()){alert('Date received cannot be in the future.');return}
+  const rec={challan:txt(d.challan).toUpperCase(),amount:amt,recd,recdAmt:recd?ra:0,recdDate:recd?d.recdDate:'',by:cloudEmail,at:FB.F.serverTimestamp()};
+  FB.F.setDoc(finRef(id),rec,{merge:true}).catch(e=>toast('⚠ Not saved: '+(e.code||e.message)));
+  toast(navigator.onLine?'Saved ✓':'Saved – will sync when online'); staffView();
+}
+
 $('#app').addEventListener('input',()=>{appDirty=true});
 dlg.addEventListener('close',()=>{if(cloudReady&&!$('#syncbar').classList.contains('hide')&&!appDirty)render()});
 
