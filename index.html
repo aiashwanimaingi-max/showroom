@@ -2464,9 +2464,8 @@ function staffView(){
       <label>Sale Challan No<input name="challan" required autocapitalize="characters" oninput="staffFinLoad()"></label>
       <label>Finance amount (financed) ₹<input name="amount" inputmode="decimal" required></label>
       <label>Financer<input name="financer" list="sdlF" placeholder="Muthoot…"></label>
-      <label>Finance received?<select name="recd" onchange="staffRecd('#fform')"><option value="">No – pending</option><option value="1">Yes – received</option></select></label>
-      <label class="srec">Amount received ₹<input name="recdAmt" inputmode="decimal"></label>
-      <label class="srec">Date received<input type="date" name="recdDate"></label>
+      <label>Finance amount received ₹ <span class="muted">(empty if not yet)</span><input name="recdAmt" inputmode="decimal"></label>
+      <label>Date finance received<input type="date" name="recdDate"></label>
       <p id="shint" class="note span2" style="margin:0"></p>
       <div class="row span2"><button class="btn">Save</button><button type="button" class="btn plain" onclick="staffView()">Clear</button></div>
     </form>${dls}</div>${listCard('Finance – all challans')}${foot}`;
@@ -2503,7 +2502,7 @@ function staffRecd(sel){const f=$(sel); if(!f||!f.recd) return; const y=f.recd.v
 // Finance tab: typing a challan already entered loads it, so it is changed — never entered twice
 function staffFinLoad(){
   const f=$('#fform'), k=chKey(f.challan.value), e=k&&FINQ.find(x=>x.id==='c_'+k);
-  if(e){ f.amount.value=num(e.amount)||''; f.financer.value=e.financer||''; f.recd.value=e.recd?'1':''; f.recdAmt.value=num(e.recdAmt)||''; f.recdDate.value=e.recdDate||'';
+  if(e){ f.amount.value=num(e.amount)||''; f.financer.value=e.financer||''; f.recdAmt.value=e.recd?(num(e.recdAmt)||''):''; f.recdDate.value=e.recd?(e.recdDate||''):'';
     $('#shint').innerHTML=`Challan <b>${esc(e.challan)}</b> is already entered${e.name?' ('+esc(e.name)+')':''} — you are changing it.` }
   else $('#shint').innerHTML='';
   staffRecd('#fform');
@@ -2512,9 +2511,9 @@ function staffFinSave(ev){
   ev.preventDefault(); const d=formData(ev.target), k=chKey(d.challan), amt=num(d.amount);
   if(!k){alert('Enter the Sale Challan No.');return}
   if(amt<=0){alert('Enter the finance amount.');return}
-  const recd=d.recd==='1', ra=num(d.recdAmt);
-  if(recd&&ra<=0){alert('Enter the amount received.');return}
-  if(recd&&!d.recdDate){alert('Enter the date received.');return}
+  const ra=num(d.recdAmt), recd=ra>0;
+  if(recd&&!d.recdDate){alert('Enter the date the finance amount was received.');return}
+  if(!recd&&d.recdDate){alert('Enter the finance amount received (or clear the date).');return}
   if(recd&&d.recdDate>today()){alert('Date received cannot be in the future.');return}
   const id='c_'+k, ex=FINQ.find(x=>x.id===id);
   const rec={amount:amt,recd,recdAmt:recd?ra:0,recdDate:recd?d.recdDate:'',by:cloudEmail,at:FB.F.serverTimestamp()};
