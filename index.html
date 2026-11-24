@@ -2325,7 +2325,7 @@ service cloud.firestore {
         && request.auth.token.email.lower() in [${L(sf)}];
       allow create, update: if request.auth != null
         && request.auth.token.email.lower() in [${L(sf)}]
-        && request.resource.data.keys().hasOnly(['challan','amount','recd','recdAmt','recdDate','by','at','m']);
+        && request.resource.data.keys().hasOnly(['challan','date','pchallan','name','phone','model','chassis','down','amount','financer','recd','recdAmt','recdDate','exReg','exModel','exValue','by','at','m']);
     }
   }
 }`}
@@ -2340,7 +2340,7 @@ function rulesBox(v){const a=DB.settings.ruleAdmins||v, st=DB.settings.ruleStaff
   return `<details style="margin-top:10px"><summary>Firebase Rules – which emails have access</summary>
   <p class="note">1) Create each login in Firebase → Authentication → Users → Add user. 2) Enter the emails below. <b>Put every owner’s email in the first box</b> — anyone left out loses access. 3) Paste the full text into Firebase → Firestore → Rules and Publish.</p>
   <label>Full access (owners / partners)<input id="rulesEm" value="${esc(a)}" placeholder="aap@gmail.com, partner@gmail.com" oninput="${upd}" onchange="${keep}"></label>
-  <label style="margin-top:6px">Finance-only staff (can only enter finance amount / received against a sale challan)<input id="rulesSt" value="${esc(st)}" placeholder="employee@gmail.com" oninput="${upd}" onchange="${keep}"></label>
+  <label style="margin-top:6px">Staff – sale entry only (sale & purchase challan, customer, down payment, finance, old vehicle). Cannot see anything else<input id="rulesSt" value="${esc(st)}" placeholder="employee@gmail.com" oninput="${upd}" onchange="${keep}"></label>
   <textarea id="rulesOut" readonly style="min-height:260px;font-family:ui-monospace,Menlo,monospace;font-size:12px;margin-top:6px">${esc(rulesText(a,st))}</textarea>
   <button class="btn plain sm" style="margin-top:6px" onclick="navigator.clipboard&&navigator.clipboard.writeText($('#rulesOut').value).then(()=>toast('Rules copied'))">Copy rules</button></details>`}
 function cloudCard(){
@@ -2357,42 +2357,86 @@ function cloudCard(){
   ${pre?`<button class="btn plain" onclick="download('old-device-data-${today()}.json',localStorage.getItem(PRE),'application/json')">⬇ This device’s old (pre-cloud) data</button>`:''}</div>
   ${rulesBox(cloudEmail)}</div>`;
 }
-/* ---------- finance entries by staff (finance-only login) ---------- */
+/* ---------- sale entries by staff (staff login) ---------- */
 const chKey=v=>txt(v).toUpperCase().replace(/[^A-Z0-9]/g,'');
 const finRef=id=>FB.F.doc(FB.db,'shops',SHOP,'finentries',id);
+const STF=['challan','date','pchallan','name','phone','model','chassis','down','amount','financer','recd','recdAmt','recdDate','exReg','exModel','exValue'];
+const stSales=e=>{const k=chKey(e.challan);return k?DB.sales.filter(x=>chKey(x.schallan)===k):[]};
 // Admin side: copy each staff entry into the sale with the same Sale Challan No.
 function finApply(){
   if(!CLOUD||!cloudReady||STAFF||!FINQ.length) return false; let ch=false;
   for(const e of FINQ){
-    const k=chKey(e.challan); if(!k) continue;
-    const ss=DB.sales.filter(x=>chKey(x.schallan)===k);
-    const lbl=ss.length===1?`${ss[0].name} · ${ss[0].model}`:ss.length>1?'TWO SALES HAVE THIS CHALLAN – office will check':'';
+    if(!chKey(e.challan)) continue;
+    const ss=stSales(e);
+    const lbl=ss.length===1?`✓ In app: ${ss[0].name} · ${ss[0].model}`:ss.length>1?'TWO SALES HAVE THIS CHALLAN – office will check':'';
     if((e.m||'')!==lbl){ e.m=lbl; FB.F.updateDoc(finRef(e.id),{m:lbl}).catch(()=>{}) }
     if(ss.length!==1) continue;
-    const s=ss[0], ver=[e.id,num(e.amount),e.recd?1:0,num(e.recdAmt),e.recdDate||''].join('|');
-    if(s.finSrc===ver) continue;
-    const wasMine=String(s.finSrc||'').startsWith(e.id+'|');
+    const s=ss[0], ver=JSON.stringify(STF.map(k=>e[k]??''));
+    if(s.finSrc===ver&&s.finSrcId===e.id) continue;
+    const mine=s.finSrcId===e.id;
+    // finance
     if(num(e.amount)>0) s.finance=num(e.amount);
-    const fid='fin_'+s.id; let de=DB.daybook.find(x=>x.fin&&x.saleId===s.id);
+    if(txt(e.financer)) s.financer=txt(e.financer);
+    let de=DB.daybook.find(x=>x.fin&&x.saleId===s.id);
     if(e.recd&&num(e.recdAmt)>0){
       Object.assign(s,{financeReceived:true,financeRecdAmt:num(e.recdAmt),financeRecdDate:e.recdDate||today()}); delete s.financeBy;
-      if(!de){ de={id:fid,created:Date.now(),type:'in',saleId:s.id,fin:true,mode:'Bank'}; DB.daybook.push(de) }
+      if(!de){ de={id:'fin_'+s.id,created:Date.now(),type:'in',saleId:s.id,fin:true,mode:'Bank'}; DB.daybook.push(de) }
       Object.assign(de,{date:s.financeRecdDate,amount:num(e.recdAmt),particulars:`Finance ${s.financer||''} – Sale #${s.inv} ${s.name}${s.financeRef?' · '+s.financeRef:''}`}); delete de.by;
-    } else if(wasMine&&s.financeReceived){
+    } else if(mine&&s.financeReceived){
       s.financeReceived=false; delete s.financeRecdAmt; delete s.financeRecdDate;
       DB.daybook=DB.daybook.filter(x=>!(x.fin&&x.saleId===s.id));
     }
-    s.finSrc=ver; ch=true;
+    // down payment (one payment, never added twice)
+    s.payments=s.payments||[]; const pid='dp_'+s.id, dp=num(e.down);
+    let p=s.payments.find(x=>x.id===pid);
+    const others=s.payments.filter(x=>x.id!==pid).reduce((t,x)=>t+num(x.amount),0);
+    if(dp>0&&!p&&Math.round(others)!==Math.round(dp)){ p={id:pid,mode:'Cash'}; s.payments.push(p) }
+    if(p&&dp>0){
+      Object.assign(p,{date:e.date||s.date,amount:dp});
+      let pe=DB.daybook.find(x=>x.payId===pid);
+      if(!pe){ pe={id:'dpd_'+s.id,created:Date.now(),type:'in',saleId:s.id,payId:pid}; DB.daybook.push(pe) }
+      Object.assign(pe,{date:p.date,amount:dp,mode:p.mode||'Cash',particulars:`Sale #${s.inv} – ${s.name} (${s.model}) · down payment`}); if(p.by) pe.by=p.by; else delete pe.by;
+    } else if(p&&dp<=0){ s.payments=s.payments.filter(x=>x.id!==pid); DB.daybook=DB.daybook.filter(x=>x.payId!==pid) }
+    // old vehicle taken in exchange
+    if(txt(e.exReg)||txt(e.exModel)||num(e.exValue)){
+      if(txt(e.exReg)) s.exchangeReg=up(e.exReg); if(txt(e.exModel)) s.exchange=txt(e.exModel); s.exchangeValue=num(e.exValue);
+    }
+    // purchase challan on the vehicle
+    const st=DB.stock.find(x=>x.id===s.stockId); if(st&&txt(e.pchallan)&&!txt(st.challan)) st.challan=txt(e.pchallan);
+    s.finSrc=ver; s.finSrcId=e.id; ch=true;
   }
   return ch;
 }
+const stWait=()=>FINQ.filter(e=>chKey(e.challan)&&stSales(e).length!==1);
 function finBanner(){
-  const bad=FINQ.filter(e=>{const k=chKey(e.challan);return k&&DB.sales.filter(x=>chKey(x.schallan)===k).length!==1});
-  return bad.length?`<div class="warn" style="cursor:pointer" onclick="finUnmatched()">⚠ <b>${bad.length} finance ${bad.length>1?'entries':'entry'} from staff</b> could not be matched to a sale (no sale — or two sales — with that Sale Challan No). <u>Click to see</u></div>`:''}
+  const n=stWait().length;
+  return n?`<div class="warn" style="cursor:pointer" onclick="finUnmatched()">🧾 <b>${n} sale ${n>1?'entries':'entry'} from staff</b> waiting to be added to the app. <u>Click to add</u></div>`:''}
 function finUnmatched(){
-  const bad=FINQ.filter(e=>{const k=chKey(e.challan);return k&&DB.sales.filter(x=>chKey(x.schallan)===k).length!==1});
-  openDlg('Finance entries from staff – not matched',`<p class="muted" style="margin-top:0">Put the same Sale Challan No on the sale (Sales → open sale → Sale Challan). The finance will then be filled in automatically.</p>
-  <div class="tablewrap"><table><tr><th>Sale Challan</th><th>Finance</th><th>Received</th><th>Entered by</th></tr>${bad.map(e=>`<tr><td><b>${esc(e.challan)}</b></td><td>${rs(e.amount)}</td><td>${e.recd?rs(e.recdAmt)+' · '+fd(e.recdDate):'Pending'}</td><td>${esc(e.by||'')}</td></tr>`).join('')}</table></div>`,'<button class="btn" onclick="dlg.close()">OK</button>');
+  const L=stWait();
+  if(!L.length){dlg.close();toast('All staff entries are in the app ✓');return}
+  openDlg('Sale entries from staff – add to app',`<p class="muted" style="margin-top:0">Press <b>Create sale</b>, choose the vehicle, enter the vehicle price and Save. Finance, down payment and old vehicle are then filled in automatically.</p>
+  ${L.map(e=>`<div class="card" style="margin:0 0 10px;padding:12px">
+    <b>Sale challan ${esc(e.challan)}</b> · ${fd(e.date)} · <b>${esc(e.name)}</b> ${esc(e.phone||'')}<br>
+    <span class="muted">${[e.model&&'Model '+e.model,e.chassis&&'Chassis '+e.chassis,e.pchallan&&'Purch. challan '+e.pchallan].filter(Boolean).map(esc).join(' · ')}</span><br>
+    Down payment ${rs(e.down)} · Finance ${rs(e.amount)} ${esc(e.financer||'')} · ${e.recd?`Finance recd ${rs(e.recdAmt)} on ${fd(e.recdDate)}`:'Finance pending'}
+    ${txt(e.exReg)||txt(e.exModel)?`<br>Old vehicle: ${esc(e.exModel)} ${esc(e.exReg)} · ${rs(e.exValue)}`:''}
+    <div class="sub2">by ${esc(e.by||'')}</div>
+    ${stSales(e).length>1?'<p class="warn" style="margin:6px 0 0">Two sales already have this challan no. — fix the sale challan in Sales.</p>':`<button class="btn sm" style="margin-top:6px" onclick="staffToSale('${e.id}')">Create sale</button>`}</div>`).join('')}`,
+  '<button class="btn" onclick="dlg.close()">Close</button>');
+}
+function staffToSale(id){
+  const e=FINQ.find(x=>x.id===id); if(!e) return;
+  const ch=up(e.chassis), avail=DB.stock.filter(isIn);
+  let st=ch&&avail.find(x=>x.chassis===ch||x.engine===ch);
+  if(ch&&!st&&DB.stock.some(x=>x.chassis===ch&&!isIn(x))){alert(`Vehicle ${ch} is not in stock (already sold?). Check Stock first.`);return}
+  if(!st&&e.pchallan){const c=avail.filter(x=>chKey(x.challan)===chKey(e.pchallan)&&(!e.model||String(x.model).toLowerCase().includes(String(e.model).toLowerCase()))); if(c.length===1) st=c[0]}
+  newSale(st?.id); const f=$('#fs'); if(!f) return;
+  const set=(n,v)=>{if(f[n]&&v!=null&&v!=='')f[n].value=v};
+  set('date',e.date); set('schallan',e.challan); set('name',e.name); set('phone',e.phone); set('finance',num(e.amount)||''); set('financer',e.financer);
+  set('exchange',e.exModel); set('exchangeReg',up(e.exReg)); set('exchangeValue',num(e.exValue)||''); set('notes','Entered by '+(e.by||'staff'));
+  if(f.paid){ f.paid.value=''; f.paid.disabled=true; f.paid.placeholder=num(e.down)?`${rs(e.down)} – added automatically`:'' }
+  if(!st) f.stockId.insertAdjacentHTML('afterend',`<div class="sub2" style="color:var(--amber)">Choose the vehicle — ${esc([e.model,e.chassis,e.pchallan&&'purch. challan '+e.pchallan].filter(Boolean).join(' · '))||'staff gave no vehicle details'}</div>`);
+  saleCalc();
 }
 // Staff side
 function staffStart(){
@@ -2400,63 +2444,134 @@ function staffStart(){
   const {F,db}=FB; let first=true;
   UNSUB.push(F.onSnapshot(F.collection(db,'shops',SHOP,'finentries'),{includeMetadataChanges:true},snap=>{
     FINQ=snap.docs.map(d=>({id:d.id,...d.data(),_p:d.metadata.hasPendingWrites}));
-    const ae=document.activeElement; if(!first&&ae&&ae.closest&&ae.closest('#sform')){staffList();return}
+    const ae=document.activeElement; if(!first&&ae&&ae.closest&&ae.closest('#sform,#fform')){staffList();return}
     first=false; staffView();
   },e=>{ STAFF=false; UNSUB.forEach(u=>{try{u()}catch(x){}}); UNSUB=[];
     cloudScreen(`<h2>Access denied</h2><p style="margin-top:0"><b>${esc(cloudEmail)}</b> does not have access to this showroom’s data. Ask the owner to add this email in Settings → Firebase Rules.</p><button class="btn" onclick="cloudLogout(true)">Logout</button>`) }));
 }
+let staffTab='fin'; try{staffTab=localStorage.getItem(KEY+'_stab')||'fin'}catch(e){}
+function staffGo(t){staffTab=t;try{localStorage.setItem(KEY+'_stab',t)}catch(e){};staffView()}
 function staffView(){
-  $('#nav').innerHTML=''; setSync();
-  $('#app').innerHTML=`<div class="card" style="max-width:720px;margin:16px auto">
+  setSync(); document.querySelectorAll('button[onclick="backupJSON()"]').forEach(b=>b.style.display='none');
+  $('#nav').innerHTML=[['fin','Finance'],['sale','New Sale']].map(([k,v])=>`<button class="${k===staffTab?'on':''}" onclick="staffGo('${k}')">${v}</button>`).join('');
+  const foot=`<p class="note" style="text-align:center">${esc(cloudEmail)} · <a href="#" onclick="cloudLogout();return false">Logout</a></p>`;
+  const listCard=t=>`<div class="card" style="max-width:760px;margin:16px auto"><div class="row"><h2 class="grow" style="margin:0">${t}</h2><input placeholder="Search challan / name" style="max-width:200px" value="${esc(staffQ)}" oninput="staffQ=this.value;staffList()"></div><div id="slist"></div></div>`;
+  const dls=`${dl('sdlM',[...new Set(FINQ.map(e=>e.model).filter(Boolean))])}${dl('sdlF',[...new Set(['Muthoot',...FINQ.map(e=>e.financer).filter(Boolean)])])}`;
+  if(staffTab==='fin'){
+    $('#app').innerHTML=`<div class="card" style="max-width:760px;margin:16px auto">
     <h2 style="margin-top:0">Finance entry</h2>
-    <form id="sform" class="grid" onsubmit="staffSave(event)">
-      <input type="hidden" name="eid">
-      <label>Sale Challan No<input name="challan" required autocapitalize="characters" oninput="staffHint()"></label>
-      <label>Finance amount ₹<input name="amount" inputmode="decimal" required></label>
-      <label>Finance received?<select name="recd" onchange="staffRecd()"><option value="">No – pending</option><option value="1">Yes – received</option></select></label>
+    <form id="fform" class="grid" onsubmit="staffFinSave(event)">
+      <label>Sale Challan No<input name="challan" required autocapitalize="characters" oninput="staffFinLoad()"></label>
+      <label>Finance amount (financed) ₹<input name="amount" inputmode="decimal" required></label>
+      <label>Financer<input name="financer" list="sdlF" placeholder="Muthoot…"></label>
+      <label>Finance received?<select name="recd" onchange="staffRecd('#fform')"><option value="">No – pending</option><option value="1">Yes – received</option></select></label>
       <label class="srec">Amount received ₹<input name="recdAmt" inputmode="decimal"></label>
       <label class="srec">Date received<input type="date" name="recdDate"></label>
       <p id="shint" class="note span2" style="margin:0"></p>
       <div class="row span2"><button class="btn">Save</button><button type="button" class="btn plain" onclick="staffView()">Clear</button></div>
-    </form></div>
-  <div class="card" style="max-width:720px;margin:16px auto"><div class="row"><h2 class="grow" style="margin:0">Entries</h2><input placeholder="Search challan" style="max-width:180px" value="${esc(staffQ)}" oninput="staffQ=this.value;staffList()"></div><div id="slist"></div></div>
-  <p class="note" style="text-align:center">${esc(cloudEmail)} · <a href="#" onclick="cloudLogout();return false">Logout</a></p>`;
-  staffRecd(); staffList();
+    </form>${dls}</div>${listCard('Finance – all challans')}${foot}`;
+    staffRecd('#fform');
+  } else {
+    $('#app').innerHTML=`<div class="card" style="max-width:760px;margin:16px auto">
+    <h2 style="margin-top:0">New sale entry</h2>
+    <form id="sform" class="grid" onsubmit="staffSave(event)">
+      <input type="hidden" name="eid">
+      <label>Sale Challan No<input name="challan" required autocapitalize="characters" oninput="staffHint()"></label>
+      <label>Sale date<input type="date" name="date" required></label>
+      <label>Customer name<input name="name" required></label>
+      <label>Mobile<input name="phone" inputmode="tel"></label>
+      <label>Purchase Challan No<input name="pchallan" autocapitalize="characters"></label>
+      <label>Model<input name="model" list="sdlM"></label>
+      <label class="span2">Chassis No (if known)<input name="chassis" class="mono" autocapitalize="characters"></label>
+      <label>Down payment ₹<input name="down" inputmode="decimal"></label>
+      <label>Finance amount ₹ (0 if cash sale)<input name="amount" inputmode="decimal"></label>
+      <label>Financer<input name="financer" list="sdlF" placeholder="Muthoot…"></label>
+      <p class="span2" style="margin:6px 0 0"><b>Old vehicle taken in exchange</b> <span class="muted">(leave empty if none)</span></p>
+      <label>Old vehicle number<input name="exReg" autocapitalize="characters" placeholder="HR02AB1234"></label>
+      <label>Old vehicle model<input name="exModel" placeholder="Splendor 2016"></label>
+      <label>Old vehicle value ₹<input name="exValue" inputmode="decimal"></label>
+      <p class="note span2" style="margin:0">When the finance money comes, enter it in the <b>Finance</b> tab.</p>
+      <p id="shint" class="note span2" style="margin:0"></p>
+      <div class="row span2"><button class="btn">Save</button><button type="button" class="btn plain" onclick="staffView()">Clear</button></div>
+    </form>${dls}</div>${listCard('My sale entries')}${foot}`;
+    $('#sform').date.value=today();
+  }
+  staffList();
 }
-function staffRecd(){const f=$('#sform'), y=f.recd.value==='1'; document.querySelectorAll('.srec').forEach(l=>l.style.display=y?'':'none');
+function staffRecd(sel){const f=$(sel); if(!f||!f.recd) return; const y=f.recd.value==='1'; f.querySelectorAll('.srec').forEach(l=>l.style.display=y?'':'none');
   if(y){ if(!f.recdAmt.value) f.recdAmt.value=f.amount.value; if(!f.recdDate.value) f.recdDate.value=today() } }
-function staffHint(){const f=$('#sform'), k=chKey(f.challan.value), e=k&&FINQ.find(x=>x.id==='c_'+k&&x.id!==f.eid.value);
-  $('#shint').innerHTML=e?`⚠ Challan ${esc(e.challan)} is already entered. <a href="#" onclick="staffEdit('${e.id}');return false">Open it to change</a> — do not enter it twice.`:''}
-function staffList(){
-  const q=chKey(staffQ), L=FINQ.filter(e=>!q||chKey(e.challan).includes(q)).sort((a,b)=>(b.at?.seconds||9e12)-(a.at?.seconds||9e12));
-  $('#slist').innerHTML=L.length?`<div class="tablewrap"><table><tr><th>Sale Challan</th><th>Finance</th><th>Status</th><th>Sale</th><th></th></tr>${L.map(e=>`<tr>
-    <td><b>${esc(e.challan)}</b></td><td>${rs(e.amount)}</td>
-    <td>${e.recd?`<span class="pill in">Recd ${rs(e.recdAmt)}</span> ${fd(e.recdDate)}`:'<span class="pill due">pending</span>'}${e._p?' <span class="muted">⏳</span>':''}</td>
-    <td style="white-space:normal">${e.m?esc(e.m):'<span class="muted">not matched yet</span>'}</td>
-    <td><button class="btn plain sm" onclick="staffEdit('${e.id}')">Edit</button></td></tr>`).join('')}</table></div>`:'<div class="empty">No entries yet.</div>';
+// Finance tab: typing a challan already entered loads it, so it is changed — never entered twice
+function staffFinLoad(){
+  const f=$('#fform'), k=chKey(f.challan.value), e=k&&FINQ.find(x=>x.id==='c_'+k);
+  if(e){ f.amount.value=num(e.amount)||''; f.financer.value=e.financer||''; f.recd.value=e.recd?'1':''; f.recdAmt.value=num(e.recdAmt)||''; f.recdDate.value=e.recdDate||'';
+    $('#shint').innerHTML=`Challan <b>${esc(e.challan)}</b> is already entered${e.name?' ('+esc(e.name)+')':''} — you are changing it.` }
+  else $('#shint').innerHTML='';
+  staffRecd('#fform');
 }
-function staffEdit(id){
-  const e=FINQ.find(x=>x.id===id); if(!e) return; const f=$('#sform');
-  f.eid.value=id; f.challan.value=e.challan; f.challan.readOnly=true; f.amount.value=num(e.amount)||''; f.recd.value=e.recd?'1':'';
-  f.recdAmt.value=num(e.recdAmt)||''; f.recdDate.value=e.recdDate||''; staffRecd();
-  $('#shint').innerHTML=`Changing challan <b>${esc(e.challan)}</b>. <a href="#" style="color:var(--red)" onclick="staffDel('${id}');return false">Delete this entry</a>`;
-  scrollTo({top:0,behavior:'smooth'});
-}
-async function staffDel(id){
-  if(!confirm('Delete this finance entry?')) return;
-  try{ FB.F.deleteDoc(finRef(id)).catch(e=>toast('⚠ '+(e.code||e.message))); staffView(); toast('Deleted') }catch(e){ toast('⚠ '+(e.code||e.message)) }
-}
-function staffSave(ev){
-  ev.preventDefault(); const f=ev.target, d=formData(f), k=chKey(d.challan), amt=num(d.amount);
+function staffFinSave(ev){
+  ev.preventDefault(); const d=formData(ev.target), k=chKey(d.challan), amt=num(d.amount);
   if(!k){alert('Enter the Sale Challan No.');return}
   if(amt<=0){alert('Enter the finance amount.');return}
-  const id='c_'+k, ex=FINQ.find(x=>x.id===id);
-  if(ex&&d.eid!==id){ alert(`Challan ${ex.challan} is already entered (finance ${rs(ex.amount)}). It will open now — change it there instead of entering it twice.`); staffEdit(id); return }
   const recd=d.recd==='1', ra=num(d.recdAmt);
   if(recd&&ra<=0){alert('Enter the amount received.');return}
   if(recd&&!d.recdDate){alert('Enter the date received.');return}
   if(recd&&d.recdDate>today()){alert('Date received cannot be in the future.');return}
-  const rec={challan:txt(d.challan).toUpperCase(),amount:amt,recd,recdAmt:recd?ra:0,recdDate:recd?d.recdDate:'',by:cloudEmail,at:FB.F.serverTimestamp()};
+  const id='c_'+k, ex=FINQ.find(x=>x.id===id);
+  const rec={amount:amt,recd,recdAmt:recd?ra:0,recdDate:recd?d.recdDate:'',by:cloudEmail,at:FB.F.serverTimestamp()};
+  if(!ex) rec.challan=txt(d.challan).toUpperCase();
+  if(d.financer) rec.financer=txt(d.financer);
+  FB.F.setDoc(finRef(id),rec,{merge:true}).catch(e=>toast('⚠ Not saved: '+(e.code||e.message)));
+  toast(navigator.onLine?'Saved ✓':'Saved – will sync when online'); staffView();
+}
+function staffHint(){const f=$('#sform'), k=chKey(f.challan.value), e=k&&FINQ.find(x=>x.id==='c_'+k&&x.id!==f.eid.value);
+  $('#shint').innerHTML=e&&e.name?`⚠ Sale challan ${esc(e.challan)} is already entered (${esc(e.name)}). <a href="#" onclick="staffEdit('${e.id}');return false">Open it to change</a> — do not enter it twice.`
+    :e?`Finance for challan ${esc(e.challan)} is already entered — the sale details will be added to it.`:''}
+function staffList(){
+  const q=String(staffQ).trim().toLowerCase(), qk=chKey(q);
+  const L=FINQ.filter(e=>!q||(qk&&chKey(e.challan).includes(qk))||String(e.name||'').toLowerCase().includes(q)).sort((a,b)=>(b.at?.seconds||9e12)-(a.at?.seconds||9e12));
+  const pend=e=>e._p?' <span class="muted">⏳</span>':'';
+  if(!L.length){$('#slist').innerHTML='<div class="empty">No entries yet.</div>';return}
+  $('#slist').innerHTML=staffTab==='fin'
+    ?`<div class="tablewrap"><table><tr><th>Sale Challan</th><th>Customer</th><th>Financed</th><th>Received</th><th></th></tr>${L.map(e=>`<tr>
+      <td><b>${esc(e.challan)}</b></td><td>${esc(e.name||'')}<div class="sub2">${esc(e.financer||'')}</div></td><td>${num(e.amount)?rs(e.amount):'—'}</td>
+      <td>${e.recd?`<span class="pill in">${rs(e.recdAmt)}</span> ${fd(e.recdDate)}${Math.abs(num(e.recdAmt)-num(e.amount))>=0.5&&num(e.amount)?`<div class="sub2">${num(e.recdAmt)<num(e.amount)?rs(num(e.amount)-num(e.recdAmt))+' short':rs(num(e.recdAmt)-num(e.amount))+' excess'}</div>`:''}`:num(e.amount)?'<span class="pill due">pending</span>':''}${pend(e)}</td>
+      <td><button class="btn plain sm" onclick="staffEdit('${e.id}')">Edit</button></td></tr>`).join('')}</table></div>`
+    :`<div class="tablewrap"><table><tr><th>Sale Challan</th><th>Customer</th><th>Down pay</th><th>Finance</th><th>Old vehicle</th><th>Office</th><th></th></tr>${L.filter(e=>e.name).map(e=>`<tr>
+      <td><b>${esc(e.challan)}</b><div class="sub2">${fd(e.date)}</div></td><td>${esc(e.name)}<div class="sub2">${esc(e.model||'')}</div></td><td>${rs(e.down)}</td>
+      <td>${rs(e.amount)}<br>${num(e.amount)?(e.recd?`<span class="pill in">Recd ${rs(e.recdAmt)}</span>`:'<span class="pill due">pending</span>'):''}${pend(e)}</td>
+      <td>${txt(e.exReg)||txt(e.exModel)?`${esc(e.exReg)}<div class="sub2">${esc(e.exModel)} · ${rs(e.exValue)}</div>`:'—'}</td>
+      <td style="white-space:normal">${e.m?esc(e.m):'<span class="muted">waiting</span>'}</td>
+      <td><button class="btn plain sm" onclick="staffEdit('${e.id}')">Edit</button></td></tr>`).join('')}</table></div>`;
+}
+function staffEdit(id){
+  const e=FINQ.find(x=>x.id===id); if(!e) return;
+  if(staffTab==='fin'){ const f=$('#fform'); f.challan.value=e.challan; f.challan.readOnly=true; staffFinLoad();
+    $('#shint').innerHTML+=` <a href="#" style="color:var(--red)" onclick="staffDel('${id}');return false">Delete this entry</a>`; scrollTo({top:0,behavior:'smooth'}); return }
+  const f=$('#sform'); f.eid.value=id;
+  ['challan','date','pchallan','name','phone','model','chassis','down','amount','financer','exReg','exModel','exValue'].forEach(k=>{f[k].value=['down','amount','exValue'].includes(k)?(num(e[k])||''):(e[k]??'')});
+  f.challan.readOnly=true;
+  $('#shint').innerHTML=`Changing sale challan <b>${esc(e.challan)}</b>. <a href="#" style="color:var(--red)" onclick="staffDel('${id}');return false">Delete this entry</a>`;
+  scrollTo({top:0,behavior:'smooth'});
+}
+function staffDel(id){
+  if(!confirm('Delete this entry?')) return;
+  FB.F.deleteDoc(finRef(id)).catch(e=>toast('⚠ '+(e.code||e.message))); staffView(); toast('Deleted');
+}
+function staffSave(ev){
+  ev.preventDefault(); const f=ev.target, d=formData(f), k=chKey(d.challan);
+  if(!k){alert('Enter the Sale Challan No.');return}
+  if(!d.name){alert('Enter the customer name.');return}
+  if(d.date>today()){alert('Sale date cannot be in the future.');return}
+  const id='c_'+k, ex=FINQ.find(x=>x.id===id);
+  if(ex&&ex.name&&d.eid!==id){ alert(`Sale challan ${ex.challan} is already entered (${ex.name}). It will open now — change it there instead of entering it twice.`); staffEdit(id); return }
+  const chs=up(d.chassis), dc=chs&&FINQ.find(x=>x.id!==id&&up(x.chassis)===chs);
+  if(dc&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nChassis ${chs} is already entered with sale challan ${dc.challan} (${dc.name}).\n\nSave anyway?`)) return;
+  const exr=up(d.exReg), dx=exr&&FINQ.find(x=>x.id!==id&&up(x.exReg)===exr);
+  if(dx&&!confirm(`⚠ Possible DOUBLE ENTRY\n\nOld vehicle ${exr} is already entered with sale challan ${dx.challan} (${dx.name}).\n\nSave anyway?`)) return;
+  if((exr||d.exModel)&&num(d.exValue)<=0&&!confirm('Old vehicle value is empty. Save anyway?')) return;
+  const rec={challan:ex?ex.challan:txt(d.challan).toUpperCase(),date:d.date,pchallan:txt(d.pchallan).toUpperCase(),name:txt(d.name),phone:txt(d.phone),model:txt(d.model),chassis:chs,
+    down:num(d.down),amount:num(d.amount),financer:txt(d.financer),exReg:exr,exModel:txt(d.exModel),exValue:num(d.exValue),by:cloudEmail,at:FB.F.serverTimestamp()};
+  if(!ex) Object.assign(rec,{recd:false,recdAmt:0,recdDate:''});
   FB.F.setDoc(finRef(id),rec,{merge:true}).catch(e=>toast('⚠ Not saved: '+(e.code||e.message)));
   toast(navigator.onLine?'Saved ✓':'Saved – will sync when online'); staffView();
 }
